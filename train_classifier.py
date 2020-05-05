@@ -2,6 +2,7 @@ import torch
 import torch.nn.functional as F
 import numpy as np
 from torch.utils.data import DataLoader
+from torchsummary import summary
 
 from deep_learning.utils.data import PTDataset
 from deep_learning.models import ResNet
@@ -59,7 +60,8 @@ class TrainingState():
         print(f'Starting train #{self.epoch}')
         for iteration, (img, target) in enumerate(train_loader):
             img    = img.to(self.dev, torch.float)
-            target = target.max(dim=[2, 3], keepdim=True).to(self.dev, torch.float, non_blocking=True)
+            target = target.max(dim=2, keepdim=True)[0].max(dim=3, keepdim=True)[0]
+            target = target.to(self.dev, torch.float, non_blocking=True)
 
             self.opt.zero_grad()
             y_hat = self.model(img)
@@ -89,7 +91,8 @@ class TrainingState():
         with torch.no_grad():
             for iteration, (img, target) in enumerate(val_loader):
                 img    = img.to(self.dev, torch.float)
-                target = target.max(dim=[2, 3], keepdim=True).to(self.dev, torch.float, non_blocking=True)
+                target = target.max(dim=2, keepdim=True).max(dim=3, keepdim=True)
+                target = target.to(self.dev, torch.float, non_blocking=True)
 
                 y_hat = self.model(img)
 
@@ -107,17 +110,16 @@ class TrainingState():
 
 
 if __name__ == "__main__":
-    model_type = UNet
-    conv_block = layers.WithSE(layers.Convx2, reduction=2)
-    print(conv_block.__name__)
-    state = TrainingState(model_type, 2, 1, conv_block=conv_block, base_channels=1, batch_norm=True)
+    model_type = ResNet
+    state = TrainingState(model_type, 4, 1, base_channels=1, batch_norm=True)
+    summary(state.model, [(4, 256, 256)])
 
-    train_loader = DataLoader(PTDataset('data/scenes-train', ['scene', 'mask']),
+    train_loader = DataLoader(PTDataset('data/tiles_train', ['data', 'mask']),
                               batch_size=state.batch_size,
                               num_workers=4,
                               pin_memory=True)
 
-    val_loader   = DataLoader(PTDataset('data/scenes-val', ['scene', 'mask']),
+    val_loader   = DataLoader(PTDataset('data/tiles_val', ['data', 'mask']),
                               batch_size=state.batch_size,
                               num_workers=4,
                               pin_memory=True)

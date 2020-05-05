@@ -8,6 +8,8 @@ from deep_learning.utils.data import PTDataset
 from deep_learning.models import ResNet
 import deep_learning.models.layers as layers
 
+from tqdm.autonotebook import tqdm
+
 
 def _update_dict(dictionary, key, value):
     if key in dictionary:
@@ -91,7 +93,7 @@ class TrainingState():
         with torch.no_grad():
             for iteration, (img, target) in enumerate(val_loader):
                 img    = img.to(self.dev, torch.float)
-                target = target.max(dim=2, keepdim=True).max(dim=3, keepdim=True)
+                target = target.max(dim=2, keepdim=True)[0].max(dim=3, keepdim=True)[0]
                 target = target.to(self.dev, torch.float, non_blocking=True)
 
                 y_hat = self.model(img)
@@ -126,5 +128,5 @@ if __name__ == "__main__":
 
     model_name = model_type.__name__
     for epoch in range(20):
-        state.train_epoch(train_loader)
+        state.train_epoch(tqdm(train_loader))
         state.val_epoch(val_loader)

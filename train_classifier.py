@@ -62,7 +62,7 @@ class TrainingState():
         print(f'Starting train #{self.epoch}')
         for iteration, (img, target) in enumerate(train_loader):
             img    = img.to(self.dev, torch.float)
-            target = target.max(dim=2, keepdim=True)[0].max(dim=3, keepdim=True)[0]
+            target = target.max(dim=3)[0].max(dim=2)[0]
             target = target.to(self.dev, torch.float, non_blocking=True)
 
             self.opt.zero_grad()
@@ -93,7 +93,7 @@ class TrainingState():
         with torch.no_grad():
             for iteration, (img, target) in enumerate(val_loader):
                 img    = img.to(self.dev, torch.float)
-                target = target.max(dim=2, keepdim=True)[0].max(dim=3, keepdim=True)[0]
+                target = target.max(dim=3)[0].max(dim=2)[0]
                 target = target.to(self.dev, torch.float, non_blocking=True)
 
                 y_hat = self.model(img)
@@ -113,7 +113,7 @@ class TrainingState():
 
 if __name__ == "__main__":
     model_type = ResNet
-    state = TrainingState(model_type, 4, 1, base_channels=1, batch_norm=True)
+    state = TrainingState(model_type, 4, 1)
     summary(state.model, [(4, 256, 256)])
 
     train_loader = DataLoader(PTDataset('data/tiles_train', ['data', 'mask']),

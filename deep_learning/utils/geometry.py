@@ -15,9 +15,9 @@ def make_sdf(mask, truncation=16):
             base = mask[0, y, x]
 
             lo_y = max(0, y - truncation)
-            hi_y = min(H, y + 1 + truncation) # exclusive
+            hi_y = min(H, y + 1 + truncation)  # exclusive
             lo_x = max(0, x - truncation)
-            hi_x = min(W, x + 1 + truncation) # exclusive
+            hi_x = min(W, x + 1 + truncation)  # exclusive
 
             best = truncation * truncation
             for y2 in range(lo_y, hi_y):

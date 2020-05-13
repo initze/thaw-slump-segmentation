@@ -25,7 +25,7 @@ class Trainer():
         self.epoch += 1
         self.model.train(True)
         for iteration, (img, target) in enumerate(train_loader):
-            img    = img.to(self.dev, torch.float)
+            img = img.to(self.dev, torch.float)
             target = target.to(self.dev, torch.float, non_blocking=True)
 
             self.opt.zero_grad()
@@ -42,17 +42,22 @@ class Trainer():
             N = len(metrics)
             W = N * 12 - 1
             self.metric_order = []
+            # Cryptic code for nice table formatting... :)
             print('┌───────┬' + '─' * W + '┬' + '─' * W + '┐')
-            print('│       │' + ' ' * (W // 2 - 3) + 'Train' + ' ' * (W - (W // 2 - 3) - 5) + '│' \
-                      + ' ' * (W // 2 - 5) + 'Validation' + ' ' * (W - (W // 2 - 5) - 10) + '│')
+            print('│       │' + ' ' * (W // 2 - 3) + 'Train'
+                  + ' ' * (W - (W // 2 - 3) - 5) + '│'
+                  + ' ' * (W // 2 - 5) + 'Validation'
+                  + ' ' * (W - (W // 2 - 5) - 10) + '│')
             print('│ Epoch │', end='')
             for key in metrics:
                 self.metric_order.append(key)
                 pre = (11 - len(key)) // 2
-                print(' ' * pre + key + ' ' * (11 - len(key) - pre) + '│', end='')
+                post = (11 - len(key) - pre)
+                print(' ' * pre + key + ' ' * post + '│', end='')
             for key in self.metric_order:
                 pre = (11 - len(key)) // 2
-                print(' ' * pre + key + ' ' * (11 - len(key) - pre) + '│', end='')
+                post = (11 - len(key) - pre)
+                print(' ' * pre + key + ' ' * post + '│', end='')
             print()
 
         epochpre = ' ' * (7 - len(str(self.epoch)))
@@ -66,7 +71,7 @@ class Trainer():
         self.model.train(False)
         with torch.no_grad():
             for iteration, (img, target) in enumerate(val_loader):
-                img    = img.to(self.dev, torch.float)
+                img = img.to(self.dev, torch.float)
                 target = target.to(self.dev, torch.float, non_blocking=True)
                 y_hat = self.model(img)
 

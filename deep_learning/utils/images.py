@@ -1,5 +1,4 @@
 import numpy as np
-import rasterio as rio
 
 
 def extract_patches(images, patch_size=512, max_nodata=0.0, stride=None):

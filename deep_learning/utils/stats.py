@@ -1,12 +1,13 @@
 import torch
 import torch.nn.functional as F
 
+
 def gamma_pdf(alpha, beta, x):
     """
     PDF for a Gamma(alpha, beta) distributed RV.
     """
     return torch.pow(beta, alpha) / torch.exp(torch.lgamma(alpha)) \
-         * torch.pow(x, alpha - 1) * torch.exp(-beta * x)
+        * torch.pow(x, alpha - 1) * torch.exp(-beta * x)
 
 
 def gamma_nll(alpha, beta, target):
@@ -30,7 +31,7 @@ def lp_gamma_pdf(log_alpha, log_beta, x):
     beta = torch.exp(log_beta)
 
     return torch.pow(beta, alpha) / torch.exp(torch.lgamma(alpha)) \
-         * torch.pow(x, alpha - 1) * torch.exp(-beta * x)
+        * torch.pow(x, alpha - 1) * torch.exp(-beta * x)
 
 
 def lp_gamma_nll(log_alpha, log_beta, target):

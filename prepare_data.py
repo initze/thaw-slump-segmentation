@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# flake8: noqa: E501
 from pathlib import Path
 from tqdm import tqdm
 import rasterio as rio
@@ -26,9 +27,10 @@ DATA = Path('data')
 datasets = list(sorted(DATA.glob('*/tiles')))
 
 # Train-val-test split
+setnames = list(map(lambda x: x.parent.name, datasets))
 val_set = ['20190727_160426_104e']
 test_set = ['20190709_042959_08_1057']
-train_set = [t for t in map(lambda x: x.parent.name, datasets) if t not in val_set + test_set]
+train_set = [t for t in setnames if t not in val_set + test_set]
 
 sets = dict(train=train_set, val=val_set, test=test_set)
 
@@ -37,10 +39,11 @@ def others_from_img(img_path):
     """
     Given an image path, return paths for mask and tcvis
     """
-    date, time, *block, platform, analytics, sr, row, col = img_path.stem.split('_')
+    date, time, *block, platform, _, sr, row, col = img_path.stem.split('_')
     block = '_'.join(block)
-    mask_path = img_path.parent.parent / 'mask' / f'{date}_{time}_{block}_mask_{row}_{col}.tif'
-    tcvis_path = img.parent.parent / 'tcvis' / f'tcvis_{row}_{col}.tif'
+    base = img_path.parent.parent
+    mask_path = base / 'mask' / f'{date}_{time}_{block}_mask_{row}_{col}.tif'
+    tcvis_path = base / 'tcvis' / f'tcvis_{row}_{col}.tif'
 
     assert mask_path.exists()
     assert tcvis_path.exists()
@@ -54,7 +57,8 @@ def glob_file(DATASET, filter_string):
         print('Found file:', candidates[0])
         return candidates[0]
     else:
-        raise ValueError(f'Found {len(candidates)} candidates. Please make selection more specific!')
+        raise ValueError(f'Found {len(candidates)} candidates.'
+                         'Please make selection more specific!')
 
 
 def do_gdal_calls(DATASET):
@@ -114,7 +118,8 @@ for setname, dataset in sets.items():
                 assert imgdata.max() < 2 ** 15
 
             with rio.open(tcvis) as raster:
-                tcdata = raster.read()[:3] # Toss Alpha
+                # Throw away alpha channel
+                tcdata = raster.read()[:3] 
                 # Assert data can safely be coerced to int16
                 assert tcdata.max() < 2 ** 15
 

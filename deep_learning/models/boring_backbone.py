@@ -5,7 +5,8 @@ from .layers import Convx2, DownBlock
 
 
 class BoringBackbone(nn.Module):
-    def __init__(self, input_channels, num_features=64, conv_block=Convx2, batch_norm=True):
+    def __init__(self, input_channels, num_features=64, conv_block=Convx2,
+                 batch_norm=True):
         super().__init__()
         bc = num_features // 4
         self.pre = Convx2(2, bc),

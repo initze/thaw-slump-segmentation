@@ -7,7 +7,7 @@ def download(url, dst, **args):
     """
     Downloads a file from a given url to a destination path.
     Resumes partial downloads and skips alrady downloaded files.
-    Adapted from https://gist.github.com/wy193777/0e2a4932e81afc6aa4c8f7a2984f34e2
+    Cf. https://gist.github.com/wy193777/0e2a4932e81afc6aa4c8f7a2984f34e2
 
     @param: `url` to download file
     @param: `dst` place to put the file
@@ -32,4 +32,3 @@ def download(url, dst, **args):
                 pbar.update(1024)
     pbar.close()
     return file_size
-

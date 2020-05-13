@@ -40,8 +40,10 @@ class PTDataset(Dataset):
     def __init__(self, root, parts, transform=None, suffix='.pt'):
         self.root = Path(root)
         self.parts = parts
-        filenames = list(sorted([x.name for x in (self.root / parts[0]).glob('*' + suffix)]))
-        self.index = [[self.root / part / x for part in parts] for x in filenames]
+
+        first = self.root / parts[0]
+        filenames = list(sorted([x.name for x in first.glob('*' + suffix)]))
+        self.index = [[self.root / p / x for p in parts] for x in filenames]
         self.transform = transform
 
     def __getitem__(self, idx):

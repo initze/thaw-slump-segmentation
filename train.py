@@ -1,130 +1,58 @@
-import torch
-import torch.nn.functional as F
+import warnings
+warnings.filterwarnings("ignore")
 import numpy as np
-from torch.utils.data import DataLoader
-from torchsummary import summary
+import matplotlib.pyplot as plt
+import torch
+import torch.nn as nn
 
-from deep_learning.utils.data import PTDataset
+from deep_learning import Trainer
 from deep_learning.models import UNet
-import deep_learning.models.layers as layers
-
-from tqdm.autonotebook import tqdm
+from data_loading import get_loaders
 
 
-def _update_dict(dictionary, key, value):
-    if key in dictionary:
-        dictionary[key].append(value)
-    else:
-        dictionary[key] = [value]
+def showexample(batch, pred, idx, filename):
+    m = 0.02
+    gridspec_kw = dict(left=m, right=1-m, top=1-m, bottom=m, hspace=m, wspace=m)
+    fig, ((a1, a2), (a3, a4)) = plt.subplots(2, 2, figsize=(8, 8), gridspec_kw=gridspec_kw)
+    batch_img, batch_target = batch
+    batch_img = batch_img.to(torch.float)
 
-
-class TrainingState():
-    def __init__(self, model_type, *model_args, **model_kwargs):
-        cuda = True if torch.cuda.is_available() else False
-        self.dev = torch.device("cpu") if not cuda else torch.device("cuda")
-        print(f'Training on {self.dev} device')
-
-        self.board_idx = 0
-        self.model = model_type(*model_args, **model_kwargs).to(self.dev)
-        self.opt = torch.optim.Adam(self.model.parameters(), lr=1e-3)
-
-        self.epoch = 0
-        self.train_metrics = {}
-        self.val_metrics = {}
-
-        self.loss_function = F.binary_cross_entropy_with_logits
-
-        self.batch_size = 4
-
-    def eval_metrics(self, metrics_dict, prediction, target):
-        with torch.no_grad():
-            TP = ((prediction > 0) * (target > 0)).float().sum().item()
-            FP = ((prediction > 0) * (target <= 0)).float().sum().item()
-            FN = ((prediction <= 0) * (target > 0)).float().sum().item()
-            TN = ((prediction <= 0) * (target <= 0)).float().sum().item()
-
-            accuracy = (TP + TN) / (TP + FP + FN + TN)
-            error = (FN + FP) / (TP + FP + FN + TN)
-            precision = np.nan if TP + FP == 0 else TP / (TP + FP)
-            recall = np.nan if TP + FN == 0 else TP / (TP + FN)
-            f1 = np.nan if precision + recall == 0 else 2 * precision * recall / (precision + recall)
-
-            _update_dict(metrics_dict, 'Accuracy', accuracy)
-            _update_dict(metrics_dict, 'Error', error)
-            _update_dict(metrics_dict, 'Precision', precision)
-            _update_dict(metrics_dict, 'Recall', recall)
-            _update_dict(metrics_dict, 'F1', f1)
-
-    def train_epoch(self, train_loader):
-        self.epoch += 1
-        metrics = {}
-        self.model.train(True)
-        print(f'Starting train #{self.epoch}')
-        for iteration, (img, target) in enumerate(train_loader):
-            img    = img.to(self.dev, torch.float)
-            target = target.to(self.dev, torch.float, non_blocking=True)
-
-            self.opt.zero_grad()
-            y_hat = self.model(img)
-            bce_loss = self.loss_function(y_hat, target)
-
-            loss = bce_loss
-            loss.backward()
-            self.opt.step()
-
-            lossdict = {
-                'BCE': bce_loss,
-            }
-
-            for key in lossdict:
-                _update_dict(metrics, key, lossdict[key].item())
-            self.eval_metrics(metrics, y_hat, target)
-
-            self.board_idx += img.shape[0]
-        for key in metrics:
-            value = np.nanmean(metrics[key])
-            _update_dict(self.train_metrics, key, value)
-
-    def val_epoch(self, val_loader):
-        metrics = {}
-        self.model.train(False)
-        print(f'Starting val #{self.epoch}')
-        with torch.no_grad():
-            for iteration, (img, target) in enumerate(val_loader):
-                img    = img.to(self.dev, torch.float)
-                target = target.to(self.dev, torch.float, non_blocking=True)
-
-                y_hat = self.model(img)
-
-                bce_loss = self.loss_function(y_hat, target)
-                lossdict = {
-                    'BCE': bce_loss,
-                }
-                for key in lossdict:
-                    _update_dict(metrics, key, lossdict[key].item())
-                self.eval_metrics(metrics, y_hat, target)
-
-        for key in metrics:
-            value = np.nanmean(metrics[key])
-            _update_dict(self.val_metrics, key, value)
+    rgb = batch_img[idx].cpu().numpy()[[2, 1, 0]]
+    a1.imshow(np.clip(rgb.transpose(1, 2, 0), 0, 1))
+    a1.axis('off')
+    a2.imshow(batch_target[idx, 0].cpu(), cmap='coolwarm', vmin=0, vmax=1)
+    a2.axis('off')
+    tcvis = batch_img[idx].cpu().numpy()[[4, 5, 6]]
+    a3.imshow(np.clip(tcvis.transpose(1, 2, 0), 0, 1))
+    a3.axis('off')
+    a4.imshow(torch.sigmoid(pred[idx, 0]).cpu(), cmap='coolwarm', vmin=0, vmax=1)
+    # a4.imshow((pred[idx, 0] > 0).cpu(), cmap='coolwarm', vmin=0, vmax=1)
+    a4.axis('off')
+    plt.savefig(filename)
+    plt.close()
 
 
 if __name__ == "__main__":
-    model_type = UNet
-    state = TrainingState(model_type, 7, 1, base_channels=1, padding_mode='replicate')
-    summary(state.model, [(7, 256, 256)])
+    model = UNet(7, 1, base_channels=8)
+    trainer = Trainer(model)
+    trainer.loss_function = nn.BCEWithLogitsLoss(pos_weight=150 * torch.ones([])).to(trainer.dev)
+    trainer.optimizer = torch.optim.Adam(trainer.model.parameters(), 1e-4)
+    # Print model summary
+    # summary(trainer.model, [(7, 256, 256)])
+    train_loader, val_loader = get_loaders(batch_size=32, augment=True)
 
-    train_loader = DataLoader(PTDataset('data/tiles_train', ['data', 'mask']),
-                              batch_size=state.batch_size,
-                              num_workers=4,
-                              pin_memory=True)
+    interesting_tiles = [129, 92, 332, 169, 142, 424]
+    interesting_batch = list(zip(*[val_loader.dataset[i] for i in interesting_tiles]))
+    interesting_batch = [torch.stack(i, dim=0) for i in interesting_batch]
+    interesting_imgs = interesting_batch[0].to(trainer.dev)
 
-    val_loader   = DataLoader(PTDataset('data/tiles_val', ['data', 'mask']),
-                              batch_size=state.batch_size,
-                              num_workers=4,
-                              pin_memory=True)
-
-    model_name = model_type.__name__
     for epoch in range(20):
-        state.train_epoch(tqdm(train_loader))
-        state.val_epoch(val_loader)
+        trainer.train_epoch(train_loader)
+        trainer.val_epoch(val_loader)
+
+        with torch.no_grad():
+            pred = trainer.model(interesting_imgs)
+        for i, idx in enumerate(interesting_tiles):
+            filename = f'logs/{idx}_{trainer.epoch}.png'
+            showexample(interesting_batch, pred, i, filename)
+

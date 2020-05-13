@@ -111,7 +111,7 @@ class TrainingState():
 
 if __name__ == "__main__":
     model_type = UNet
-    state = TrainingState(model_type, 7, 1, base_channels=1)
+    state = TrainingState(model_type, 7, 1, base_channels=1, padding_mode='replicate')
     summary(state.model, [(7, 256, 256)])
 
     train_loader = DataLoader(PTDataset('data/tiles_train', ['data', 'mask']),

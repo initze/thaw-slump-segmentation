@@ -1,4 +1,4 @@
-name: uc2
+name: aicore-uc2
 channels:
   - pytorch
 dependencies:

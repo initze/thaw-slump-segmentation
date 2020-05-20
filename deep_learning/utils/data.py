@@ -31,3 +31,29 @@ class PTDataset(Dataset):
 
     def __len__(self):
         return len(self.index)
+
+
+class Augment(Dataset):
+    def __init__(self, dataset):
+        self.dataset = dataset
+        self.len = 8 * len(self.dataset)
+
+    def __getitem__(self, idx):
+        idx, carry = divmod(idx, 8)
+        carry, flipx = divmod(carry, 2)
+        transpose, flipy = divmod(carry, 2)
+
+        diry = 2 * flipy - 1
+        dirx = 2 * flipx - 1
+        base = self.dataset[idx]
+        augmented = []
+        for field in base:
+            field = field.numpy()
+            field = field[:, ::diry, ::dirx]
+            if transpose == 1:
+                field = field.transpose(0, 2, 1)
+            augmented.append(torch.from_numpy(field.copy()))
+        return tuple(augmented)
+
+    def __len__(self):
+        return len(self.dataset) * 8

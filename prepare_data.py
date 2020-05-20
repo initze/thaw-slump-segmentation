@@ -70,7 +70,8 @@ def do_gdal_calls(DATASET):
     tile_dir_tcvis = DATASET / 'tiles' / 'tcvis'
     tile_dir_mask = DATASET / 'tiles' / 'mask'
 
-    tile_dir_data.mkdir(exist_ok=True)
+    # Create parents on the first data folder
+    tile_dir_data.mkdir(exist_ok=True, parents=True)
     tile_dir_tcvis.mkdir(exist_ok=True)
     tile_dir_mask.mkdir(exist_ok=True)
 

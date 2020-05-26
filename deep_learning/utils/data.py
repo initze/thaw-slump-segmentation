@@ -6,11 +6,11 @@ from pathlib import Path
 class PTDataset(Dataset):
     """
     Random access Dataset for datasets of pytorch tensors stored like this:
-        data/images/1.pt
-        data/images/2.pt
+        data/images/file1.pt
+        data/images/file1.pt
         ...
-        data/masks/1.pt
-        data/masks/2.pt
+        data/masks/file1.pt
+        data/masks/file2.pt
         ...
     """
     def __init__(self, root, parts, transform=None, suffix='.pt'):

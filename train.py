@@ -66,7 +66,7 @@ if __name__ == "__main__":
     modelscale = int(args['--modelscale'])
     model = UNet(7, 1, base_channels=modelscale)
     if args['--resume']:
-        model.load_state_dict(args['--resume'])
+        model.load_state_dict(torch.load(args['--resume']))
 
     trainer = Trainer(model)
     posweight = float(args['--posweight'])

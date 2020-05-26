@@ -140,8 +140,9 @@ for setname, dataset in sets.items():
                 continue
 
             # Write the tensor files
-            torch.save(imgtensor, data_dir / f'{i}.pt')
-            torch.save(masktensor, mask_dir / f'{i}.pt')
+            filename = img.stem + '.pt'
+            torch.save(imgtensor, data_dir / filename)
+            torch.save(masktensor, mask_dir / filename)
             i += 1
 
     # Optional Compression for quicker uploading

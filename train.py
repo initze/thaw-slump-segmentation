@@ -121,7 +121,7 @@ if __name__ == "__main__":
         metrics = trainer.metrics.evaluate()
 
         with (log_dir / 'metrics.txt').open('a') as f:
-            print(f'Epoch {trainer.epoch} - Val:   ', end='', file=f)
+            print(f'Epoch {trainer.epoch:02d} - Val:   ', end='', file=f)
             print(', '.join(f'{key}: {val:.2f}' for key, val in metrics.items()), file=f)
 
         with torch.no_grad():

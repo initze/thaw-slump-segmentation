@@ -4,3 +4,4 @@ __pycache__/
 .vim/
 archive/
 *.png
+logs/

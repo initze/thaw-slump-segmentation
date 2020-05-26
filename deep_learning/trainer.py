@@ -1,3 +1,4 @@
+
 import torch
 import torch.nn.functional as F
 from .metrics import Metrics, Accuracy, Precision, Recall, F1
@@ -34,38 +35,9 @@ class Trainer():
             loss.backward()
             self.opt.step()
 
-            self.metrics.step(y_hat, target, Loss=loss)
+            self.metrics.step(y_hat, target, Loss=loss.detach())
             self.board_idx += img.shape[0]
 
-        metrics = self.metrics.evaluate()
-        if self.epoch == 1:
-            N = len(metrics)
-            W = N * 12 - 1
-            self.metric_order = []
-            # Cryptic code for nice table formatting... :)
-            print('┌───────┬' + '─' * W + '┬' + '─' * W + '┐')
-            print('│       │' + ' ' * (W // 2 - 3) + 'Train'
-                  + ' ' * (W - (W // 2 - 3) - 5) + '│'
-                  + ' ' * (W // 2 - 5) + 'Validation'
-                  + ' ' * (W - (W // 2 - 5) - 10) + '│')
-            print('│ Epoch │', end='')
-            for key in metrics:
-                self.metric_order.append(key)
-                pre = (11 - len(key)) // 2
-                post = (11 - len(key) - pre)
-                print(' ' * pre + key + ' ' * post + '│', end='')
-            for key in self.metric_order:
-                pre = (11 - len(key)) // 2
-                post = (11 - len(key) - pre)
-                print(' ' * pre + key + ' ' * post + '│', end='')
-            print()
-
-        epochpre = ' ' * (7 - len(str(self.epoch)))
-        print(f'│{epochpre}{self.epoch}│', end='')
-        for key in self.metric_order:
-            val = f'{metrics[key]:.4f}'
-            pre = (11 - len(val))
-            print(' ' * pre + val, end='│')
 
     def val_epoch(self, val_loader):
         self.model.train(False)
@@ -76,11 +48,4 @@ class Trainer():
                 y_hat = self.model(img)
 
                 loss = self.loss_function(y_hat, target)
-                self.metrics.step(y_hat, target, Loss=loss)
-
-        metrics = self.metrics.evaluate()
-        for key in self.metric_order:
-            val = f'{metrics[key]:.4f}'
-            pre = (11 - len(val))
-            print(' ' * pre + val, end='│')
-        print()
+                self.metrics.step(y_hat, target, Loss=loss.detach())

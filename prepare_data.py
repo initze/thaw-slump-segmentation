@@ -1,38 +1,32 @@
 #!/usr/bin/env python
 # flake8: noqa: E501
+"""
+Usecase 2 Data Preprocessing Script
+
+Usage:
+    prepare_data.py [options]
+
+Options:
+    -h --help               Show this screen
+    --skip_gdal             Skip the Gdal conversion stage (if it has already been done)
+    --gdal_path=PATH        Path to gdal scripts (ignored if --skip_gdal is passed) [default: ]
+    --gdal_bin=PATH         Path to gdal binaries (ignored if --skip_gdal is passed) [default: ]
+    --nodata_threshold=THR  Throw away data with at least this % of nodata pixels [default: 50]
+    --tile_size=XxY         Tiling size in pixels [default: 256x256]
+    --tile_overlap          Overlap of the tiles in pixels [default: 25]
+    --make_overviews        Make additional overview images in a seperate 'info' folder
+"""
+from skimage.io import imsave
 from pathlib import Path
 from tqdm import tqdm
+import matplotlib.pyplot as plt
 import rasterio as rio
 import numpy as np
 import torch
 import os
 
-# Tiling Settings
-XSIZE = 256
-YSIZE = 256
-OVERLAP = 25
+from docopt import docopt
 
-# Paths setup
-RASTERFILTER = '*3B_AnalyticMS_SR.tif'
-VECTORFILTER = '*.shp'
-
-gdal_path = '/usr/bin'
-gdal_bin = '/usr/bin'
-gdal_merge = os.path.join(gdal_path, 'gdal_merge.py')
-gdal_retile = os.path.join(gdal_path, 'gdal_retile.py')
-gdal_rasterize = os.path.join(gdal_bin, 'gdal_rasterize')
-gdal_translate = os.path.join(gdal_bin, 'gdal_translate')
-
-DATA = Path('data')
-datasets = list(sorted(DATA.glob('*/tiles')))
-
-# Train-val-test split
-setnames = list(map(lambda x: x.parent.name, datasets))
-val_set = ['20190727_160426_104e']
-test_set = ['20190709_042959_08_1057']
-train_set = [t for t in setnames if t not in val_set + test_set]
-
-sets = dict(train=train_set, val=val_set, test=test_set)
 
 
 def others_from_img(img_path):
@@ -90,60 +84,125 @@ def do_gdal_calls(DATASET):
     os.system(f'python {gdal_retile} -ps {XSIZE} {YSIZE} -overlap {OVERLAP} -targetDir {tile_dir_tcvis} {tcvisfile}')
 
 
-for setname, dataset in sets.items():
-    dest = DATA / f'tiles_{setname}'
-    dest.mkdir(exist_ok=False)
+def make_info_picture(imgtensor, masktensor, filename):
+    "Make overview picture"
+    rgbn = np.clip(imgtensor[:4,:,:].numpy().transpose(1, 2, 0) / 3000 * 255, 0, 255).astype(np.uint8)
+    tcvis = np.clip(imgtensor[4:,:,:].numpy().transpose(1, 2, 0), 0, 255).astype(np.uint8)
 
-    data_dir = dest / 'data'
-    data_dir.mkdir()
-    mask_dir = dest / 'mask'
-    mask_dir.mkdir()
+    rgb = rgbn[:,:,:3]
+    nir = rgbn[:,:,[3,3,3]]
+    mask = (masktensor.numpy()[0][:,:,np.newaxis][:,:,[0,0,0]] * 255).astype(np.uint8)
 
-    i = 0
-    for subset in dataset:
-        print(f'Doing {subset}')
-        DATASET = DATA / subset
-        do_gdal_calls(DATASET)
+    img = np.concatenate([
+        np.concatenate([rgb, nir], axis=1),
+        np.concatenate([tcvis, mask], axis=1),
+    ])
+    imsave(filename, img)
 
-        # Convert data to pytorch tensor files (pt) for efficient data loading
-        # Sort for reproducibility
-        for img in tqdm(list(sorted(DATASET.glob('tiles/data/*.tif')))):
-            mask, tcvis = others_from_img(img)
 
-            with rio.open(img) as raster:
-                imgdata = raster.read()
-                # Skip nodata tiles
-                if imgdata.max() == 0:
+if __name__ == "__main__":
+    args = docopt(__doc__, version="Usecase 2 Data Preprocessing Script 1.0")
+    # Tiling Settings
+    XSIZE, YSIZE = map(int, args['--tile_size'].split('x'))
+    OVERLAP = int(args['--tile_overlap'])
+
+    # Paths setup
+    RASTERFILTER = '*3B_AnalyticMS_SR.tif'
+    VECTORFILTER = '*.shp'
+
+    if not args['--skip_gdal']:
+        gdal_path = args['--gdal_path']
+        gdal_bin = args['--gdal_path']
+        gdal_merge = os.path.join(gdal_path, 'gdal_merge.py')
+        gdal_retile = os.path.join(gdal_path, 'gdal_retile.py')
+        gdal_rasterize = os.path.join(gdal_bin, 'gdal_rasterize')
+        gdal_translate = os.path.join(gdal_bin, 'gdal_translate')
+
+    DATA = Path('data')
+    datasets = list(DATA.glob('*/tiles'))
+
+    # Train-val-test split
+    setnames = list(map(lambda x: x.parent.name, datasets))
+    val_set = ['20190727_160426_104e']
+    test_set = ['20190709_042959_08_1057']
+    train_set = [t for t in setnames if t not in val_set + test_set]
+
+    sets = dict(train=train_set, val=val_set, test=test_set)
+
+    train_slump_dir = DATA / 'tiles_train_slump'
+    train_slump_dir.mkdir(exist_ok=False)
+    slump_data_dir = train_slump_dir / 'data'
+    slump_data_dir.mkdir()
+    slump_mask_dir = train_slump_dir / 'mask'
+    slump_mask_dir.mkdir()
+    slump_info_dir = train_slump_dir / 'info'
+    slump_info_dir.mkdir()
+
+    THRESHOLD = float(args['--nodata_threshold']) / 100
+
+    for setname, dataset in sets.items():
+        dest = DATA / f'tiles_{setname}'
+        dest.mkdir(exist_ok=False)
+
+        data_dir = dest / 'data'
+        data_dir.mkdir()
+        mask_dir = dest / 'mask'
+        mask_dir.mkdir()
+        info_dir = dest / 'info'
+        info_dir.mkdir()
+
+        for subset in dataset:
+            print(f'Doing {subset}')
+            DATASET = DATA / subset
+            if not args['--skip_gdal']:
+                do_gdal_calls(DATASET)
+
+            # Convert data to pytorch tensor files (pt) for efficient data loading
+            for img in tqdm(list(DATASET.glob('tiles/data/*.tif'))):
+                mask, tcvis = others_from_img(img)
+
+                with rio.open(img) as raster:
+                    imgdata = raster.read()
+                    # Skip nodata tiles
+                    if (imgdata == 0).all(axis=0).mean() > THRESHOLD:
+                        continue
+                    # Assert data can safely be coerced to int16
+                    assert imgdata.max() < 2 ** 15
+
+                with rio.open(tcvis) as raster:
+                    # Throw away alpha channel
+                    tcdata = raster.read()[:3] 
+                    # Assert data can safely be coerced to int16
+                    assert tcdata.max() < 2 ** 15
+
+                full_data = np.concatenate([imgdata, tcdata], axis=0)
+                imgtensor = torch.from_numpy(full_data.astype(np.int16))
+
+                with rio.open(mask) as raster:
+                    maskdata = raster.read()
+                    assert maskdata.max() <= 1, "Mask can't contain values > 1"
+                    masktensor = torch.from_numpy(maskdata.astype(np.bool))
+
+                # gdal_retile leaves narrow stripes at the right and bottom border,
+                # which are filtered out here:
+                if imgtensor.shape != (7, 256, 256):
                     continue
-                # Assert data can safely be coerced to int16
-                assert imgdata.max() < 2 ** 15
+                if masktensor.shape != (1, 256, 256):
+                    continue
 
-            with rio.open(tcvis) as raster:
-                # Throw away alpha channel
-                tcdata = raster.read()[:3] 
-                # Assert data can safely be coerced to int16
-                assert tcdata.max() < 2 ** 15
+                # Write the tensor files
+                filename = img.stem + '.pt'
+                torch.save(imgtensor, data_dir / filename)
+                torch.save(masktensor, mask_dir / filename)
+                make_info_picture(imgtensor, masktensor,
+                        (info_dir / filename).with_suffix('.jpg'))
 
-            full_data = np.concatenate([imgdata, tcdata], axis=0)
-            imgtensor = torch.from_numpy(full_data.astype(np.int16))
+                if setname == 'train' and masktensor.max() > 0:
+                    torch.save(imgtensor, slump_data_dir / filename)
+                    torch.save(masktensor, slump_mask_dir / filename)
+                    make_info_picture(imgtensor, masktensor,
+                            (slump_info_dir / filename).with_suffix('.jpg'))
 
-            with rio.open(mask) as raster:
-                maskdata = raster.read()
-                assert maskdata.max() <= 1, "Mask can't contain values > 1"
-                masktensor = torch.from_numpy(maskdata.astype(np.bool))
 
-            # gdal_retile leaves narrow stripes at the right and bottom border,
-            # which are filtered out here:
-            if imgtensor.shape != (7, 256, 256):
-                continue
-            if masktensor.shape != (1, 256, 256):
-                continue
-
-            # Write the tensor files
-            filename = img.stem + '.pt'
-            torch.save(imgtensor, data_dir / filename)
-            torch.save(masktensor, mask_dir / filename)
-            i += 1
-
-    # Optional Compression for quicker uploading
-    # os.system(f'cd data && tar -cJf tiles_{setname}.tar.xz tiles_{setname}')
+        # Optional Compression for quicker uploading
+        # os.system(f'cd data && tar -cJf tiles_{setname}.tar.xz tiles_{setname}')

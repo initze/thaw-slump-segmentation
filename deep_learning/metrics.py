@@ -40,7 +40,7 @@ class Metrics():
 
     def step(self, prediction, target, **additional_terms):
         for agg in self.required_aggregators:
-            self.state[agg] = AGGREGATORS[agg](prediction, target)
+            self.state[agg] += AGGREGATORS[agg](prediction, target)
 
         for term in additional_terms:
             agg = self.running_agg.get(term, 0) + additional_terms[term]

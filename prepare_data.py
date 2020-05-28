@@ -122,7 +122,11 @@ if __name__ == "__main__":
     datasets = list(DATA.glob('*/tiles'))
 
     # Train-val-test split
-    setnames = list(map(lambda x: x.parent.name, datasets))
+    setnames = list(sorted(DATA.glob('*')))
+    setnames = [os.path.basename(x) for x in setnames if os.path.isdir(x)]
+    #setnames = [os.path.basename(x) for x in setnames]
+    setnames = [x for x in setnames if x not in ('tiles_train', 'tiles_test', 'tiles_val')]
+
     val_set = ['20190727_160426_104e']
     test_set = ['20190709_042959_08_1057']
     train_set = [t for t in setnames if t not in val_set + test_set]

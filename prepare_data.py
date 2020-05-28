@@ -112,7 +112,7 @@ if __name__ == "__main__":
 
     if not args['--skip_gdal']:
         gdal_path = args['--gdal_path']
-        gdal_bin = args['--gdal_path']
+        gdal_bin = args['--gdal_bin']
         gdal_merge = os.path.join(gdal_path, 'gdal_merge.py')
         gdal_retile = os.path.join(gdal_path, 'gdal_retile.py')
         gdal_rasterize = os.path.join(gdal_bin, 'gdal_rasterize')

@@ -24,6 +24,7 @@ def get_loaders(batch_size, augment=True):
 
     train_loader = DataLoader(train_data,
                               batch_size=batch_size,
+                              shuffle=True,
                               num_workers=0,
                               pin_memory=True)
 

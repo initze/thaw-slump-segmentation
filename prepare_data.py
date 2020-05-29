@@ -23,7 +23,8 @@ import matplotlib.pyplot as plt
 import rasterio as rio
 import numpy as np
 import torch
-import os
+import shutil
+import os, sys
 
 from docopt import docopt
 
@@ -119,7 +120,21 @@ if __name__ == "__main__":
         gdal_translate = os.path.join(gdal_bin, 'gdal_translate')
 
     DATA = Path('data')
-    datasets = list(DATA.glob('*/tiles'))
+
+    old_data_dirs = []
+    for dest_dir in ('tiles_train', 'tiles_test', 'tiles_val', 'tiles_train_slump'):
+        check_dir = DATA / dest_dir
+        if check_dir.exists():
+            old_data_dirs.append(check_dir)
+    if old_data_dirs:
+        print(f"Found old data directories: {', '.join(dir.name for dir in old_data_dirs)}.")
+        decision = input("Delete? [y/N]")
+        if decision.lower() == 'y':
+            for old_dir in old_data_dirs:
+                shutil.rmtree(old_dir)
+        else:
+            print("Won't overwrite old data directories.")
+            sys.exit(1)
 
     # Train-val-test split
     setnames = list(sorted(DATA.glob('*')))

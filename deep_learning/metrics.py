@@ -2,19 +2,19 @@ import numpy as np
 
 
 def true_positive(prediction, target):
-    return ((prediction > 0) * (target > 0)).float().sum().item()
+    return ((prediction > 0) * (target > 0)).float().sum()
 
 
 def false_positive(prediction, target):
-    return ((prediction > 0) * (target <= 0)).float().sum().item()
+    return ((prediction > 0) * (target <= 0)).float().sum()
 
 
 def false_negative(prediction, target):
-    return ((prediction <= 0) * (target > 0)).float().sum().item()
+    return ((prediction <= 0) * (target > 0)).float().sum()
 
 
 def true_negative(prediction, target):
-    return ((prediction <= 0) * (target <= 0)).float().sum().item()
+    return ((prediction <= 0) * (target <= 0)).float().sum()
 
 
 AGGREGATORS = {

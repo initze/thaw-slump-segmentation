@@ -6,6 +6,7 @@ import rasterio as rio
 import ee
 from pyproj import Transformer
 import requests
+import shutil
 import zipfile
 
 
@@ -17,17 +18,14 @@ def is_clip(input_dir):
     pass
 
 def get_tcvis_from_gee(image_dir, ee_imagecollection, buffer=1000, resolution=3, remove_files=True):
-    """
-    Download and extract image data from Earthengine and fit to image
-    :param image_dir:
-    :param ee_imagecollection:
-    :param buffer:
-    :param resolution:
-    :param remove_files:
-    :return:
-    """
+
     image_dir = os.path.abspath(image_dir)
     assert os.path.isdir(image_dir)
+    outfile_tcvis = os.path.join(image_dir, 'tcvis.tif')
+    if os.path.exists(outfile_tcvis):
+        print('"tcvis.tif" already exists. Skipping download!')
+    else:
+        print("Starting download Dataset from Google Earthengine")
     imlist = glob.glob(os.path.join(image_dir, r'*3B_AnalyticMS_SR*.tif'))
     impath = imlist[0]
     basepath = os.path.basename(image_dir)
@@ -58,16 +56,14 @@ def get_tcvis_from_gee(image_dir, ee_imagecollection, buffer=1000, resolution=3,
         zip_ref.extractall(image_dir)
 
     infile = os.path.join(image_dir, basename_tcvis + '.tif')
-    outfile = os.path.join(image_dir, 'tcvis.tif')
-    s_warp = f'{gdalwarp} -t_srs {epsg} -tr {resolution} {resolution} -te {xmin} {ymin} {xmax} {ymax} {infile} {outfile}'
+
+    s_warp = f'{gdalwarp} -t_srs {epsg} -tr {resolution} {resolution} -te {xmin} {ymin} {xmax} {ymax} {infile} {outfile_tcvis}'
 
     os.system(s_warp)
 
     if remove_files:
         os.remove(zippath)
         os.remove(infile)
-
-    return 0
 
 
 def rename_clip_to_standard(image_dir):
@@ -77,7 +73,8 @@ def rename_clip_to_standard(image_dir):
         for p in imlist:
             p_out = os.path.join(image_dir, os.path.basename(p).replace('_clip', ''))
             os.rename(p, p_out)
-        pass
+    else:
+        print('No "_clip" naming found. Assume renaming not necessary')
 
 
 def burn_mask(file_src, file_dst, file_udm, mask_value=0):
@@ -100,27 +97,33 @@ def get_mask_images(image_dir, udm='*udm.tif', images=['_SR.tif', 'tcvis.tif']):
     udm_file = [f for f in flist if 'udm.tif' in f][0]
     remaining_files = [f for f in flist if f not in [udm_file, *image_files]]
 
-    return dict(udm=udm_file, images=image_files, remaining_files=remaining_files)
+    return dict(udm=udm_file, images=image_files, others=remaining_files)
+
+
+def move_files(image_dir, target_dir, backup_dir):
+    mask_image_paths = get_mask_images(image_dir)
+    # good files
+    infiles = mask_image_paths['others'] + [(mask_image_paths['udm'])]
+    [shutil.copy(infile, target_dir) for infile in infiles]
+    # all files
+    shutil.move(image_dir, backup_dir)
 
 
 def mask_input_data(image_dir):
     mask_image_paths = get_mask_images(image_dir)
     for image in mask_image_paths['images']:
-        image_out = os.path.join(IMAGE_DIR, os.path.basename(image_dir), os.path.basename(image))
-        os.makedirs(os.path.dirname(image_out), exist_ok=True)
+        dir_out = os.path.join(DATA_DIR, os.path.basename(image_dir))
+        image_out = os.path.join(dir_out, os.path.basename(image))
+        os.makedirs(dir_out, exist_ok=True)
         burn_mask(image, image_out, mask_image_paths['udm'])
-
-
-def move_files():
-    pass
 
 
 if __name__ == "__main__":
 
-    BASEDIR = '.'
+    BASEDIR = os.path.abspath('.')
     INPUT_DATA_DIR = os.path.join(BASEDIR, 'input_data')
-    TRASH_DIR = os.path.join(BASEDIR, 'preprocessed')
-    IMAGE_DIR = os.path.join(BASEDIR, 'data')
+    BACKUP_DIR = os.path.join(BASEDIR, 'backup')
+    DATA_DIR = os.path.join(BASEDIR, 'data')
 
     gdalwarp = 'gdalwarp'
 
@@ -136,5 +139,6 @@ if __name__ == "__main__":
                                buffer=1000, resolution=3, remove_files=True)
             rename_clip_to_standard(image_dir)
             mask_input_data(image_dir)
+            move_files(image_dir, os.path.join(DATA_DIR, os.path.basename(image_dir)), os.path.join(BACKUP_DIR, os.path.basename(image_dir)))
     else:
-        print("Empty Input Data Directory!")
+        print("Empty Input Data Directory! No Data available to process!")

@@ -80,8 +80,35 @@ def rename_clip_to_standard(image_dir):
         pass
 
 
-def mask_input_data():
-    pass
+def burn_mask(file_src, file_dst, file_udm, mask_value=0):
+    with rio.Env():
+        # the new file's profile, we start with the profile of the source
+        with rio.open(file_src) as ds_src:
+            with rio.open(file_udm) as ds_udm:
+                clear_mask = ds_udm.read()[0]==mask_value
+                data = ds_src.read()*clear_mask
+                profile = ds_src.profile #check projection here
+                with rio.open(file_dst, 'w', **profile) as ds_dst:
+                    ds_dst.write(data)
+
+
+def get_mask_images(image_dir, udm='*udm.tif', images=['_SR.tif', 'tcvis.tif']):
+    flist = glob.glob(os.path.join(image_dir, '*'))
+    image_files = []
+    for im in images:
+        image_files.extend([f for f in flist if im in f])
+    udm_file = [f for f in flist if 'udm.tif' in f][0]
+    remaining_files = [f for f in flist if f not in [udm_file, *image_files]]
+
+    return dict(udm=udm_file, images=image_files, remaining_files=remaining_files)
+
+
+def mask_input_data(image_dir):
+    mask_image_paths = get_mask_images(image_dir)
+    for image in mask_image_paths['images']:
+        image_out = os.path.join(IMAGE_DIR, os.path.basename(image_dir), os.path.basename(image))
+        os.makedirs(os.path.dirname(image_out), exist_ok=True)
+        burn_mask(image, image_out, mask_image_paths['udm'])
 
 
 def move_files():
@@ -89,10 +116,15 @@ def move_files():
 
 
 if __name__ == "__main__":
-    # TODO: remove hardcoded part
+
+    BASEDIR = '.'
+    INPUT_DATA_DIR = os.path.join(BASEDIR, 'input_data')
+    TRASH_DIR = os.path.join(BASEDIR, 'preprocessed')
+    IMAGE_DIR = os.path.join(BASEDIR, 'data')
+
     gdalwarp = 'gdalwarp'
 
-    dir_list = check_input_data('./input_data')
+    dir_list = check_input_data(INPUT_DATA_DIR)
     if len(dir_list) > 0:
         try:
             ee.Initialize()
@@ -103,5 +135,6 @@ if __name__ == "__main__":
             get_tcvis_from_gee(image_dir, ee.ImageCollection("users/ingmarnitze/TCTrend_SR_2000-2019_TCVIS").mosaic(),
                                buffer=1000, resolution=3, remove_files=True)
             rename_clip_to_standard(image_dir)
+            mask_input_data(image_dir)
     else:
         print("Empty Input Data Directory!")

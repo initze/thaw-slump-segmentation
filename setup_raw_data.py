@@ -17,6 +17,15 @@ def is_clip(input_dir):
     pass
 
 def get_tcvis_from_gee(image_dir, ee_imagecollection, buffer=1000, resolution=3, remove_files=True):
+    """
+    Download and extract image data from Earthengine and fit to image
+    :param image_dir:
+    :param ee_imagecollection:
+    :param buffer:
+    :param resolution:
+    :param remove_files:
+    :return:
+    """
     image_dir = os.path.abspath(image_dir)
     assert os.path.isdir(image_dir)
     imlist = glob.glob(os.path.join(image_dir, r'*3B_AnalyticMS_SR*.tif'))
@@ -61,6 +70,16 @@ def get_tcvis_from_gee(image_dir, ee_imagecollection, buffer=1000, resolution=3,
     return 0
 
 
+def rename_clip_to_standard(image_dir):
+    image_dir = os.path.abspath(image_dir)
+    imlist = glob.glob(os.path.join(image_dir, r'*_clip*'))
+    if len(imlist) > 0:
+        for p in imlist:
+            p_out = os.path.join(image_dir, os.path.basename(p).replace('_clip', ''))
+            os.rename(p, p_out)
+        pass
+
+
 def mask_input_data():
     pass
 
@@ -83,3 +102,6 @@ if __name__ == "__main__":
         for image_dir in dir_list:
             get_tcvis_from_gee(image_dir, ee.ImageCollection("users/ingmarnitze/TCTrend_SR_2000-2019_TCVIS").mosaic(),
                                buffer=1000, resolution=3, remove_files=True)
+            rename_clip_to_standard(image_dir)
+    else:
+        print("Empty Input Data Directory!")

@@ -109,9 +109,11 @@ if __name__ == "__main__":
         # Train epoch
         trainer.train_epoch(tqdm(train_loader))
         metrics = trainer.metrics.evaluate()
+        logstr = f'Epoch {trainer.epoch:02d} - Train: ' \
+               + ', '.join(f'{key}: {val:.2f}' for key, val in metrics.items())
+        print(logstr)
         with (log_dir / 'metrics.txt').open('a+') as f:
-            print(f'Epoch {trainer.epoch:02d} - Train: ', end='', file=f)
-            print(', '.join(f'{key}: {val:.2f}' for key, val in metrics.items()), file=f)
+            print(logstr, file=f)
 
         # Save model Checkpoint
         torch.save(trainer.model.state_dict(), checkpoints / f'{trainer.epoch:02d}.pt')
@@ -119,10 +121,11 @@ if __name__ == "__main__":
         # Val epoch
         trainer.val_epoch(val_loader)
         metrics = trainer.metrics.evaluate()
-
-        with (log_dir / 'metrics.txt').open('a') as f:
-            print(f'Epoch {trainer.epoch:02d} - Val:   ', end='', file=f)
-            print(', '.join(f'{key}: {val:.2f}' for key, val in metrics.items()), file=f)
+        logstr = f'Epoch {trainer.epoch:02d} - Val: ' \
+               + ', '.join(f'{key}: {val:.2f}' for key, val in metrics.items())
+        print(logstr)
+        with (log_dir / 'metrics.txt').open('a+') as f:
+            print(logstr, file=f)
 
         with torch.no_grad():
             pred = trainer.model(vis_imgs)

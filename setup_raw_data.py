@@ -2,8 +2,10 @@
 
 import glob
 import os
-import rasterio as rio
+
 import ee
+import rasterio as rio
+
 from pyproj import Transformer
 import requests
 import shutil
@@ -130,14 +132,12 @@ if __name__ == "__main__":
 
     dir_list = check_input_data(INPUT_DATA_DIR)
     if len(dir_list) > 0:
-        ee.Initialize()
-        """
+
         try:
             ee.Initialize()
         except:
             ee.Authenticate()
             ee.Initialize()
-        """
         for image_dir in dir_list:
             print(f'\nStarting preprocessing: {os.path.basename(image_dir)}')
             rename_clip_to_standard(image_dir)

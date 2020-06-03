@@ -26,7 +26,7 @@ def get_tcvis_from_gee(image_dir, ee_imagecollection, buffer=1000, resolution=3,
         print('"tcvis.tif" already exists. Skipping download!')
     else:
         print("Starting download Dataset from Google Earthengine")
-    imlist = glob.glob(os.path.join(image_dir, r'*3B_AnalyticMS_SR*.tif'))
+    imlist = glob.glob(os.path.join(image_dir, r'*3B_AnalyticMS_SR.tif'))
     impath = imlist[0]
     basepath = os.path.basename(image_dir)
     basename_tcvis = basepath + '_TCVIS'
@@ -72,7 +72,8 @@ def rename_clip_to_standard(image_dir):
     if len(imlist) > 0:
         for p in imlist:
             p_out = os.path.join(image_dir, os.path.basename(p).replace('_clip', ''))
-            os.rename(p, p_out)
+            if not os.path.exists(p_out):
+                os.rename(p, p_out)
     else:
         print('No "_clip" naming found. Assume renaming not necessary')
 
@@ -135,9 +136,10 @@ if __name__ == "__main__":
             ee.Authenticate()
             ee.Initialize()
         for image_dir in dir_list:
+            print(f'\nStarting preprocessing: {os.path.basename(image_dir)}')
+            rename_clip_to_standard(image_dir)
             get_tcvis_from_gee(image_dir, ee.ImageCollection("users/ingmarnitze/TCTrend_SR_2000-2019_TCVIS").mosaic(),
                                buffer=1000, resolution=3, remove_files=True)
-            rename_clip_to_standard(image_dir)
             mask_input_data(image_dir)
             move_files(image_dir, os.path.join(DATA_DIR, os.path.basename(image_dir)), os.path.join(BACKUP_DIR, os.path.basename(image_dir)))
     else:

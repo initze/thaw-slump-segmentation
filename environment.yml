@@ -112,6 +112,7 @@ dependencies:
   - pytorch=1.5.0=py3.7_cuda102_cudnn7_0
   - pytz=2020.1=pyh9f0ad1d_0
   - pywavelets=1.1.1=py37he774522_0
+  - pyyaml
   - qt=5.9.7=vc14h73c81de_0
   - rasterio=1.1.0=py37h039b02d_0
   - requests=2.23.0=pyh8c360ce_2

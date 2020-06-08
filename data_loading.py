@@ -37,4 +37,6 @@ def get_batch(data_names):
         mask_file, = base_dir.glob(f'*/mask/{sample}.pt')
         masks.append(torch.load(mask_file))
 
-    return torch.stack(tensors, dim=0).float(), torch.stack(masks, dim=0).float()
+    data = torch.stack(tensors, dim=0).float()
+
+    return data * normalize, torch.stack(masks, dim=0).float()

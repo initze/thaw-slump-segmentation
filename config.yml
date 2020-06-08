@@ -3,20 +3,26 @@ model: UNet
 input_channels: 7
 modelscale: 8
 # Data Configuration
-train_data:
-  - "20190618_201847_1035"
-  - "20190618_201848_1035"
-  - "20190623_200555_0e19"
-val_data:
-  - "20190727_160426_104e"
-test_data:
-  - "20190709_042959_08_1057"
+datasets:
+  train:
+    augment: true
+    shuffle: true
+    folders:
+      - "20190618_201847_1035"
+      - "20190618_201848_1035"
+      - "20190623_200555_0e19"
+  val:
+    augment: false
+    shuffle: false
+    folders:
+      - "20190727_160426_104e"
+  test:
+    augment: false
+    shuffle: false
+    folders:
+      - "20190709_042959_08_1057"
 # Training Parameters
-batchsize: 32
-epochs: 20
-loss_function:
-  type: BinaryCrossEntropy
-  pos_weight: 150
+batch_size: 32
 learning_rate: 0.001
 # Visualization
 visualization_tiles:
@@ -24,3 +30,21 @@ visualization_tiles:
   - "20190727_160426_104e_3B_AnalyticMS_SR_07_29"
   - "20190727_160426_104e_3B_AnalyticMS_SR_12_16"
   - "20190727_160426_104e_3B_AnalyticMS_SR_13_18"
+schedule:
+  - phase: Slump Pretraining
+    epochs: 10
+    loss_function:
+      type: BinaryCrossEntropy
+    steps:
+      - train_on: slump_tiles(train)
+      - validate_on: val 
+      - log_images
+  - phase: Full Training
+    epochs: 5
+    loss_function:
+      type: BinaryCrossEntropy
+      pos_weight: 150
+    steps:
+      - train_on: train
+      - validate_on: val
+      - log_images

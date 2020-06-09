@@ -15,8 +15,10 @@ Options:
                        Otherwise, training starts from scratch
     --lr=LR            Learning rate to use [default: 1e-4]
     --posweight=PW     Weighting for positive examples [default: 150]
+    --example=bool     Plot examples [default: False]
 """
 import sys
+import distutils.util
 from datetime import datetime
 from pathlib import Path
 
@@ -44,7 +46,7 @@ def showexample(batch, pred, idx, filename):
     batch_img, batch_target = batch
     batch_img = batch_img.to(torch.float)
 
-    rgb = batch_img[idx].cpu().numpy()[[2, 1, 0]]
+    rgb = batch_img[idx].cpu().numpy()[[4, 3, 2]]
     a1.imshow(np.clip(rgb.transpose(1, 2, 0), 0, 1))
     a1.axis('off')
     a2.imshow(batch_target[idx, 0].cpu(), **heatmap_args)
@@ -86,17 +88,14 @@ if __name__ == "__main__":
     augment = args['--augment'] == 'True'
     train_loader, val_loader = get_loaders(batch_size=batch_size, augment=augment)
 
-    vis_tiles = [
-        '20190727_160426_104e_3B_AnalyticMS_SR_06_31',
-        '20190727_160426_104e_3B_AnalyticMS_SR_07_29',
-        '20190727_160426_104e_3B_AnalyticMS_SR_12_16',
-        '20190727_160426_104e_3B_AnalyticMS_SR_13_18'
-    ]
-    val_names = [n.stem for n, *_ in val_loader.dataset.index]
-    vis_idx = [val_names.index(tile) for tile in vis_tiles]
-    vis_batch = list(zip(*[val_loader.dataset[i] for i in vis_idx]))
-    vis_batch = [torch.stack(i, dim=0) for i in vis_batch]
-    vis_imgs = vis_batch[0].to(trainer.dev)
+    print(bool(distutils.util.strtobool(args['--example'])))
+    if bool(distutils.util.strtobool(args['--example'])):
+        vis_tiles = []
+        val_names = [n.stem for n, *_ in val_loader.dataset.index]
+        vis_idx = [val_names.index(tile) for tile in vis_tiles]
+        vis_batch = list(zip(*[val_loader.dataset[i] for i in vis_idx]))
+        vis_batch = [torch.stack(i, dim=0) for i in vis_batch]
+        vis_imgs = vis_batch[0].to(trainer.dev)
 
     log_dir = Path('logs') / datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
     log_dir.mkdir(exist_ok=False)
@@ -127,9 +126,10 @@ if __name__ == "__main__":
         with (log_dir / 'metrics.txt').open('a+') as f:
             print(logstr, file=f)
 
-        with torch.no_grad():
-            pred = trainer.model(vis_imgs)
-        for i, tile in enumerate(vis_tiles):
-            filename = log_dir / tile / f'{trainer.epoch}.png'
-            filename.parent.mkdir(exist_ok=True)
-            showexample(vis_batch, pred, i, filename)
+        if bool(distutils.util.strtobool(args['--example'])):
+            with torch.no_grad():
+                pred = trainer.model(vis_imgs)
+            for i, tile in enumerate(vis_tiles):
+                filename = log_dir / tile / f'{trainer.epoch}.png'
+                filename.parent.mkdir(exist_ok=True)
+                showexample(vis_batch, pred, i, filename)

@@ -19,7 +19,6 @@ Options:
 from skimage.io import imsave
 from pathlib import Path
 from tqdm import tqdm
-import matplotlib.pyplot as plt
 import rasterio as rio
 import numpy as np
 import torch
@@ -27,7 +26,6 @@ import shutil
 import os, sys
 
 from docopt import docopt
-
 
 
 def others_from_img(img_path):
@@ -57,8 +55,7 @@ def glob_file(DATASET, filter_string):
 
 
 def do_gdal_calls(DATASET):
-    maskfile = DATASET / 'mask.tif'
-    maskfile2 = DATASET / f'{DATASET.name}_mask.tif'
+    maskfile = DATASET / f'{DATASET.name}_mask.tif'
     tcvisfile = DATASET / 'tcvis.tif'
 
     tile_dir_data = DATASET / 'tiles' / 'data'
@@ -71,18 +68,10 @@ def do_gdal_calls(DATASET):
     tile_dir_mask.mkdir(exist_ok=True)
 
     rasterfile = glob_file(DATASET, RASTERFILTER)
-    vectorfile = glob_file(DATASET, VECTORFILTER)
-    """
-    # Create temporary raster maskfile
-    os.system(f'{gdal_merge} -createonly -init 0 -o {maskfile} -ot Byte -co COMPRESS=DEFLATE {rasterfile}')
-    # Add empty band to mask
-    os.system(f'{gdal_translate} -of GTiff -ot Byte -co COMPRESS=DEFLATE -b 1 {maskfile} {maskfile2}')
-    # Burn digitized polygons into mask
-    os.system(f'{gdal_rasterize} -l {DATASET.name} -a label {vectorfile} {maskfile2}')
+
     # Retile data, mask and tcvis
-    """
     os.system(f'python {gdal_retile} -ps {XSIZE} {YSIZE} -overlap {OVERLAP} -targetDir {tile_dir_data} {rasterfile}')
-    os.system(f'python {gdal_retile} -ps {XSIZE} {YSIZE} -overlap {OVERLAP} -targetDir {tile_dir_mask} {maskfile2}')
+    os.system(f'python {gdal_retile} -ps {XSIZE} {YSIZE} -overlap {OVERLAP} -targetDir {tile_dir_mask} {maskfile}')
     os.system(f'python {gdal_retile} -ps {XSIZE} {YSIZE} -overlap {OVERLAP} -targetDir {tile_dir_tcvis} {tcvisfile}')
 
 
@@ -142,8 +131,8 @@ if __name__ == "__main__":
     setnames = [os.path.basename(x) for x in setnames if os.path.isdir(x)]
     setnames = [x for x in setnames if x not in ('tiles_train', 'tiles_test', 'tiles_val')]
 
-    val_set = ['20190618_214633_0f31']
-    test_set = ['20190618_214633_0f31']
+    val_set = ['20190714_194400_1035']
+    test_set = ['20190803_164436_1048']
     train_set = [t for t in setnames if t not in val_set + test_set]
 
     sets = dict(train=train_set, val=val_set, test=test_set)
@@ -221,7 +210,3 @@ if __name__ == "__main__":
                     torch.save(masktensor, slump_mask_dir / filename)
                     make_info_picture(imgtensor, masktensor,
                             (slump_info_dir / filename).with_suffix('.jpg'))
-
-
-        # Optional Compression for quicker uploading
-        # os.system(f'cd data && tar -cJf tiles_{setname}.tar.xz tiles_{setname}')

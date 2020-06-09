@@ -94,7 +94,6 @@ def rename_clip_to_standard(image_directory):
         return 2
 
 
-# TODO: add rastermask image
 def burn_mask(file_src, file_dst, file_udm, mask_value=0):
     with rio.Env():
         with rio.open(file_src) as ds_src:

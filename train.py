@@ -88,7 +88,7 @@ if __name__ == "__main__":
     augment = args['--augment'] == 'True'
     train_loader, val_loader = get_loaders(batch_size=batch_size, augment=augment)
 
-    print(bool(distutils.util.strtobool(args['--example'])))
+    # need distutils to transform str input to bool
     if bool(distutils.util.strtobool(args['--example'])):
         vis_tiles = []
         val_names = [n.stem for n, *_ in val_loader.dataset.index]

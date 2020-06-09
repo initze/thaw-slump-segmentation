@@ -7,32 +7,28 @@ Usage:
 Options:
     -h --help          Show this screen
     --summary          Only print model summary and return (Requires the torchsummary package)
-    --epochs=EPOCHS    Number of epochs to train [default: 20]
-    --batchsize=BS     Specify batch size [default: 8]
-    --modelscale=MS    Model feature space scale [default: 32]
-    --augment=bool     Whether to use data augmentation [default: True]
-    --resume=CHKPT     If a checkpoint path is given, resume training from a given checkpoint.
-                       Otherwise, training starts from scratch
-    --lr=LR            Learning rate to use [default: 1e-4]
-    --posweight=PW     Weighting for positive examples [default: 150]
-    --example=bool     Plot examples [default: False]
+    --config=CONFIG    Specify run config to use [default: config.yml]
 """
 import sys
 import distutils.util
 from datetime import datetime
 from pathlib import Path
+import shutil
 
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
-import torch.nn as nn
 from tqdm import tqdm
 
 from deep_learning import Trainer
-from deep_learning.models import UNet
-from data_loading import get_loaders
+from deep_learning.models import get_model
+from deep_learning.loss_functions import get_loss
+from data_loading import get_loader, get_filtered_loader, get_batch
+
+import re
 
 from docopt import docopt
+import yaml
 
 
 def showexample(batch, pred, idx, filename):
@@ -62,74 +58,110 @@ def showexample(batch, pred, idx, filename):
     plt.close()
 
 
-if __name__ == "__main__":
-    args = docopt(__doc__, version="Usecase 2 Training Script 1.0")
+def scoped_get(key, *scopestack):
+    for scope in scopestack:
+        value = scope.get(key)
+        if value is not None:
+            return value
+    raise ValueError(f'Could not find "{key}" in any scope.')
 
-    modelscale = int(args['--modelscale'])
-    model = UNet(7, 1, base_channels=modelscale)
-    if args['--resume']:
-        model.load_state_dict(torch.load(args['--resume']))
+
+def get_dataloader(name):
+    if name in dataset_cache:
+        return dataset_cache[name]
+    if name in config['datasets']:
+        ds_config = config['datasets'][name]
+        if 'batch_size' not in ds_config:
+            ds_config['batch_size'] = config['batch_size']
+        dataset_cache[name] = get_loader(**ds_config)
+        return dataset_cache[name]
+    else:
+        func, arg = re.search(r'(\w+)\((\w+)\)', name).groups()
+        if func == 'slump_tiles':
+            ds_config = config['datasets'][arg]
+            if 'batch_size' not in ds_config:
+                ds_config['batch_size'] = config['batch_size']
+            dataset_cache[name] = get_filtered_loader(**ds_config)
+    return dataset_cache[name]
+
+
+
+if __name__ == "__main__":
+    cli_args = docopt(__doc__, version="Usecase 2 Training Script 1.0")
+    config_file = Path(cli_args['--config'])
+    config = yaml.load(config_file.open(), Loader=yaml.SafeLoader)
+
+    modelclass = get_model(config['model'])
+    model = modelclass(config['input_channels'], 1, base_channels=config['modelscale'])
+
+    # TODO: Resume from checkpoint
 
     trainer = Trainer(model)
-    posweight = float(args['--posweight'])
-    loss_fn = nn.BCEWithLogitsLoss(pos_weight=posweight * torch.ones([]))
-    trainer.loss_function = loss_fn.to(trainer.dev)
 
-    lr = float(args['--lr'])
+    lr = config['learning_rate']
     trainer.optimizer = torch.optim.Adam(trainer.model.parameters(), lr)
 
-    if args['--summary']:
+    if cli_args['--summary']:
         from torchsummary import summary
         summary(trainer.model, [(7, 256, 256)])
         sys.exit(0)
 
-    batch_size = int(args['--batchsize'])
-    assert args['--augment'] == 'True' or args['--augment'] == 'False'
-    augment = args['--augment'] == 'True'
-    train_loader, val_loader = get_loaders(batch_size=batch_size, augment=augment)
+    dataset_cache = {}
 
-    # need distutils to transform str input to bool
-    if bool(distutils.util.strtobool(args['--example'])):
-        vis_tiles = []
-        val_names = [n.stem for n, *_ in val_loader.dataset.index]
-        vis_idx = [val_names.index(tile) for tile in vis_tiles]
-        vis_batch = list(zip(*[val_loader.dataset[i] for i in vis_idx]))
-        vis_batch = [torch.stack(i, dim=0) for i in vis_batch]
-        vis_imgs = vis_batch[0].to(trainer.dev)
+    vis_batch = get_batch(config['visualization_tiles'])
+    vis_imgs = vis_batch[0].to(trainer.dev)
 
     log_dir = Path('logs') / datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
     log_dir.mkdir(exist_ok=False)
+
+    shutil.copy(config_file, log_dir / 'config.yml')
+
     checkpoints = log_dir / 'checkpoints'
     checkpoints.mkdir()
 
-    EPOCHS = int(args['--epochs'])
-
-    for epoch in range(EPOCHS):
-        # Train epoch
-        trainer.train_epoch(tqdm(train_loader))
-        metrics = trainer.metrics.evaluate()
-        logstr = f'Epoch {trainer.epoch:02d} - Train: ' \
-               + ', '.join(f'{key}: {val:.2f}' for key, val in metrics.items())
-        print(logstr)
+    for phase in config['schedule']:
+        print(f'Starting phase "{phase["phase"]}"')
         with (log_dir / 'metrics.txt').open('a+') as f:
-            print(logstr, file=f)
+            print(f'Phase {phase["phase"]}', file=f)
+        for epoch in range(phase['epochs']):
+            # Epoch setup
+            loss_fn = get_loss(scoped_get('loss_function', phase, config))
+            trainer.loss_function = loss_fn.to(trainer.dev)
 
-        # Save model Checkpoint
-        torch.save(trainer.model.state_dict(), checkpoints / f'{trainer.epoch:02d}.pt')
+            datasets_config = scoped_get('datasets', phase, config)
 
-        # Val epoch
-        trainer.val_epoch(val_loader)
-        metrics = trainer.metrics.evaluate()
-        logstr = f'Epoch {trainer.epoch:02d} - Val: ' \
-               + ', '.join(f'{key}: {val:.2f}' for key, val in metrics.items())
-        print(logstr)
-        with (log_dir / 'metrics.txt').open('a+') as f:
-            print(logstr, file=f)
-
-        if bool(distutils.util.strtobool(args['--example'])):
-            with torch.no_grad():
-                pred = trainer.model(vis_imgs)
-            for i, tile in enumerate(vis_tiles):
-                filename = log_dir / tile / f'{trainer.epoch}.png'
-                filename.parent.mkdir(exist_ok=True)
-                showexample(vis_batch, pred, i, filename)
+            for step in phase['steps']:
+                if type(step) is dict:
+                    assert len(step) == 1
+                    (command, key), = step.items()
+                else:
+                    command = step
+                if command == 'train_on':
+                    # Training step
+                    data_loader = get_dataloader(key)
+                    trainer.train_epoch(tqdm(data_loader))
+                    metrics = trainer.metrics.evaluate()
+                    logstr = f'Epoch {trainer.epoch:02d} - Train: ' \
+                           + ', '.join(f'{key}: {val:.2f}' for key, val in metrics.items())
+                    print(logstr)
+                    with (log_dir / 'metrics.txt').open('a+') as f:
+                        print(logstr, file=f)
+                    # Save model Checkpoint
+                    torch.save(trainer.model.state_dict(), checkpoints / f'{trainer.epoch:02d}.pt')
+                elif command == 'validate_on':
+                    # Validation step
+                    data_loader = get_dataloader(key)
+                    trainer.val_epoch(data_loader)
+                    metrics = trainer.metrics.evaluate()
+                    logstr = f'Epoch {trainer.epoch:02d} - Val: ' \
+                           + ', '.join(f'{key}: {val:.2f}' for key, val in metrics.items())
+                    print(logstr)
+                    with (log_dir / 'metrics.txt').open('a+') as f:
+                        print(logstr, file=f)
+                elif command == 'log_images':
+                    with torch.no_grad():
+                        pred = trainer.model(vis_imgs)
+                    for i, tile in enumerate(config['visualization_tiles']):
+                        filename = log_dir / tile / f'{trainer.epoch}.png'
+                        filename.parent.mkdir(exist_ok=True)
+                        showexample(vis_batch, pred, i, filename)

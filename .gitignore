@@ -1,5 +1,8 @@
 .ipynb_checkpoints/
 data/
+data_input/
+data_backup/
+data_pytorch/
 __pycache__/
 .vim/
 archive/

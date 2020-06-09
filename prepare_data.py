@@ -72,14 +72,15 @@ def do_gdal_calls(DATASET):
 
     rasterfile = glob_file(DATASET, RASTERFILTER)
     vectorfile = glob_file(DATASET, VECTORFILTER)
-
+    """
     # Create temporary raster maskfile
-    os.system(f'python {gdal_merge} -createonly -init 0 -o {maskfile} -ot Byte -co COMPRESS=DEFLATE {rasterfile}')
+    os.system(f'{gdal_merge} -createonly -init 0 -o {maskfile} -ot Byte -co COMPRESS=DEFLATE {rasterfile}')
     # Add empty band to mask
     os.system(f'{gdal_translate} -of GTiff -ot Byte -co COMPRESS=DEFLATE -b 1 {maskfile} {maskfile2}')
     # Burn digitized polygons into mask
     os.system(f'{gdal_rasterize} -l {DATASET.name} -a label {vectorfile} {maskfile2}')
     # Retile data, mask and tcvis
+    """
     os.system(f'python {gdal_retile} -ps {XSIZE} {YSIZE} -overlap {OVERLAP} -targetDir {tile_dir_data} {rasterfile}')
     os.system(f'python {gdal_retile} -ps {XSIZE} {YSIZE} -overlap {OVERLAP} -targetDir {tile_dir_mask} {maskfile2}')
     os.system(f'python {gdal_retile} -ps {XSIZE} {YSIZE} -overlap {OVERLAP} -targetDir {tile_dir_tcvis} {tcvisfile}')
@@ -139,11 +140,10 @@ if __name__ == "__main__":
     # Train-val-test split
     setnames = list(sorted(DATA.glob('*')))
     setnames = [os.path.basename(x) for x in setnames if os.path.isdir(x)]
-    #setnames = [os.path.basename(x) for x in setnames]
     setnames = [x for x in setnames if x not in ('tiles_train', 'tiles_test', 'tiles_val')]
 
-    val_set = ['20190727_160426_104e']
-    test_set = ['20190709_042959_08_1057']
+    val_set = ['20190618_214633_0f31']
+    test_set = ['20190618_214633_0f31']
     train_set = [t for t in setnames if t not in val_set + test_set]
 
     sets = dict(train=train_set, val=val_set, test=test_set)

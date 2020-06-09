@@ -1,38 +1,11 @@
 #!/usr/bin/env python
 
 import os
-import glob
 
 import ee
 
 from deep_learning.data_pre_processing import *
 
-
-def vector_to_raster_mask(image_directory):
-    basename = os.path.basename(image_directory)
-    vectorfile = glob.glob(os.path.join(image_directory, '*.shp'))[0]
-    rasterfile = glob.glob(os.path.join(image_directory, r'*3B_AnalyticMS_SR.tif'))[0]
-    maskfile = os.path.join(image_directory, 'mask.tif')
-    maskfile2 = os.path.join(image_directory, f'{basename}_mask.tif')
-
-    gdal_path = r'C:\Users\initze\AppData\Local\Continuum\anaconda3\envs\aicore\Scripts'
-    gdal_bin = r'C:\Users\initze\AppData\Local\Continuum\anaconda3\envs\aicore\Library\bin'
-    gdal_merge = os.path.join(gdal_path, 'gdal_merge.py')
-    gdal_translate = os.path.join(gdal_bin, 'gdal_translate')
-    gdal_rasterize = os.path.join(gdal_bin, 'gdal_rasterize')
-
-    try:
-        s_merge = f'python {gdal_merge} -createonly -init 0 -o {maskfile} -ot Byte -co COMPRESS=DEFLATE {rasterfile}'
-        os.system(s_merge)
-        # Add empty band to mask
-        s_translate = f'{gdal_translate} -of GTiff -ot Byte -co COMPRESS=DEFLATE -b 1 {maskfile} {maskfile2}'
-        os.system(s_translate)
-        # Burn digitized polygons into mask
-        s_rasterize = f'{gdal_rasterize} -l {basename} -a label {vectorfile} {maskfile2}'
-        os.system(s_rasterize)
-    except:
-        return 2
-    return 1
 
 if __name__ == "__main__":
 

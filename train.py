@@ -10,6 +10,7 @@ Options:
     --config=CONFIG    Specify run config to use [default: config.yml]
 """
 import sys
+import distutils.util
 from datetime import datetime
 from pathlib import Path
 import shutil
@@ -41,7 +42,7 @@ def showexample(batch, pred, idx, filename):
     batch_img, batch_target = batch
     batch_img = batch_img.to(torch.float)
 
-    rgb = batch_img[idx].cpu().numpy()[[2, 1, 0]]
+    rgb = batch_img[idx].cpu().numpy()[[4, 3, 2]]
     a1.imshow(np.clip(rgb.transpose(1, 2, 0), 0, 1))
     a1.axis('off')
     a2.imshow(batch_target[idx, 0].cpu(), **heatmap_args)

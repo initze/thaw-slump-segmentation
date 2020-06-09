@@ -19,7 +19,6 @@ Options:
 from skimage.io import imsave
 from pathlib import Path
 from tqdm import tqdm
-import matplotlib.pyplot as plt
 import rasterio as rio
 import numpy as np
 import torch
@@ -27,7 +26,6 @@ import shutil
 import os, sys
 
 from docopt import docopt
-
 
 
 def others_from_img(img_path):
@@ -57,8 +55,7 @@ def glob_file(DATASET, filter_string):
 
 
 def do_gdal_calls(DATASET):
-    maskfile = DATASET / 'mask.tif'
-    maskfile2 = DATASET / f'{DATASET.name}_mask.tif'
+    maskfile = DATASET / f'{DATASET.name}_mask.tif'
     tcvisfile = DATASET / 'tcvis.tif'
 
     tile_dir_data = DATASET / 'tiles' / 'data'
@@ -71,17 +68,10 @@ def do_gdal_calls(DATASET):
     tile_dir_mask.mkdir(exist_ok=True)
 
     rasterfile = glob_file(DATASET, RASTERFILTER)
-    vectorfile = glob_file(DATASET, VECTORFILTER)
 
-    # Create temporary raster maskfile
-    os.system(f'python {gdal_merge} -createonly -init 0 -o {maskfile} -ot Byte -co COMPRESS=DEFLATE {rasterfile}')
-    # Add empty band to mask
-    os.system(f'{gdal_translate} -of GTiff -ot Byte -co COMPRESS=DEFLATE -b 1 {maskfile} {maskfile2}')
-    # Burn digitized polygons into mask
-    os.system(f'{gdal_rasterize} -l {DATASET.name} -a label {vectorfile} {maskfile2}')
     # Retile data, mask and tcvis
     os.system(f'python {gdal_retile} -ps {XSIZE} {YSIZE} -overlap {OVERLAP} -targetDir {tile_dir_data} {rasterfile}')
-    os.system(f'python {gdal_retile} -ps {XSIZE} {YSIZE} -overlap {OVERLAP} -targetDir {tile_dir_mask} {maskfile2}')
+    os.system(f'python {gdal_retile} -ps {XSIZE} {YSIZE} -overlap {OVERLAP} -targetDir {tile_dir_mask} {maskfile}')
     os.system(f'python {gdal_retile} -ps {XSIZE} {YSIZE} -overlap {OVERLAP} -targetDir {tile_dir_tcvis} {tcvisfile}')
 
 

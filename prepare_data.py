@@ -16,16 +16,17 @@ Options:
     --tile_overlap          Overlap of the tiles in pixels [default: 25]
     --make_overviews        Make additional overview images in a seperate 'info' folder
 """
-from skimage.io import imsave
-from pathlib import Path
-from tqdm import tqdm
-import rasterio as rio
-import numpy as np
-import torch
+import os
 import shutil
-import os, sys
+import sys
+from pathlib import Path
 
+import numpy as np
+import rasterio as rio
+import torch
 from docopt import docopt
+from skimage.io import imsave
+from tqdm import tqdm
 
 
 def others_from_img(img_path):
@@ -54,25 +55,29 @@ def glob_file(DATASET, filter_string):
                          'Please make selection more specific!')
 
 
-def do_gdal_calls(DATASET):
+def do_gdal_calls(DATASET, aux_data=['tcvis', 'slope', 'relative_elevation']):
     maskfile = DATASET / f'{DATASET.name}_mask.tif'
-    tcvisfile = DATASET / 'tcvis.tif'
 
     tile_dir_data = DATASET / 'tiles' / 'data'
-    tile_dir_tcvis = DATASET / 'tiles' / 'tcvis'
     tile_dir_mask = DATASET / 'tiles' / 'mask'
 
     # Create parents on the first data folder
     tile_dir_data.mkdir(exist_ok=True, parents=True)
-    tile_dir_tcvis.mkdir(exist_ok=True)
     tile_dir_mask.mkdir(exist_ok=True)
 
     rasterfile = glob_file(DATASET, RASTERFILTER)
 
-    # Retile data, mask and tcvis
+    # Retile data, mask
     os.system(f'python {gdal_retile} -ps {XSIZE} {YSIZE} -overlap {OVERLAP} -targetDir {tile_dir_data} {rasterfile}')
     os.system(f'python {gdal_retile} -ps {XSIZE} {YSIZE} -overlap {OVERLAP} -targetDir {tile_dir_mask} {maskfile}')
-    os.system(f'python {gdal_retile} -ps {XSIZE} {YSIZE} -overlap {OVERLAP} -targetDir {tile_dir_tcvis} {tcvisfile}')
+
+    # Retile additional data
+    for aux in aux_data:
+        auxfile = DATASET / f'{aux}.tif'
+        tile_dir_aux = DATASET / 'tiles' / aux
+        tile_dir_aux.mkdir(exist_ok=True)
+        os.system(
+            f'python {gdal_retile} -ps {XSIZE} {YSIZE} -overlap {OVERLAP} -targetDir {tile_dir_aux} {auxfile}')
 
 
 def make_info_picture(imgtensor, masktensor, filename):

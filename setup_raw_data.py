@@ -26,6 +26,7 @@ if __name__ == "__main__":
     BACKUP_DIR = os.path.join(BASEDIR, 'data_backup')
     DATA_DIR = os.path.join(BASEDIR, 'data')
     STATUS = {0: 'failed', 1: 'success', 2: 'skipped'}
+    SUCCESS_STATES = ['rename', 'label', 'tcvis', 'rel_dem', 'slope', 'mask', 'move']
 
     gdalwarp = 'gdalwarp'
 
@@ -38,7 +39,7 @@ if __name__ == "__main__":
             ee.Authenticate()
             ee.Initialize()
         for image_dir in dir_list:
-            success_state = dict(rename=0, label=0, tcvis=0, mask=0, move=0)
+            success_state = dict(rename=0, label=0, tcvis=0, rel_dem=0, slope=0, mask=0, move=0)
             print(f'\nStarting preprocessing: {os.path.basename(image_dir)}')
 
             success_state['rename'] = rename_clip_to_standard(image_dir)
@@ -51,19 +52,29 @@ if __name__ == "__main__":
                                                            gdal_bin=args['--gdal_bin'],
                                                            gdal_path=args['--gdal_path'])
 
-            image_collection_tcvis = ee.ImageCollection("users/ingmarnitze/TCTrend_SR_2000-2019_TCVIS").mosaic()
+            ee_image_tcvis = ee.ImageCollection("users/ingmarnitze/TCTrend_SR_2000-2019_TCVIS").mosaic()
             success_state['tcvis'] = get_tcvis_from_gee(image_dir,
-                                                        image_collection_tcvis,
-                                                        buffer=1000,
-                                                        resolution=3,
-                                                        remove_files=True)
+                                                        ee_image=ee_image_tcvis,
+                                                        out_filename='tcvis.tif')
+
+            ee_image_rel_el = get_ArcticDEM_rel_el()
+            success_state['rel_dem'] = get_tcvis_from_gee(image_dir,
+                                                          ee_image=ee_image_rel_el,
+                                                          out_filename='relative_elevation.tif',
+                                                          resolution=3)
+
+            ee_image_slope = get_ArcticDEM_slope()
+            success_state['slope'] = get_tcvis_from_gee(image_dir,
+                                                        ee_image=ee_image_slope,
+                                                        out_filename='slope.tif',
+                                                        resolution=3)
 
             success_state['mask'] = mask_input_data(image_dir, DATA_DIR)
 
             backup_dir = os.path.join(BACKUP_DIR, os.path.basename(image_dir))
             success_state['move'] = move_files(image_dir, backup_dir)
 
-            for status in ['rename', 'label', 'tcvis', 'mask', 'move']:
+            for status in SUCCESS_STATES:
                 print(status + ':', STATUS[success_state[status]])
     else:
         print("Empty Input Data Directory! No Data available to process!")

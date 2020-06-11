@@ -8,6 +8,8 @@ import rasterio as rio
 import requests
 from pyproj import Transformer
 
+from deep_learning.data_pre_processing.udm import burn_mask
+
 
 def check_input_data(input_directory):
     directory_list = [f for f in glob.glob(os.path.join(input_directory, '*')) if os.path.isdir(f)]
@@ -94,27 +96,19 @@ def rename_clip_to_standard(image_directory):
         return 2
 
 
-def burn_mask(file_src, file_dst, file_udm, mask_value=0):
-    with rio.Env():
-        with rio.open(file_src) as ds_src:
-            with rio.open(file_udm) as ds_udm:
-                clear_mask = ds_udm.read()[0] == mask_value
-                data = ds_src.read()*clear_mask
-                profile = ds_src.profile
-                with rio.open(file_dst, 'w', **profile) as ds_dst:
-                    ds_dst.write(data)
-    return 1
-
-
-def get_mask_images(image_directory, udm='udm.tif', images=['_SR.tif', 'tcvis.tif', '_mask.tif']):
+def get_mask_images(image_directory, udm='udm.tif', udm2='udm2.tif', images=['_SR.tif', 'tcvis.tif', '_mask.tif']):
     flist = glob.glob(os.path.join(image_directory, '*'))
     image_files = []
     for im in images:
         image_files.extend([f for f in flist if im in f])
     udm_file = [f for f in flist if udm in f][0]
+    try:
+        udm2_file = [f for f in flist if udm2 in f][0]
+    except:
+        udm2_file = None
     remaining_files = [f for f in flist if f not in [udm_file, *image_files]]
 
-    return dict(udm=udm_file, images=image_files, others=remaining_files)
+    return dict(udm=udm_file, udm2=udm2_file, images=image_files, others=remaining_files)
 
 
 def move_files(image_directory, backup_dir):
@@ -131,7 +125,7 @@ def mask_input_data(image_directory, output_directory):
         dir_out = os.path.join(output_directory, os.path.basename(image_directory))
         image_out = os.path.join(dir_out, os.path.basename(image))
         os.makedirs(dir_out, exist_ok=True)
-        burn_mask(image, image_out, mask_image_paths['udm'])
+        burn_mask(image, image_out, file_udm=mask_image_paths['udm'], file_udm2=mask_image_paths['udm2'])
     return 1
 
 

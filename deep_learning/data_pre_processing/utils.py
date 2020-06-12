@@ -30,19 +30,19 @@ def has_projection(image_directory):
             return False
 
 
-def get_tcvis_from_gee(image_directory, ee_imagecollection, buffer=1000, resolution=3, remove_files=True):
+def get_tcvis_from_gee(image_directory, ee_image, out_filename, buffer=1000, resolution=3, remove_files=True):
     image_directory = os.path.abspath(image_directory)
     assert os.path.isdir(image_directory)
-    outfile_tcvis = os.path.join(image_directory, 'tcvis.tif')
-    if os.path.exists(outfile_tcvis):
-        print('"tcvis.tif" already exists. Skipping download!')
+    outfile_path = os.path.join(image_directory, out_filename)
+    if os.path.exists(outfile_path):
+        print(f'{out_filename} already exists. Skipping download!')
         return 2
     else:
         print("Starting download Dataset from Google Earthengine")
     image_list = glob.glob(os.path.join(image_directory, r'*3B_AnalyticMS_SR.tif'))
     impath = image_list[0]
     basepath = os.path.basename(image_directory)
-    basename_tcvis = basepath + '_TCVIS'
+    basename_tmpimage = basepath + '_ee_tmp'
 
     with rio.open(impath) as src:
         epsg = 'EPSG:{}'.format(src.crs.to_epsg())
@@ -55,11 +55,12 @@ def get_tcvis_from_gee(image_directory, ee_imagecollection, buffer=1000, resolut
     geom_4326 = ee.Geometry.Rectangle(coords=region_transformed)
 
     export_props = {'scale': 30,
-                    'name': '{basename}'.format(basename=basename_tcvis),
+                    'name': '{basename}'.format(basename=basename_tmpimage),
                     'region': geom_4326,
-                    'filePerBand': False}
+                    'filePerBand': False,
+                    'crs': epsg}
 
-    url = ee_imagecollection.getDownloadURL(export_props)
+    url = ee_image.getDownloadURL(export_props)
 
     zippath = os.path.join(image_directory, 'out.zip')
     myfile = requests.get(url, allow_redirects=True)
@@ -68,11 +69,10 @@ def get_tcvis_from_gee(image_directory, ee_imagecollection, buffer=1000, resolut
     with zipfile.ZipFile(zippath, 'r') as zip_ref:
         zip_ref.extractall(image_directory)
 
-    infile = os.path.join(image_directory, basename_tcvis + '.tif')
+    infile = os.path.join(image_directory, basename_tmpimage + '.tif')
 
-    s_warp = f'gdalwarp -t_srs {epsg} -tr {resolution} {resolution} -te {xmin} {ymin} {xmax} {ymax} {infile} \
-             {outfile_tcvis} '
-
+    s_warp = f'gdalwarp -t_srs {epsg} -tr {resolution} {resolution} \
+               -srcnodata None -te {xmin} {ymin} {xmax} {ymax} {infile} {outfile_path}'
     os.system(s_warp)
 
     if remove_files:
@@ -96,7 +96,7 @@ def rename_clip_to_standard(image_directory):
         return 2
 
 
-def get_mask_images(image_directory, udm='udm.tif', udm2='udm2.tif', images=['_SR.tif', 'tcvis.tif', '_mask.tif']):
+def get_mask_images(image_directory, udm='udm.tif', udm2='udm2.tif', images=['_SR.tif', 'tcvis.tif', '_mask.tif', 'relative_elevation.tif', 'slope.tif']):
     flist = glob.glob(os.path.join(image_directory, '*'))
     image_files = []
     for im in images:

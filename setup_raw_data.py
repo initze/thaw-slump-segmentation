@@ -51,18 +51,18 @@ if __name__ == "__main__":
 
             ee_image_tcvis = ee.ImageCollection("users/ingmarnitze/TCTrend_SR_2000-2019_TCVIS").mosaic()
             success_state['tcvis'] = get_tcvis_from_gee(image_dir,
-                                                        ee_image=ee_image_tcvis,
+                                                        ee_image_tcvis,
                                                         out_filename='tcvis.tif')
 
             ee_image_rel_el = get_ArcticDEM_rel_el()
             success_state['rel_dem'] = get_tcvis_from_gee(image_dir,
-                                                          ee_image=ee_image_rel_el,
+                                                          ee_image_rel_el,
                                                           out_filename='relative_elevation.tif',
                                                           resolution=3)
 
             ee_image_slope = get_ArcticDEM_slope()
             success_state['slope'] = get_tcvis_from_gee(image_dir,
-                                                        ee_image=ee_image_slope,
+                                                        ee_image_slope,
                                                         out_filename='slope.tif',
                                                         resolution=3)
 

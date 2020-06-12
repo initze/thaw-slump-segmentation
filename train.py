@@ -103,7 +103,7 @@ if __name__ == "__main__":
 
     if cli_args['--summary']:
         from torchsummary import summary
-        summary(trainer.model, [(7, 256, 256)])
+        summary(trainer.model, [(config['input_channels'], 256, 256)])
         sys.exit(0)
 
     dataset_cache = {}

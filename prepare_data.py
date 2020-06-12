@@ -16,32 +16,36 @@ Options:
     --tile_overlap          Overlap of the tiles in pixels [default: 25]
     --make_overviews        Make additional overview images in a seperate 'info' folder
 """
-from skimage.io import imsave
-from pathlib import Path
-from tqdm import tqdm
-import rasterio as rio
-import numpy as np
-import torch
+import os
 import shutil
-import os, sys
+import sys
+from pathlib import Path
 
+import numpy as np
+import rasterio as rio
+import torch
 from docopt import docopt
+from skimage.io import imsave
+from tqdm import tqdm
 
 
-def others_from_img(img_path):
+def others_from_img(img_path, datasets=['tcvis', 'relative_elevation', 'slope']):
     """
     Given an image path, return paths for mask and tcvis
     """
     date, time, *block, platform, _, sr, row, col = img_path.stem.split('_')
     block = '_'.join(block)
     base = img_path.parent.parent
+
     mask_path = base / 'mask' / f'{date}_{time}_{block}_mask_{row}_{col}.tif'
-    tcvis_path = base / 'tcvis' / f'tcvis_{row}_{col}.tif'
-
     assert mask_path.exists()
-    assert tcvis_path.exists()
+    other_paths = []
+    for ds in datasets:
+        path = base / ds / f'{ds}_{row}_{col}.tif'
+        assert path.exists()
+        other_paths.append(path)
 
-    return mask_path, tcvis_path
+    return mask_path, list(other_paths)
 
 
 def glob_file(DATASET, filter_string):
@@ -54,34 +58,38 @@ def glob_file(DATASET, filter_string):
                          'Please make selection more specific!')
 
 
-def do_gdal_calls(DATASET):
+def do_gdal_calls(DATASET, aux_data=['tcvis', 'slope', 'relative_elevation']):
     maskfile = DATASET / f'{DATASET.name}_mask.tif'
-    tcvisfile = DATASET / 'tcvis.tif'
 
     tile_dir_data = DATASET / 'tiles' / 'data'
-    tile_dir_tcvis = DATASET / 'tiles' / 'tcvis'
     tile_dir_mask = DATASET / 'tiles' / 'mask'
 
     # Create parents on the first data folder
     tile_dir_data.mkdir(exist_ok=True, parents=True)
-    tile_dir_tcvis.mkdir(exist_ok=True)
     tile_dir_mask.mkdir(exist_ok=True)
 
     rasterfile = glob_file(DATASET, RASTERFILTER)
 
-    # Retile data, mask and tcvis
+    # Retile data, mask
     os.system(f'python {gdal_retile} -ps {XSIZE} {YSIZE} -overlap {OVERLAP} -targetDir {tile_dir_data} {rasterfile}')
     os.system(f'python {gdal_retile} -ps {XSIZE} {YSIZE} -overlap {OVERLAP} -targetDir {tile_dir_mask} {maskfile}')
-    os.system(f'python {gdal_retile} -ps {XSIZE} {YSIZE} -overlap {OVERLAP} -targetDir {tile_dir_tcvis} {tcvisfile}')
+
+    # Retile additional data
+    for aux in aux_data:
+        auxfile = DATASET / f'{aux}.tif'
+        tile_dir_aux = DATASET / 'tiles' / aux
+        tile_dir_aux.mkdir(exist_ok=True)
+        os.system(
+            f'python {gdal_retile} -ps {XSIZE} {YSIZE} -overlap {OVERLAP} -targetDir {tile_dir_aux} {auxfile}')
 
 
 def make_info_picture(imgtensor, masktensor, filename):
     "Make overview picture"
     rgbn = np.clip(imgtensor[:4,:,:].numpy().transpose(1, 2, 0) / 3000 * 255, 0, 255).astype(np.uint8)
-    tcvis = np.clip(imgtensor[4:,:,:].numpy().transpose(1, 2, 0), 0, 255).astype(np.uint8)
+    tcvis = np.clip(imgtensor[4:7,:,:].numpy().transpose(1, 2, 0), 0, 255).astype(np.uint8)
 
     rgb = rgbn[:,:,:3]
-    nir = rgbn[:,:,[3,3,3]]
+    nir = rgbn[:,:,[3,2,1]]
     mask = (masktensor.numpy()[0][:,:,np.newaxis][:,:,[0,0,0]] * 255).astype(np.uint8)
 
     img = np.concatenate([
@@ -147,7 +155,8 @@ if __name__ == "__main__":
 
         # Convert data to pytorch tensor files (pt) for efficient data loading
         for img in tqdm(list(dataset.glob('tiles/data/*.tif'))):
-            mask, tcvis = others_from_img(img)
+            mask, other_paths = others_from_img(img)
+            tcvis, relative_elevation, slope = other_paths
 
             with rio.open(img) as raster:
                 imgdata = raster.read()
@@ -163,7 +172,17 @@ if __name__ == "__main__":
                 # Assert data can safely be coerced to int16
                 assert tcdata.max() < 2 ** 15
 
-            full_data = np.concatenate([imgdata, tcdata], axis=0)
+            with rio.open(relative_elevation) as raster:
+                eldata = raster.read()
+                # Assert data can safely be coerced to int16
+                assert eldata.max() < 2 ** 15
+
+            with rio.open(slope) as raster:
+                slopedata = raster.read()
+                # Assert data can safely be coerced to int16
+                assert slopedata.max() < 2 ** 15
+
+            full_data = np.concatenate([imgdata, tcdata, eldata, slopedata], axis=0)
             imgtensor = torch.from_numpy(full_data.astype(np.int16))
 
             with rio.open(mask) as raster:
@@ -173,7 +192,7 @@ if __name__ == "__main__":
 
             # gdal_retile leaves narrow stripes at the right and bottom border,
             # which are filtered out here:
-            if imgtensor.shape != (7, 256, 256):
+            if imgtensor.shape != (9, 256, 256):
                 continue
             if masktensor.shape != (1, 256, 256):
                 continue

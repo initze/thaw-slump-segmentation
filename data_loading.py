@@ -3,7 +3,8 @@ from torch.utils.data import DataLoader, ConcatDataset, Subset
 from deep_learning.utils.data import PTDataset, Augment
 from pathlib import Path
 
-factors = [3000, 3000, 3000, 3000, 255, 255, 255]
+
+factors = [3000, 3000, 3000, 3000, 255, 255, 255, 20, 90]
 normalize = 1 / torch.Tensor(factors).reshape(-1, 1, 1)
 
 

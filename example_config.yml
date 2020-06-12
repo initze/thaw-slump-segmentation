@@ -1,6 +1,6 @@
 # Model Specification
 model: UNet
-input_channels: 7
+input_channels: 9
 modelscale: 8
 # Data Configuration
 datasets:

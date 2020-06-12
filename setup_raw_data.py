@@ -11,9 +11,6 @@ Options:
     --gdal_path=PATH        Path to gdal scripts (ignored if --skip_gdal is passed) [default: ]
     --gdal_bin=PATH         Path to gdal binaries (ignored if --skip_gdal is passed) [default: ]
 """
-import os
-
-import ee
 
 from deep_learning.data_pre_processing import *
 

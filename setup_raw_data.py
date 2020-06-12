@@ -39,6 +39,8 @@ if __name__ == "__main__":
             success_state = dict(rename=0, label=0, tcvis=0, rel_dem=0, slope=0, mask=0, move=0)
             print(f'\nStarting preprocessing: {os.path.basename(image_dir)}')
 
+            pre_cleanup(image_dir)
+
             success_state['rename'] = rename_clip_to_standard(image_dir)
 
             if not has_projection(image_dir):

@@ -16,6 +16,14 @@ def check_input_data(input_directory):
     return directory_list
 
 
+def pre_cleanup(input_directory):
+    flist_dirty = glob.glob(os.path.join(input_directory, '*.aux.xml'))
+    if len(flist_dirty) > 0:
+        for f in flist_dirty:
+            os.remove(f)
+            print(f'Removed File {f}')
+
+
 def has_projection(image_directory):
     image_directory = os.path.abspath(image_directory)
     assert os.path.isdir(image_directory)

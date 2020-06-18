@@ -1,12 +1,9 @@
 import glob
 import os
 import shutil
-import zipfile
+import numpy as np
 
-import ee
 import rasterio as rio
-import requests
-from pyproj import Transformer
 
 from deep_learning.data_pre_processing.udm import burn_mask
 
@@ -38,58 +35,6 @@ def has_projection(image_directory):
             return False
 
 
-def get_tcvis_from_gee(image_directory, ee_image, out_filename, buffer=1000, resolution=3, remove_files=True):
-    image_directory = os.path.abspath(image_directory)
-    assert os.path.isdir(image_directory)
-    outfile_path = os.path.join(image_directory, out_filename)
-    if os.path.exists(outfile_path):
-        print(f'{out_filename} already exists. Skipping download!')
-        return 2
-    else:
-        print("Starting download Dataset from Google Earthengine")
-    image_list = glob.glob(os.path.join(image_directory, r'*3B_AnalyticMS_SR.tif'))
-    impath = image_list[0]
-    basepath = os.path.basename(image_directory)
-    basename_tmpimage = basepath + '_ee_tmp'
-
-    with rio.open(impath) as src:
-        epsg = 'EPSG:{}'.format(src.crs.to_epsg())
-        xmin, xmax, ymin, ymax = [src.bounds.left, src.bounds.right, src.bounds.bottom, src.bounds.top]
-    region_rect = [[xmin - buffer, ymin - buffer], [xmax + buffer, ymax + buffer]]
-
-    # make polygon
-    transformer = Transformer.from_crs(epsg, "epsg:4326")
-    region_transformed = [transformer.transform(*vertex)[::-1] for vertex in region_rect]
-    geom_4326 = ee.Geometry.Rectangle(coords=region_transformed)
-
-    export_props = {'scale': 30,
-                    'name': '{basename}'.format(basename=basename_tmpimage),
-                    'region': geom_4326,
-                    'filePerBand': False,
-                    'crs': epsg}
-
-    url = ee_image.getDownloadURL(export_props)
-
-    zippath = os.path.join(image_directory, 'out.zip')
-    myfile = requests.get(url, allow_redirects=True)
-    open(zippath, 'wb').write(myfile.content)
-
-    with zipfile.ZipFile(zippath, 'r') as zip_ref:
-        zip_ref.extractall(image_directory)
-
-    infile = os.path.join(image_directory, basename_tmpimage + '.tif')
-
-    s_warp = f'gdalwarp -t_srs {epsg} -tr {resolution} {resolution} \
-               -srcnodata None -te {xmin} {ymin} {xmax} {ymax} {infile} {outfile_path}'
-    os.system(s_warp)
-
-    if remove_files:
-        os.remove(zippath)
-        os.remove(infile)
-
-    return 1
-
-
 def rename_clip_to_standard(image_directory):
     image_directory = os.path.abspath(image_directory)
     imlist = glob.glob(os.path.join(image_directory, r'*_clip*'))
@@ -104,7 +49,27 @@ def rename_clip_to_standard(image_directory):
         return 2
 
 
-def get_mask_images(image_directory, udm='udm.tif', udm2='udm2.tif', images=['_SR.tif', 'tcvis.tif', '_mask.tif', 'relative_elevation.tif', 'slope.tif']):
+def make_ndvi_file(image_directory, nir_band=3, red_band=2):
+    images = get_mask_images(image_directory, images=['_SR.tif'])
+    file_src = images['images'][0]
+    file_dst = os.path.join(os.path.dirname(file_src), 'ndvi.tif')
+    with rio.Env():
+        with rio.open(images['images'][0]) as ds_src:
+            data = ds_src.read().astype(np.float)
+            mask = ds_src.read_masks()[0] != 0
+            ndvi = np.zeros_like(data[0])
+            upper = (data[nir_band][mask] - data[red_band][mask])
+            lower = (data[nir_band][mask] + data[red_band][mask])
+            ndvi[mask] = np.around((np.divide(upper, lower) + 1) * 1e4).astype(np.uint16)
+            profile = ds_src.profile
+            profile['count'] = 1
+
+            with rio.open(file_dst, 'w', **profile) as ds_dst:
+                ds_dst.write(ndvi.astype(rio.uint16), 1)
+    return 1
+
+
+def get_mask_images(image_directory, udm='udm.tif', udm2='udm2.tif', images=['_SR.tif', 'tcvis.tif', '_mask.tif', 'relative_elevation.tif', 'slope.tif', 'ndvi.tif']):
     flist = glob.glob(os.path.join(image_directory, '*'))
     image_files = []
     for im in images:

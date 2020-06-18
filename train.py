@@ -10,52 +10,24 @@ Options:
     --config=CONFIG    Specify run config to use [default: config.yml]
 """
 import sys
-import distutils.util
 from datetime import datetime
 from pathlib import Path
 import shutil
 
-import numpy as np
-import matplotlib.pyplot as plt
 import torch
+import torchsummary
 from tqdm import tqdm
 
 from deep_learning import Trainer
 from deep_learning.models import get_model
 from deep_learning.loss_functions import get_loss
+from deep_learning.utils import showexample
 from data_loading import get_loader, get_filtered_loader, get_batch
 
 import re
 
 from docopt import docopt
 import yaml
-
-
-def showexample(batch, pred, idx, filename):
-    m = 0.02
-    gridspec_kw = dict(left=m, right=1 - m, top=1 - m, bottom=m,
-                       hspace=m, wspace=m)
-    fig, axes = plt.subplots(2, 2, figsize=(8, 8), gridspec_kw=gridspec_kw)
-    ((a1, a2), (a3, a4)) = axes
-    heatmap_args = dict(cmap='coolwarm', vmin=0, vmax=1)
-
-    batch_img, batch_target = batch
-    batch_img = batch_img.to(torch.float)
-
-    rgb = batch_img[idx].cpu().numpy()[[4, 3, 2]]
-    a1.imshow(np.clip(rgb.transpose(1, 2, 0), 0, 1))
-    a1.axis('off')
-    a2.imshow(batch_target[idx, 0].cpu(), **heatmap_args)
-    a2.axis('off')
-    tcvis = batch_img[idx].cpu().numpy()[[5, 6, 7]]
-    a3.imshow(np.clip(tcvis.transpose(1, 2, 0), 0, 1))
-    a3.axis('off')
-    a4.imshow(torch.sigmoid(pred[idx, 0]).cpu(), **heatmap_args)
-    # a4.imshow((pred[idx, 0] > 0).cpu(), cmap='coolwarm', vmin=0, vmax=1)
-    a4.axis('off')
-    filename.parent.mkdir(exist_ok=True)
-    plt.savefig(filename)
-    plt.close()
 
 
 def scoped_get(key, *scopestack):

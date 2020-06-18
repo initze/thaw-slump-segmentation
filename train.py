@@ -47,7 +47,7 @@ def showexample(batch, pred, idx, filename):
     a1.axis('off')
     a2.imshow(batch_target[idx, 0].cpu(), **heatmap_args)
     a2.axis('off')
-    tcvis = batch_img[idx].cpu().numpy()[[4, 5, 6]]
+    tcvis = batch_img[idx].cpu().numpy()[[5, 6, 7]]
     a3.imshow(np.clip(tcvis.transpose(1, 2, 0), 0, 1))
     a3.axis('off')
     a4.imshow(torch.sigmoid(pred[idx, 0]).cpu(), **heatmap_args)

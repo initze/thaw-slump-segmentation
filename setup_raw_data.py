@@ -25,7 +25,7 @@ if __name__ == "__main__":
     BACKUP_DIR = os.path.join(BASEDIR, 'data_backup')
     DATA_DIR = os.path.join(BASEDIR, 'data')
     STATUS = {0: 'failed', 1: 'success', 2: 'skipped'}
-    SUCCESS_STATES = ['rename', 'label', 'tcvis', 'rel_dem', 'slope', 'mask', 'move']
+    SUCCESS_STATES = ['rename', 'label', 'ndvi', 'tcvis', 'rel_dem', 'slope', 'mask', 'move']
 
     gdalwarp = 'gdalwarp'
 

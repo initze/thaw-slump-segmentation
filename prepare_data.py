@@ -29,7 +29,18 @@ from skimage.io import imsave
 from tqdm import tqdm
 
 
-def others_from_img(img_path, datasets=['tcvis', 'relative_elevation', 'slope']):
+def read_and_asert_imagedata(image_path):
+    with rio.open(image_path) as raster:
+        if raster.count <= 3:
+            data = raster.read()
+        else:
+            data = raster.read()[:3]
+        # Assert data can safely be coerced to int16
+        assert data.max() < 2 ** 15
+        return data
+
+
+def others_from_img(img_path, datasets=['ndvi', 'tcvis', 'relative_elevation', 'slope']):
     """
     Given an image path, return paths for mask and tcvis
     """
@@ -58,7 +69,7 @@ def glob_file(DATASET, filter_string):
                          'Please make selection more specific!')
 
 
-def do_gdal_calls(DATASET, aux_data=['tcvis', 'slope', 'relative_elevation']):
+def do_gdal_calls(DATASET, aux_data=['ndvi', 'tcvis', 'slope', 'relative_elevation']):
     maskfile = DATASET / f'{DATASET.name}_mask.tif'
 
     tile_dir_data = DATASET / 'tiles' / 'data'
@@ -86,7 +97,7 @@ def do_gdal_calls(DATASET, aux_data=['tcvis', 'slope', 'relative_elevation']):
 def make_info_picture(imgtensor, masktensor, filename):
     "Make overview picture"
     rgbn = np.clip(imgtensor[:4,:,:].numpy().transpose(1, 2, 0) / 3000 * 255, 0, 255).astype(np.uint8)
-    tcvis = np.clip(imgtensor[4:7,:,:].numpy().transpose(1, 2, 0), 0, 255).astype(np.uint8)
+    tcvis = np.clip(imgtensor[5:8,:,:].numpy().transpose(1, 2, 0), 0, 255).astype(np.uint8)
 
     rgb = rgbn[:,:,:3]
     nir = rgbn[:,:,[3,2,1]]
@@ -156,7 +167,6 @@ if __name__ == "__main__":
         # Convert data to pytorch tensor files (pt) for efficient data loading
         for img in tqdm(list(dataset.glob('tiles/data/*.tif'))):
             mask, other_paths = others_from_img(img)
-            tcvis, relative_elevation, slope = other_paths
 
             with rio.open(img) as raster:
                 imgdata = raster.read()
@@ -166,23 +176,8 @@ if __name__ == "__main__":
                 # Assert data can safely be coerced to int16
                 assert imgdata.max() < 2 ** 15
 
-            with rio.open(tcvis) as raster:
-                # Throw away alpha channel
-                tcdata = raster.read()[:3] 
-                # Assert data can safely be coerced to int16
-                assert tcdata.max() < 2 ** 15
-
-            with rio.open(relative_elevation) as raster:
-                eldata = raster.read()
-                # Assert data can safely be coerced to int16
-                assert eldata.max() < 2 ** 15
-
-            with rio.open(slope) as raster:
-                slopedata = raster.read()
-                # Assert data can safely be coerced to int16
-                assert slopedata.max() < 2 ** 15
-
-            full_data = np.concatenate([imgdata, tcdata, eldata, slopedata], axis=0)
+            datasets = [read_and_asert_imagedata(ds) for ds in other_paths]
+            full_data = np.concatenate([imgdata] + datasets, axis=0)
             imgtensor = torch.from_numpy(full_data.astype(np.int16))
 
             with rio.open(mask) as raster:
@@ -192,7 +187,7 @@ if __name__ == "__main__":
 
             # gdal_retile leaves narrow stripes at the right and bottom border,
             # which are filtered out here:
-            if imgtensor.shape != (9, 256, 256):
+            if imgtensor.shape != (10, 256, 256):
                 continue
             if masktensor.shape != (1, 256, 256):
                 continue

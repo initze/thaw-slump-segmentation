@@ -60,7 +60,7 @@ if __name__ == "__main__":
                                                         ee_image_tcvis,
                                                         out_filename='tcvis.tif')
 
-            ee_image_rel_el = get_ArcticDEM_rel_el()
+            ee_image_rel_el = get_ArcticDEM_rel_el(offset=20, factor=1000)
             success_state['rel_dem'] = get_tcvis_from_gee(image_dir,
                                                           ee_image_rel_el,
                                                           out_filename='relative_elevation.tif',

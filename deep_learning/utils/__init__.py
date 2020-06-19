@@ -1,1 +1,1 @@
-from .plot_info import showexample
+from .plot_info import *

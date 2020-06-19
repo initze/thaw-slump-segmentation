@@ -21,7 +21,7 @@ from tqdm import tqdm
 from deep_learning import Trainer
 from deep_learning.models import get_model
 from deep_learning.loss_functions import get_loss
-from deep_learning.utils import showexample
+from deep_learning.utils import showexample, read_metrics_file, plot_metrics, plot_precision_recall
 from data_loading import get_loader, get_filtered_loader, get_batch
 
 import re
@@ -137,3 +137,10 @@ if __name__ == "__main__":
                         filename = log_dir / tile / f'{trainer.epoch}.png'
                         filename.parent.mkdir(exist_ok=True)
                         showexample(vis_batch, pred, i, filename)
+
+    outdir = log_dir / 'metrics_plots'
+    outdir.mkdir(exist_ok=False)
+    metrics_file = log_dir / 'metrics.txt'
+    df = read_metrics_file(metrics_file)
+    plot_metrics(df, outdir=outdir)
+    plot_precision_recall(df, outdir=outdir)

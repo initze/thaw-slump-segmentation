@@ -16,6 +16,8 @@ from deep_learning.data_pre_processing import *
 
 from docopt import docopt
 
+from deep_learning.data_pre_processing import get_tcvis_from_gee
+
 if __name__ == "__main__":
     args = docopt(__doc__, version="Usecase 2 Data Preprocessing Script 1.0")
     BASEDIR = os.path.abspath('.')
@@ -23,7 +25,7 @@ if __name__ == "__main__":
     BACKUP_DIR = os.path.join(BASEDIR, 'data_backup')
     DATA_DIR = os.path.join(BASEDIR, 'data')
     STATUS = {0: 'failed', 1: 'success', 2: 'skipped'}
-    SUCCESS_STATES = ['rename', 'label', 'tcvis', 'rel_dem', 'slope', 'mask', 'move']
+    SUCCESS_STATES = ['rename', 'label', 'ndvi', 'tcvis', 'rel_dem', 'slope', 'mask', 'move']
 
     gdalwarp = 'gdalwarp'
 
@@ -36,7 +38,7 @@ if __name__ == "__main__":
             ee.Authenticate()
             ee.Initialize()
         for image_dir in dir_list:
-            success_state = dict(rename=0, label=0, tcvis=0, rel_dem=0, slope=0, mask=0, move=0)
+            success_state = dict(rename=0, label=0, ndvi=0, tcvis=0, rel_dem=0, slope=0, mask=0, move=0)
             print(f'\nStarting preprocessing: {os.path.basename(image_dir)}')
 
             pre_cleanup(image_dir)
@@ -50,6 +52,8 @@ if __name__ == "__main__":
             success_state['label'] = vector_to_raster_mask(image_dir,
                                                            gdal_bin=args['--gdal_bin'],
                                                            gdal_path=args['--gdal_path'])
+
+            success_state['ndvi'] = make_ndvi_file(image_dir)
 
             ee_image_tcvis = ee.ImageCollection("users/ingmarnitze/TCTrend_SR_2000-2019_TCVIS").mosaic()
             success_state['tcvis'] = get_tcvis_from_gee(image_dir,

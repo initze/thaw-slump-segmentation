@@ -3,6 +3,7 @@ model: UNet
 input_channels: 9
 modelscale: 8
 # Data Configuration
+data_threads: 0
 datasets:
   train:
     augment: true

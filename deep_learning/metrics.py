@@ -34,20 +34,24 @@ class Metrics():
         self.reset()
 
     def reset(self):
-        self.state = {agg: 0 for agg in self.required_aggregators}
+        self.state = {}
         self.running_agg = {}
         self.running_count = {}
 
     def step(self, prediction, target, **additional_terms):
         for agg in self.required_aggregators:
-            self.state[agg] += AGGREGATORS[agg](prediction, target)
+            if agg not in self.state:
+                self.state[agg] = AGGREGATORS[agg](prediction, target)
+            else:
+                self.state[agg] += AGGREGATORS[agg](prediction, target)
 
         for term in additional_terms:
-            agg = self.running_agg.get(term, 0) + additional_terms[term]
-            count = self.running_count.get(term, 0) + 1
-
-            self.running_agg[term] = agg
-            self.running_count[term] = count
+            if term not in self.running_agg:
+                self.running_agg[term] = additional_terms[term]
+                self.running_count[term] = 1
+            else:
+                self.running_agg[term] += additional_terms[term]
+                self.running_count[term] += 1
 
     def evaluate(self):
         values = {}

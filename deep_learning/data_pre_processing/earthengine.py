@@ -8,10 +8,10 @@ import requests
 from pyproj import Transformer
 
 
-def get_ArcticDEM_rel_el(kernel_size=300, offset=20, factor=5000):
+def get_ArcticDEM_rel_el(kernel_size=300, offset=30, factor=300):
     dem = ee.Image("UMN/PGC/ArcticDEM/V3/2m_mosaic")
     conv = dem.convolve(ee.Kernel.circle(kernel_size, 'meters'))
-    diff = dem.subtract(conv).add(ee.Image.constant(offset)).multiply(ee.Image.constant(factor)).toInt16()
+    diff = (dem.subtract(conv).add(ee.Image.constant(offset)).multiply(ee.Image.constant(factor)).toInt16())
     return diff
 
 

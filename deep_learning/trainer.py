@@ -1,7 +1,7 @@
 
 import torch
 import torch.nn.functional as F
-from .metrics import Metrics, Accuracy, Precision, Recall, F1
+from .metrics import Metrics, Accuracy, Precision, Recall, F1, IoU
 
 
 class Trainer():
@@ -20,7 +20,7 @@ class Trainer():
         self.val_metrics = {}
 
         self.loss_function = F.binary_cross_entropy_with_logits
-        self.metrics = Metrics(Accuracy, Precision, Recall, F1)
+        self.metrics = Metrics(Accuracy, Precision, Recall, F1, IoU)
 
     def train_epoch(self, train_loader):
         self.epoch += 1

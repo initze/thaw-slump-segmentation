@@ -111,6 +111,12 @@ if __name__ == "__main__":
     checkpoints = log_dir / 'checkpoints'
     checkpoints.mkdir()
 
+    # Tensorboard initialization
+    from torch.utils.tensorboard import SummaryWriter
+    trn_writer = SummaryWriter(log_dir / 'train')
+    val_writer = SummaryWriter(log_dir / 'val')
+
+
     for phase in config['schedule']:
         print(f'Starting phase "{phase["phase"]}"')
         with (log_dir / 'metrics.txt').open('a+') as f:
@@ -138,6 +144,9 @@ if __name__ == "__main__":
                     print(logstr)
                     with (log_dir / 'metrics.txt').open('a+') as f:
                         print(logstr, file=f)
+                    for key, val in metrics.items():
+                        trn_writer.add_scalar(key, val, trainer.epoch)
+                    trn_writer.flush()
                     # Save model Checkpoint
                     torch.save(trainer.model.state_dict(), checkpoints / f'{trainer.epoch:02d}.pt')
                 elif command == 'validate_on':
@@ -150,13 +159,16 @@ if __name__ == "__main__":
                     print(logstr)
                     with (log_dir / 'metrics.txt').open('a+') as f:
                         print(logstr, file=f)
+                    for key, val in metrics.items():
+                        val_writer.add_scalar(key, val, trainer.epoch)
+                    val_writer.flush()
                 elif command == 'log_images':
                     with torch.no_grad():
                         vis_predictions.append(model(vis_imgs).cpu())
                     (log_dir / 'tile_predictions').mkdir(exist_ok=True)
                     for i, tile in enumerate(config['visualization_tiles']):
                         filename = log_dir / 'tile_predictions' / f'{tile}.jpg'
-                        showexample(vis_batch, vis_predictions, i, filename)
+                        showexample(vis_batch, vis_predictions, i, filename, val_writer)
 
                         outdir = log_dir / 'metrics_plots'
                         outdir.mkdir(exist_ok=True)
@@ -164,3 +176,4 @@ if __name__ == "__main__":
                         df = read_metrics_file(metrics_file)
                         plot_metrics(df, outdir=outdir)
                         plot_precision_recall(df, outdir=outdir)
+                    val_writer.flush()

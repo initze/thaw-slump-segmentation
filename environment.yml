@@ -126,6 +126,7 @@ dependencies:
   - snuggs=1.4.7=py_0
   - sqlite=3.31.1=h2a8f88b_1
   - tbb=2018.0.5=he980bc4_0
+  - tensorboard
   - tiledb=1.6.3=h7b000aa_0
   - tk=8.6.8=hfa6e2cd_0
   - toolz=0.10.0=py_0

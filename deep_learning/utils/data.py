@@ -45,16 +45,17 @@ class Augment(Dataset):
 
     def __getitem__(self, idx):
         idx, (flipx, flipy, transpose) = self._augmented_idx_and_ops(idx)
-        diry = 2 * flipy - 1
-        dirx = 2 * flipx - 1
         base = self.dataset[idx]
         augmented = []
         for field in base:
-            field = field.numpy()
-            field = field[:, ::diry, ::dirx]
             if transpose == 1:
-                field = field.transpose(0, 2, 1)
-            augmented.append(torch.from_numpy(field.copy()))
+                field = field.transpose(2, 1)
+            if flipx or flipy:
+                dims = []
+                if flipy: dims.append(1)
+                if flipx: dims.append(2)
+                field = torch.flip(field, dims)
+            augmented.append(field.contiguous())
         return tuple(augmented)
 
     def _augmented_idx_and_ops(self, idx):

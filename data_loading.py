@@ -23,10 +23,10 @@ def _get_dataset(dataset, names=['data', 'mask'], augment=False):
     return dataset
 
 
-def get_loader(folders, batch_size, augment=False, shuffle=False):
+def get_loader(folders, batch_size, augment=False, shuffle=False, num_workers=0):
     folders = [_get_dataset(ds, ['data', 'mask'], augment=augment) for ds in folders]
     concatenated = ConcatDataset(folders)
-    return DataLoader(concatenated, batch_size=batch_size, shuffle=shuffle, num_workers=0, pin_memory=True)
+    return DataLoader(concatenated, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, pin_memory=True)
 
 
 def get_filtered_loader(folders, batch_size, augment=False, shuffle=False):

@@ -8,6 +8,10 @@ Options:
     -h --help          Show this screen
     --summary          Only print model summary and return (Requires the torchsummary package)
     --config=CONFIG    Specify run config to use [default: config.yml]
+    --resume=CHKPT     Resume from the specified checkpoint [default: ]
+                       Can be either a run-id (e.g. "2020-06-29_18-12-03") to select the last
+                       checkpoint of that run, or a direct path to a checkpoint to be loaded.
+                       Overrides the resume option in the config file if given.
 """
 import sys
 from datetime import datetime
@@ -66,7 +70,20 @@ if __name__ == "__main__":
     modelclass = get_model(config['model'])
     model = modelclass(config['input_channels'], 1, base_channels=config['modelscale'])
 
-    # TODO: Resume from checkpoint
+    if cli_args['--resume']:
+        config['resume'] = cli_args['--resume']
+
+    if 'resume' in config and config['resume']:
+        checkpoint = Path(config['resume'])
+        if not checkpoint.exists():
+            raise ValueError(f"There is no Checkpoint at {config['resume']} to resume from!")
+        if checkpoint.is_dir():
+            # Load last checkpoint in run dir
+            ckpt_nums = [int(ckpt.stem) for ckpt in checkpoint.glob('checkpoints/*.pt')]
+            last_ckpt = max(ckpt_nums)
+            config['resume'] = checkpoint / 'checkpoints' / f'{last_ckpt:02d}.pt'
+        print(f"Resuming training from checkpoint {config['resume']}")
+        model.load_state_dict(torch.load(config['resume']))
 
     trainer = Trainer(model)
 
@@ -87,7 +104,9 @@ if __name__ == "__main__":
     log_dir = Path('logs') / datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
     log_dir.mkdir(exist_ok=False)
 
-    shutil.copy(config_file, log_dir / 'config.yml')
+    # Write the config YML to the run-folder
+    with open(log_dir / 'config.yml', 'w') as f:
+        yaml.dump(config, f)
 
     checkpoints = log_dir / 'checkpoints'
     checkpoints.mkdir()

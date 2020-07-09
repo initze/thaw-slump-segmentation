@@ -113,3 +113,15 @@ class F1():
         if precision + recall == 0:
             return np.nan
         return 2 * precision * recall / (precision + recall)
+
+
+class IoU():
+    @staticmethod
+    def required_aggregators():
+        return set(['TP', 'FP', 'FN'])
+
+    @staticmethod
+    def evaluate(state):
+        intersection = state['TP']
+        union = state['TP'] + state['FN'] + state['FP']
+        return intersection / union

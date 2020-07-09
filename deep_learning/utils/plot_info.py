@@ -18,6 +18,7 @@ def showexample(batch, preds, idx, filename, writer=None):
     fig, ax = plt.subplots(ROWS, N, figsize=(3*N, 3*ROWS), gridspec_kw=gridspec_kw)
     ax = ax.T.reshape(-1)
     heatmap_args = dict(cmap='coolwarm', vmin=0, vmax=1)
+    heatmap_dem = dict(cmap='RdBu', vmin=0, vmax=0.9)
 
     batch_img, batch_target = batch
     batch_img = batch_img.to(torch.float)
@@ -30,10 +31,8 @@ def showexample(batch, preds, idx, filename, writer=None):
     rgb = imageize(batch_img[idx, [3, 2, 1]])
     ndvi = imageize(batch_img[idx, [4, 4, 4]])
     tcvis = imageize(batch_img[idx, [5, 6, 7]])
-    dem = batch_img[idx, [8, 8, 9]]
-    dem[0] = -dem[0] # Red is negative, green is positive
-    dem *= np.array([500, 500, 2]).reshape(-1, 1, 1)
-    dem = imageize(dem)
+    dem = batch_img[idx, [8, 8, 8]].cpu().numpy()
+    target = batch_target[idx, 0].cpu()
 
     ax[0].imshow(rgb)
     ax[0].set_title('B-G-NIR')
@@ -41,9 +40,9 @@ def showexample(batch, preds, idx, filename, writer=None):
     ax[1].set_title('NDVI')
     ax[2].imshow(tcvis)
     ax[2].set_title('TCVis')
-    ax[3].imshow(dem)
+    ax[3].imshow(np.clip(dem[0], 0, 1), **heatmap_dem)
     ax[3].set_title('DEM')
-    ax[4].imshow(batch_target[idx, 0].cpu(), **heatmap_args)
+    ax[4].imshow(target , **heatmap_args)
     ax[4].set_title('Target')
 
     for i, pred in enumerate(preds):

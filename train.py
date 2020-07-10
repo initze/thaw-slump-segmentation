@@ -49,6 +49,7 @@ def get_dataloader(name):
         ds_config = config['datasets'][name]
         if 'batch_size' not in ds_config:
             ds_config['batch_size'] = config['batch_size']
+        ds_config['num_workers'] = config['data_threads']
         dataset_cache[name] = get_loader(**ds_config)
         return dataset_cache[name]
     else:

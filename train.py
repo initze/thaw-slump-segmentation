@@ -69,7 +69,7 @@ if __name__ == "__main__":
     config = yaml.load(config_file.open(), Loader=yaml.SafeLoader)
 
     modelclass = get_model(config['model'])
-    model = modelclass(config['input_channels'], 1, base_channels=config['modelscale'])
+    model = modelclass(**config['model_args'])
 
     if cli_args['--resume']:
         config['resume'] = cli_args['--resume']
@@ -125,7 +125,11 @@ if __name__ == "__main__":
         for epoch in range(phase['epochs']):
             # Epoch setup
             loss_fn = get_loss(scoped_get('loss_function', phase, config))
-            trainer.loss_function = loss_fn.to(trainer.dev)
+            try:
+                trainer.loss_function = loss_fn.to(trainer.dev)
+            except:
+                # Loss function is functional style, so it lives on the GPU already... :)
+                pass
 
             datasets_config = scoped_get('datasets', phase, config)
 

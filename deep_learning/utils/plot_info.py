@@ -98,7 +98,7 @@ def plot_metrics(df, outdir='.'):
         ax.set_ylabel(metric)
         ax.legend(['Train', 'Val'])
         ax.grid()
-        fig.savefig(outfile, bbos_inches='tight')
+        fig.savefig(outfile, bbox_inches='tight')
         plt.close()
 
 

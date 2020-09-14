@@ -26,7 +26,7 @@ from tqdm import tqdm
 
 from deep_learning import get_model, get_loss, Metrics, Accuracy, Precision, Recall, F1, IoU
 from deep_learning.utils import showexample, read_metrics_file, plot_metrics, plot_precision_recall
-from data_loading import get_loader, get_filtered_loader, get_batch, make_sift_transform
+from data_loading import get_loader, get_filtered_loader, get_batch
 
 import re
 
@@ -67,14 +67,6 @@ def get_dataloader(name):
                 ds_config['batch_size'] = config['batch_size']
             ds_config['num_workers'] = config['data_threads']
             dataset_cache[name] = get_filtered_loader(**ds_config)
-        elif func == 'sift':
-            ds_config = dict(**config['datasets'][arg])
-            ds_config['names'] = ['data']
-            if 'batch_size' not in ds_config:
-                ds_config['batch_size'] = config['batch_size']
-            ds_config['num_workers'] = config['data_threads']
-            transform = make_sift_transform(config['channels_used'])
-            dataset_cache[name] = get_loader(channels=config['channels_used'], transform=transform, **ds_config)
 
     return dataset_cache[name]
 
@@ -85,65 +77,6 @@ def with_edges(mask):
         edge = mask != avg
         mask[edge] = 2
     return mask
-
-
-def make_sift_classifier(feature_shape, sift_shape, meta_shape):
-    global sift_classifier, sift_opt
-    from deep_learning.models import Merger
-
-    params = (feature_shape[-1], sift_shape[-1], meta_shape[-1])
-    print(f'Initializing a Merger-Block with feature dimensions {params}')
-    sift_classifier = Merger(*params).to(dev)
-    sift_opt = torch.optim.SGD(sift_classifier.parameters(), config['learning_rate'], momentum=0.99, nesterov=True)
-
-
-def sift_train_epoch(train_loader):
-    global epoch, board_idx, sift_classifier
-    epoch += 1
-    progress = tqdm(train_loader)
-    metrics.reset()
-    model.train(True)
-    for iteration, (img, sift, meta) in enumerate(progress):
-        img = img.to(dev, torch.float)
-        sift = sift.to(dev, torch.float)
-        meta = meta.to(dev, torch.float)
-
-        features = model.encode(img)
-        features = features.reshape(features.shape[0], 1, -1)
-
-        if sift_classifier is None:
-            make_sift_classifier(features.shape, sift.shape, meta.shape)
-
-        res_pos, res_neg = sift_classifier(features, sift, meta)
-        loss_pos = torch.mean(-F.logsigmoid(res_pos))
-        loss_neg = torch.mean(-F.logsigmoid(-res_neg))
-
-        opt.zero_grad()
-        sift_opt.zero_grad()
-
-        loss = loss_pos + loss_neg
-        loss.backward()
-
-        opt.step()
-        sift_opt.step()
-
-        with torch.no_grad():
-            pos_acc = (res_pos > 0).float().mean()
-            neg_acc = (res_neg < 0).float().mean()
-            metrics.step(SIFTLoss=loss, PosAcc=pos_acc, NegAcc=neg_acc)
-            board_idx += img.shape[0]
-
-            if (iteration+1) % 50 == 0:
-                metrics_vals = metrics.evaluate()
-                logstr = ', '.join(f'{key}: {val:.2f}' for key, val in metrics_vals.items())
-                progress.set_description(logstr)
-                with (log_dir / 'metrics.txt').open('a+') as f:
-                    print(logstr, file=f)
-                for key, val in metrics_vals.items():
-                    trn_writer.add_scalar(key, val, board_idx)
-                trn_writer.flush()
-    # Save model Checkpoint
-    torch.save(model.state_dict(), checkpoints / f'{epoch:02d}.pt')
 
 
 def train_epoch(train_loader):
@@ -258,8 +191,6 @@ if __name__ == "__main__":
     opt = torch.optim.AdamW(model.parameters(), lr=config['learning_rate'])
 
     epoch = 0
-    sift_classifier = None
-    sift_opt = None
 
     metrics = Metrics(Accuracy, Precision, Recall, F1, IoU)
 
@@ -319,10 +250,6 @@ if __name__ == "__main__":
                     # Training step
                     data_loader = get_dataloader(key)
                     train_epoch(data_loader)
-                if command == 'sift_train_on':
-                    # SIFT-Pretraining Training step
-                    data_loader = get_dataloader(key)
-                    sift_train_epoch(data_loader)
                 elif command == 'validate_on':
                     # Validation step
                     data_loader = get_dataloader(key)

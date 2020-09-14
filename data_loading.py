@@ -24,44 +24,6 @@ def make_transform(channels=None):
         return transform_fn
 
 
-def make_sift_transform(channels=None):
-    sift = cv2.SIFT_create(nfeatures=128)
-    base_transform = make_transform(channels)
-    featurelen = 128 * len(channels)
-    NUM = 128
-    def sift_transform(sample):
-        data, = base_transform(sample)
-        sift_data = []
-        meta_data = []
-        for i, channel in enumerate(data):
-            min_ = channel.min()
-            max_ = channel.max()
-            img = (255 * (channel - min_) / (max_ - min_)).numpy().astype(np.uint8)
-            kp, features = sift.detectAndCompute(img, None)
-            if i == 1:
-                features = None
-            if features is None:
-                sift_data.append(np.zeros([0, featurelen]))
-                meta_data.append(np.zeros([0, 4]))
-            else:
-                feat = np.zeros((features.shape[0], featurelen), np.float32)
-                feat[:,128*i:128*(i+1)] = features
-                metadata = np.array([[k.angle / 360, k.pt[0] / img.shape[1], k.pt[1] / img.shape[0], k.size] for k in kp], dtype=np.float32)
-                sift_data.append(feat)
-                meta_data.append(metadata)
-        sift_data = torch.from_numpy(np.concatenate(sift_data, axis=0))
-        meta_data = torch.from_numpy(np.concatenate(meta_data, axis=0))
-        if sift_data.shape[0] < NUM:
-            sift_data = torch.cat([sift_data, torch.zeros(NUM - sift_data.shape[0], sift_data.shape[1])], dim=0)
-            meta_data = torch.cat([meta_data, torch.zeros(NUM - meta_data.shape[0], meta_data.shape[1])], dim=0)
-        else:
-            sift_data = sift_data[torch.randperm(sift_data.shape[0])[:NUM]]
-            meta_data = meta_data[torch.randperm(meta_data.shape[0])[:NUM]]
-        return data, sift_data, meta_data
-
-    return sift_transform
-
-
 def _get_dataset(dataset, names=['data', 'mask'], channels=None, augment=False, transform=None):
     ds_path = 'data_pytorch/' + dataset
     dataset = PTDataset(ds_path, names)

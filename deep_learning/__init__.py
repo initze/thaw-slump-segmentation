@@ -1,4 +1,5 @@
 # flake8: noqa
-from .trainer import Trainer
-from .metrics import Metrics, Accuracy, Precision, Recall, F1
+from .metrics import Metrics, Accuracy, Precision, Recall, F1, IoU
 from .utils import showexample
+from .models import get_model
+from .loss_functions import get_loss

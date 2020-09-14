@@ -2,19 +2,19 @@ import numpy as np
 
 
 def true_positive(prediction, target):
-    return ((prediction > 0) * (target > 0)).float().sum()
+    return (prediction & target).float().sum()
 
 
 def false_positive(prediction, target):
-    return ((prediction > 0) * (target <= 0)).float().sum()
+    return (prediction & ~target).float().sum()
 
 
 def false_negative(prediction, target):
-    return ((prediction <= 0) * (target > 0)).float().sum()
+    return (~prediction & target).float().sum()
 
 
 def true_negative(prediction, target):
-    return ((prediction <= 0) * (target <= 0)).float().sum()
+    return (~(prediction | target)).float().sum()
 
 
 AGGREGATORS = {
@@ -26,8 +26,9 @@ AGGREGATORS = {
 
 
 class Metrics():
-    def __init__(self, *metrics):
+    def __init__(self, *metrics, positive_class=1):
         self.metrics = metrics
+        self.positive_class = positive_class
         self.required_aggregators = set()
         for m in self.metrics:
             self.required_aggregators |= m.required_aggregators()
@@ -38,12 +39,17 @@ class Metrics():
         self.running_agg = {}
         self.running_count = {}
 
-    def step(self, prediction, target, **additional_terms):
-        for agg in self.required_aggregators:
-            if agg not in self.state:
-                self.state[agg] = AGGREGATORS[agg](prediction, target)
-            else:
-                self.state[agg] += AGGREGATORS[agg](prediction, target)
+    def step(self, *args, **additional_terms):
+        if len(args) == 2:
+            prediction = args[0]
+            target = args[1]
+            yhat = (prediction.argmax(dim=1) == self.positive_class)
+            y    = (target == self.positive_class)
+            for agg in self.required_aggregators:
+                if agg not in self.state:
+                    self.state[agg] = AGGREGATORS[agg](yhat, y)
+                else:
+                    self.state[agg] += AGGREGATORS[agg](yhat, y)
 
         for term in additional_terms:
             if term not in self.running_agg:
@@ -55,8 +61,9 @@ class Metrics():
 
     def evaluate(self):
         values = {}
-        for m in self.metrics:
-            values[m.__name__] = m.evaluate(self.state)
+        if self.state:
+            for m in self.metrics:
+                values[m.__name__] = m.evaluate(self.state)
         for key in self.running_agg:
             values[key] = self.running_agg[key] / self.running_count[key]
         self.reset()

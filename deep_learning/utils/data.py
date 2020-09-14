@@ -13,20 +13,17 @@ class PTDataset(Dataset):
         data/masks/file2.pt
         ...
     """
-    def __init__(self, root, parts, transform=None, suffix='.pt'):
+    def __init__(self, root, parts, suffix='.pt'):
         self.root = Path(root)
         self.parts = parts
 
         first = self.root / parts[0]
         filenames = list(sorted([x.name for x in first.glob('*' + suffix)]))
         self.index = [[self.root / p / x for p in parts] for x in filenames]
-        self.transform = transform
 
     def __getitem__(self, idx):
         files = self.index[idx]
         data = [torch.load(f) for f in files]
-        if self.transform is not None:
-            data = self.transform(data)
         return data
 
     def get_nth_tensor(self, idx, n):
@@ -41,7 +38,6 @@ class PTDataset(Dataset):
 class Augment(Dataset):
     def __init__(self, dataset):
         self.dataset = dataset
-        self.len = 8 * len(self.dataset)
 
     def __getitem__(self, idx):
         idx, (flipx, flipy, transpose) = self._augmented_idx_and_ops(idx)
@@ -72,3 +68,17 @@ class Augment(Dataset):
 
     def __len__(self):
         return len(self.dataset) * 8
+
+
+class Transform(Dataset):
+    def __init__(self, dataset, transform):
+        self.dataset = dataset
+        self.transform = transform
+
+    def __getitem__(self, idx):
+        sample = self.dataset[idx]
+        return self.transform(sample)
+
+    def __len__(self):
+        return len(self.dataset)
+

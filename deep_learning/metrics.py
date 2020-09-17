@@ -65,7 +65,7 @@ class Metrics():
             for m in self.metrics:
                 values[m.__name__] = m.evaluate(self.state)
         for key in self.running_agg:
-            values[key] = self.running_agg[key] / self.running_count[key]
+            values[key] = float(self.running_agg[key] / self.running_count[key])
         self.reset()
         return values
 
@@ -81,7 +81,7 @@ class Accuracy():
         wrong = state['FP'] + state['FN']
         if correct + wrong == 0:
             return np.nan
-        return correct / (correct + wrong)
+        return float(correct / (correct + wrong))
 
 
 class Precision():
@@ -93,7 +93,7 @@ class Precision():
     def evaluate(state):
         if state['TP'] + state['FP'] == 0:
             return np.nan
-        return state['TP'] / (state['TP'] + state['FP'])
+        return float(state['TP'] / (state['TP'] + state['FP']))
 
 
 class Recall():
@@ -105,7 +105,7 @@ class Recall():
     def evaluate(state):
         if state['TP'] + state['FN'] == 0:
             return np.nan
-        return state['TP'] / (state['TP'] + state['FN'])
+        return float(state['TP'] / (state['TP'] + state['FN']))
 
 
 class F1():
@@ -119,7 +119,7 @@ class F1():
         recall = Recall.evaluate(state)
         if precision + recall == 0:
             return np.nan
-        return 2 * precision * recall / (precision + recall)
+        return float(2 * precision * recall / (precision + recall))
 
 
 class IoU():
@@ -131,4 +131,4 @@ class IoU():
     def evaluate(state):
         intersection = state['TP']
         union = state['TP'] + state['FN'] + state['FP']
-        return intersection / union
+        return float(intersection / union)

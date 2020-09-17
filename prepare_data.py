@@ -23,13 +23,13 @@ from pathlib import Path
 
 import numpy as np
 import rasterio as rio
-import torch
+import h5py
 from docopt import docopt
 from skimage.io import imsave
 from tqdm import tqdm
 
 
-def read_and_asert_imagedata(image_path):
+def read_and_assert_imagedata(image_path):
     with rio.open(image_path) as raster:
         if raster.count <= 3:
             data = raster.read()
@@ -40,9 +40,9 @@ def read_and_asert_imagedata(image_path):
         return data
 
 
-def others_from_img(img_path, datasets=['ndvi', 'tcvis', 'relative_elevation', 'slope']):
+def mask_from_img(img_path):
     """
-    Given an image path, return paths for mask and tcvis
+    Given an image path, return path for the mask
     """
     date, time, *block, platform, _, sr, row, col = img_path.stem.split('_')
     block = '_'.join(block)
@@ -50,13 +50,22 @@ def others_from_img(img_path, datasets=['ndvi', 'tcvis', 'relative_elevation', '
 
     mask_path = base / 'mask' / f'{date}_{time}_{block}_mask_{row}_{col}.tif'
     assert mask_path.exists()
-    other_paths = []
-    for ds in datasets:
-        path = base / ds / f'{ds}_{row}_{col}.tif'
-        assert path.exists()
-        other_paths.append(path)
 
-    return mask_path, list(other_paths)
+    return mask_path
+
+
+def other_from_img(img_path, other):
+    """
+    Given an image path, return paths for mask and tcvis
+    """
+    date, time, *block, platform, _, sr, row, col = img_path.stem.split('_')
+    block = '_'.join(block)
+    base = img_path.parent.parent
+
+    path = base / other / f'{other}_{row}_{col}.tif'
+    assert path.exists()
+
+    return path
 
 
 def glob_file(DATASET, filter_string):
@@ -94,14 +103,14 @@ def do_gdal_calls(DATASET, aux_data=['ndvi', 'tcvis', 'slope', 'relative_elevati
             f'python {gdal_retile} -ps {XSIZE} {YSIZE} -overlap {OVERLAP} -targetDir {tile_dir_aux} {auxfile}')
 
 
-def make_info_picture(imgtensor, masktensor, filename):
+def make_info_picture(tile, filename):
     "Make overview picture"
-    rgbn = np.clip(imgtensor[:4,:,:].numpy().transpose(1, 2, 0) / 3000 * 255, 0, 255).astype(np.uint8)
-    tcvis = np.clip(imgtensor[5:8,:,:].numpy().transpose(1, 2, 0), 0, 255).astype(np.uint8)
+    rgbn = np.clip(tile['planet'][:4,:,:].transpose(1, 2, 0) / 3000 * 255, 0, 255).astype(np.uint8)
+    tcvis = np.clip(tile['tcvis'].transpose(1, 2, 0), 0, 255).astype(np.uint8)
 
     rgb = rgbn[:,:,:3]
     nir = rgbn[:,:,[3,2,1]]
-    mask = (masktensor.numpy()[0][:,:,np.newaxis][:,:,[0,0,0]] * 255).astype(np.uint8)
+    mask = (tile['mask'][[0,0,0]].transpose(1, 2, 0) * 255).astype(np.uint8)
 
     img = np.concatenate([
         np.concatenate([rgb, nir], axis=1),
@@ -124,13 +133,14 @@ if __name__ == "__main__":
     if not args['--skip_gdal']:
         gdal_path = args['--gdal_path']
         gdal_bin = args['--gdal_bin']
+        # TODO: we're only using gdal_retile here... is it safe to delete the others?
         gdal_merge = os.path.join(gdal_path, 'gdal_merge.py')
         gdal_retile = os.path.join(gdal_path, 'gdal_retile.py')
         gdal_rasterize = os.path.join(gdal_bin, 'gdal_rasterize')
         gdal_translate = os.path.join(gdal_bin, 'gdal_translate')
 
     DATA = Path('data')
-    DEST = Path('data_pytorch')
+    DEST = Path('data_h5')
     DEST.mkdir(exist_ok=True)
 
     # All folders that contain the big raster (...AnalyticsML_SR.tif) are assumed to be a dataset
@@ -154,47 +164,77 @@ if __name__ == "__main__":
 
     for dataset in datasets:
         print(f'Doing {dataset}')
-        data_dir = DEST / dataset.name / 'data'
-        data_dir.mkdir(parents=True)
-        mask_dir = DEST / dataset.name / 'mask'
-        mask_dir.mkdir()
-        info_dir = DEST / dataset.name / 'info'
-        info_dir.mkdir()
+        h5_path = DEST / f'{dataset.name}.h5'
+        info_dir = DEST / dataset.name
+        info_dir.mkdir(parents=True)
+
+        h5 = h5py.File(h5_path, 'w')
+        channel_numbers = dict(planet=4, ndvi=1, tcvis=3, relative_elevation=1, slope=1)
+
+        datasets = dict()
+        for dataset_name, nchannels in channel_numbers.items():
+            ds = h5.create_dataset(dataset_name,
+                dtype = np.float32,
+                shape = (512, nchannels, 256, 256),
+                maxshape=(None, nchannels, 256, 256),
+                chunks = (1, nchannels, 256, 256),
+                compression = 'lzf',
+                scaleoffset = 3,
+            )
+            datasets[dataset_name] = ds
+
+        datasets['mask'] = h5.create_dataset("mask",
+            dtype = np.uint8,
+            shape = (512, 1, 256, 256),
+            maxshape=(None, 1, 256, 256),
+            chunks = (1, 1, 256, 256),
+            compression = 'lzf',
+        )
 
         if not args['--skip_gdal']:
             do_gdal_calls(dataset)
 
-        # Convert data to pytorch tensor files (pt) for efficient data loading
+        # Convert data to HDF5 storage for efficient data loading
+        i = 0
         for img in tqdm(list(dataset.glob('tiles/data/*.tif'))):
-            mask, other_paths = others_from_img(img)
-
+            tile = {}
             with rio.open(img) as raster:
-                imgdata = raster.read()
-                # Skip nodata tiles
-                if (imgdata == 0).all(axis=0).mean() > THRESHOLD:
-                    continue
-                # Assert data can safely be coerced to int16
-                assert imgdata.max() < 2 ** 15
+                tile['planet'] = raster.read()
 
-            datasets = [read_and_asert_imagedata(ds) for ds in other_paths]
-            full_data = np.concatenate([imgdata] + datasets, axis=0)
-            imgtensor = torch.from_numpy(full_data.astype(np.int16))
+            if (tile['planet'] == 0).all(axis=0).mean() > THRESHOLD:
+                continue
 
-            with rio.open(mask) as raster:
-                maskdata = raster.read()
-                assert maskdata.max() <= 1, "Mask can't contain values > 1"
-                masktensor = torch.from_numpy(maskdata.astype(np.bool))
+            with rio.open(mask_from_img(img)) as raster:
+                tile['mask'] = raster.read()
+            assert tile['mask'].max() <= 1, "Mask can't contain values > 1"
+
+            for other in channel_numbers:
+                if other == 'planet': continue  # We already did this!
+                with rio.open(other_from_img(img, other)) as raster:
+                    data = raster.read()
+                if data.shape[0] > channel_numbers[other]:
+                    # This is for tcvis mostly
+                    data = data[:channel_numbers[other]]
+                tile[other] = data
 
             # gdal_retile leaves narrow stripes at the right and bottom border,
             # which are filtered out here:
-            if imgtensor.shape != (10, 256, 256):
-                continue
-            if masktensor.shape != (1, 256, 256):
+            is_narrow = False
+            for tensor in tile.values():
+                if tensor.shape[-2:] != (256, 256):
+                    is_narrow = True
+                    break
+            if is_narrow:
                 continue
 
-            # Write the tensor files
-            filename = img.stem + '.pt'
-            torch.save(imgtensor, data_dir / filename)
-            torch.save(masktensor, mask_dir / filename)
-            make_info_picture(imgtensor, masktensor,
-                    (info_dir / filename).with_suffix('.jpg'))
+            if(datasets['planet'].shape[0] <= i):
+                for ds in datasets.values():
+                    ds.resize(ds.shape[0] + 2048, axis=0)
+            for t in tile:
+                datasets[t][i] = tile[t]
+
+            make_info_picture(tile, info_dir / f'{i}.jpg')
+            i += 1
+
+        for t in datasets:
+            datasets[t].resize(i, axis=0)

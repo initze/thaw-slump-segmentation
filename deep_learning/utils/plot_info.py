@@ -42,7 +42,7 @@ def imageize(tensor):
     return np.clip(tensor.cpu().numpy().transpose(1, 2, 0), 0, 1)
 
 
-def showexample(batch, preds, idx, filename, channels, writer=None):
+def showexample(data, preds, filename, channels, writer=None):
     ## First plot
     ROWS = 5
     m = 0.02
@@ -56,8 +56,8 @@ def showexample(batch, preds, idx, filename, channels, writer=None):
     heatmap_args = dict(cmap=flatui, vmin=0, vmax=2)
     heatmap_dem = dict(cmap='RdBu', vmin=0, vmax=0.9)
 
-    batch_img, batch_target = batch
-    batch_img = batch_img.to(torch.float)
+    img, target = data
+    img = img.to(torch.float)
 
     # Clear all axes
     for axis in ax:
@@ -68,32 +68,32 @@ def showexample(batch, preds, idx, filename, channels, writer=None):
         nir = channels.index(3)
         b = channels.index(2)
         g = channels.index(1)
-        bgnir = imageize(batch_img[idx, [nir, b, g]])
+        bgnir = imageize(img[[nir, b, g]])
         ax[0].imshow(bgnir)
         ax[0].set_title('B-G-NIR')
     if 4 in channels:
         c = channels.index(4)
-        ndvi = imageize(batch_img[idx, [c, c, c]])
+        ndvi = imageize(img[[c, c, c]])
         ax[1].imshow(ndvi)
         ax[1].set_title('NDVI')
     if 5 in channels and 6 in channels and 7 in channels:
         r = channels.index(5)
         g = channels.index(6)
         b = channels.index(7)
-        tcvis = imageize(batch_img[idx, [r, g, b]])
+        tcvis = imageize(img[[r, g, b]])
         ax[2].imshow(tcvis)
         ax[2].set_title('TCVis')
     if 8 in channels:
         c = channels.index(8)
-        dem = batch_img[idx, [c, c, c]].cpu().numpy()
+        dem = img[[c, c, c]].cpu().numpy()
         ax[3].imshow(np.clip(dem[0], 0, 1), **heatmap_dem)
         ax[3].set_title('DEM')
-    target = batch_target[idx, 0].cpu()
-    ax[4].imshow(target, **heatmap_args)
+
+    ax[4].imshow(target[0], **heatmap_args)
     ax[4].set_title('Target')
 
     for i, pred in enumerate(preds):
-        p = pred[idx].argmax(dim=0).cpu()
+        p = pred.argmax(dim=0).cpu()
         ax[i+ROWS].imshow(p, **heatmap_args)
         ax[i+ROWS].set_title(f'Epoch {i} Prediction')
 
@@ -106,13 +106,13 @@ def showexample(batch, preds, idx, filename, channels, writer=None):
             nir = channels.index(3)
             b = channels.index(2)
             g = channels.index(1)
-            bgnir = imageize(batch_img[idx, [nir, b, g]])
+            bgnir = imageize(img[[nir, b, g]])
             ax[0].imshow(bgnir)
             ax[0].set_title('B-G-NIR')
-        ax[1].imshow(batch_target[idx, 0].cpu(), **heatmap_args)
+        ax[1].imshow(target[0].cpu(), **heatmap_args)
         ax[1].set_title('Ground Truth')
 
-        pred = preds[-1][idx].argmax(dim=0)
+        pred = preds[-1].argmax(dim=0)
         ax[2].imshow(pred, **heatmap_args)
         ax[2].set_title('Prediction')
         for axis in ax:

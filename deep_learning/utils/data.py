@@ -1,4 +1,6 @@
 import torch
+import numpy as np
+import h5py
 from torch.utils.data import Dataset
 from pathlib import Path
 
@@ -33,6 +35,31 @@ class PTDataset(Dataset):
 
     def __len__(self):
         return len(self.index)
+
+
+class H5Dataset(Dataset):
+    def __init__(self, dataset_path, data_sources):
+        super().__init__()
+        self.dataset_path = dataset_path
+        self.sources = [src.name for src in data_sources]
+        self.h5 = None
+
+    def assert_open(self):
+        # Needed for multi-threading to work
+        if self.h5 is None:
+            self.h5 = h5py.File(self.dataset_path, 'r')
+
+    def __getitem__(self, idx):
+        self.assert_open()
+        features = [self.h5[source][idx] for source in self.sources]
+        features = torch.from_numpy(np.concatenate(features, axis=0))
+
+        mask = torch.from_numpy(self.h5['mask'][idx])
+        return features, mask
+
+    def __len__(self):
+        self.assert_open()
+        return self.h5['mask'].shape[0]
 
 
 class Augment(Dataset):

@@ -19,6 +19,7 @@ def get_loss(loss_args):
 
 def auto_ce(y_hat, y):
     with torch.no_grad():
-        counts = torch.stack([(y == i).float().mean() for i in range(3)])
-        weights = 1.0 / (3.0 * counts)
+        C = y_hat.shape[1]
+        counts = torch.stack([(y == i).float().mean() for i in range(C)])
+        weights = 1.0 / (C * counts)
     return F.cross_entropy(y_hat, y.squeeze(1), weight=weights)

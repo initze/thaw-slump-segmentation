@@ -38,11 +38,21 @@ def flatui_cmap(*colors):
 
     return LinearSegmentedColormap('flatui', segmentdata=segmentdata, N=256)
 
+
 def imageize(tensor):
     return np.clip(tensor.cpu().numpy().transpose(1, 2, 0), 0, 1)
 
 
-def showexample(data, preds, filename, channels, writer=None):
+def get_channel_offset(data_sources, target_source):
+    offset = 0
+    for src in data_sources:
+        if src.name == target_source:
+            break
+        offset += src.channels
+    return offset
+
+
+def showexample(data, preds, filename, data_sources, writer=None):
     ## First plot
     ROWS = 5
     m = 0.02
@@ -64,27 +74,26 @@ def showexample(data, preds, filename, channels, writer=None):
         axis.imshow(np.ones([1, 1, 3]))
         axis.axis('off')
 
-    if 1 in channels and 2 in channels and 3 in channels:
-        nir = channels.index(3)
-        b = channels.index(2)
-        g = channels.index(1)
+    ds_names = set(src.name for src in data_sources)
+    if 'planet' in ds_names:
+        offset = get_channel_offset(data_sources, 'planet')
+        b, g, r, nir = np.arange(4) + offset
         bgnir = imageize(img[[nir, b, g]])
         ax[0].imshow(bgnir)
         ax[0].set_title('B-G-NIR')
-    if 4 in channels:
-        c = channels.index(4)
+    if 'ndvi' in ds_names:
+        c = get_channel_offset(data_sources, 'ndvi')
         ndvi = imageize(img[[c, c, c]])
         ax[1].imshow(ndvi)
         ax[1].set_title('NDVI')
-    if 5 in channels and 6 in channels and 7 in channels:
-        r = channels.index(5)
-        g = channels.index(6)
-        b = channels.index(7)
+    if 'tcvis' in ds_names:
+        offset = get_channel_offset(data_sources, 'tcvis')
+        r, g, b = np.arange(3) + offset
         tcvis = imageize(img[[r, g, b]])
         ax[2].imshow(tcvis)
         ax[2].set_title('TCVis')
-    if 8 in channels:
-        c = channels.index(8)
+    if 'relative_elevation' in ds_names:
+        c = get_channel_offset(data_sources, 'relative_elevation')
         dem = img[[c, c, c]].cpu().numpy()
         ax[3].imshow(np.clip(dem[0], 0, 1), **heatmap_dem)
         ax[3].set_title('DEM')
@@ -102,10 +111,9 @@ def showexample(data, preds, filename, channels, writer=None):
     plt.close()
     if writer is not None:
         fig, ax = plt.subplots(1, 3, figsize=(9, 4), gridspec_kw=gridspec_kw)
-        if 1 in channels and 2 in channels and 3 in channels:
-            nir = channels.index(3)
-            b = channels.index(2)
-            g = channels.index(1)
+        if 'planet' in ds_names:
+            offset = get_channel_offset(data_sources, 'planet')
+            b, g, r, nir = np.arange(4) + offset
             bgnir = imageize(img[[nir, b, g]])
             ax[0].imshow(bgnir)
             ax[0].set_title('B-G-NIR')

@@ -34,7 +34,7 @@ def make_transform(data_sources=None):
     for source in data_sources:
         factors += source.normalization_factors
 
-    normalize = 1 / torch.Tensor(factors, dtype=torch.float32).reshape(-1, 1, 1)
+    normalize = 1 / torch.tensor(factors, dtype=torch.float32).reshape(-1, 1, 1)
     def transform_fn(sample):
         data, *rest = sample
         data = data.to(torch.float) * normalize

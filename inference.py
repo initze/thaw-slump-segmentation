@@ -36,6 +36,7 @@ import os
 from docopt import docopt
 import yaml
 
+cmap_prob = flatui_cmap('Midnight Blue', 'Alizarin')
 cmap_dem = flatui_cmap('Alizarin', 'Clouds', 'Peter River')
 cmap_slope = flatui_cmap('Clouds', 'Midnight Blue')
 cmap_ndvi = 'RdYlGn'
@@ -43,8 +44,7 @@ cmap_ndvi = 'RdYlGn'
 DEM = '/hdd/AntarcticDEM/Antarctica4326.tif'
 
 FIGSIZE_MAX = 20
-PATCHSIZE = 2048
-PS_DEM = PATCHSIZE // 16
+PATCHSIZE = 1024
 
 
 def predict(imagery):
@@ -61,8 +61,9 @@ def predict(imagery):
             if patch_imagery[0, 0].max() == 0:
                 continue
             patch_imagery = patch_imagery.to(dev)
-            patch_pred = model(patch_imagery).cpu()
-            prediction[:, y:y+PATCHSIZE, x:x+PATCHSIZE] += patch_pred
+            patch_pred = model(patch_imagery)
+            patch_pred = F.softmax(patch_pred, dim=1)[0, [1]]
+            prediction[:, y:y+PATCHSIZE, x:x+PATCHSIZE] += patch_pred.cpu()
             num_preds[:, y:y+PATCHSIZE, x:x+PATCHSIZE] += 1
     final_pred = prediction / torch.clamp_min(num_preds, 1)
     return final_pred
@@ -83,7 +84,6 @@ def do_inference(tilename):
     output_directory.mkdir(exist_ok=True)
 
     planet_imagery_path = next(data_directory.glob('*_AnalyticMS_SR.tif'))
-    # TODO: Enable subsetting of the channels from the config file
 
     data = []
     for source in sources:
@@ -136,21 +136,56 @@ def do_inference(tilename):
             kwargs = dict(colorbar=True, cmap=cmap_slope, vmin=0, vmax=0.5)
         make_img(f'{src.name}.jpg', src, **kwargs)
 
-    full_data = torch.from_numpy(np.concatenate(data, axis=0))
+    full_data = np.concatenate(data, axis=0)
+    nodata = np.all(full_data == 0, axis=0, keepdims=True)
+    full_data = torch.from_numpy(full_data)
     full_data = full_data.unsqueeze(0)  # Pretend this is a batch of size 1
 
-    res = predict(full_data)
+    res = predict(full_data).numpy()
     del full_data
 
-    torch.save(res, safe_path / 'prediction.pt')
+    res[nodata] = np.nan
 
-    # TODO: make Geo-Tiffs for Probability Map and Binarized Predictions
+    with rio.open(planet_imagery_path) as input_raster:
+        profile = input_raster.profile
+        profile.update(
+                dtype=rio.float32,
+                count=1,
+                compress='lzw'
+        )
+        print(input_raster.nodata)
+        out_path = output_directory / 'pred_probability.tif'
+        with rio.open(out_path, 'w', **profile) as output_raster:
+            output_raster.write(res.astype(np.float32))
 
-    # TODO: vvv
+        out_path = output_directory / 'pred_binarized.tif'
+        profile.update(
+            dtype=rio.uint8,
+            nodata=255
+        )
+        with rio.open(out_path, 'w', **profile) as output_raster:
+            binarized = (res > 0.5).astype(np.uint8)
+            binarized[nodata] = 255
+            output_raster.write(binarized)
+
+    h, w = res.shape[1:]
+    if h > w:
+        figsize = (FIGSIZE_MAX * w / h, FIGSIZE_MAX)
+    else:
+        figsize = (FIGSIZE_MAX, FIGSIZE_MAX * h / w)
+
     fig, ax = plt.subplots(figsize=figsize)
     ax.axis('off')
-    ax.imshow(res[0], vmin=-1, vmax=1, cmap=flatui, aspect='equal')
-    plt.savefig(safe_path / 'inference_seg.jpg', bbox_inches='tight', pad_inches=0)
+    mappable = ax.imshow(res[0], vmin=0, vmax=1, cmap=cmap_prob, aspect='equal')
+    plt.colorbar(mappable)
+    plt.savefig(output_directory / 'pred_probability.jpg', bbox_inches='tight', pad_inches=0)
+    plt.close()
+
+    fig, ax = plt.subplots(figsize=figsize)
+    ax.axis('off')
+    mappable = ax.imshow(res[0] > 0.5, vmin=0, vmax=1, cmap=cmap_prob, aspect='equal')
+    plt.colorbar(mappable)
+    plt.savefig(output_directory / 'pred_binarized.jpg', bbox_inches='tight', pad_inches=0)
     plt.close()
 
 
@@ -192,5 +227,6 @@ if __name__ == "__main__":
 
     sources = get_sources(config['data_sources'])
 
+    torch.set_grad_enabled(False)
     for tilename in args['<tile_to_predict>']:
         do_inference(tilename)

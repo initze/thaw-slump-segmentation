@@ -9,3 +9,4 @@ archive/
 *.png
 logs/
 .config
+inference/

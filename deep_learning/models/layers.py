@@ -4,31 +4,33 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-class Identity(nn.Module):
-    def __init__(self):
-        super().__init__()
 
-    def forward(self, x):
-        return x
+def get_norm(name, channels):
+    if name is None:
+        return nn.Identity()
+    if name in ('BN', 'BatchNorm'):
+        return nn.BatchNorm2d(channels)
+    elif name in ('IN', 'InstanceNorm'):
+        return nn.InstanceNorm2d(channels)
+    elif name in ('SE', 'SqueezeExcitation'):
+        return SqueezeExcitation(c_out, reduction=8)
+    else:
+        raise ValueError(f'No norm named "{name}" known.')
 
 
 class Convx2(nn.Module):
-    def __init__(self, c_in, c_out, bn, padding_mode='zeros'):
+    def __init__(self, c_in, c_out, norm, padding_mode='zeros'):
         super().__init__()
-        conv_args = dict(padding=1, padding_mode=padding_mode, bias=not bn)
+        conv_args = dict(padding=1, padding_mode=padding_mode, bias=(norm is None))
         self.conv1 = nn.Conv2d(c_in, c_out, 3, **conv_args)
         self.conv2 = nn.Conv2d(c_out, c_out, 3, **conv_args)
-        if bn:
-            self.bn1 = nn.BatchNorm2d(c_out)
-            self.bn2 = nn.BatchNorm2d(c_out)
-        else:
-            self.bn1 = Identity()
-            self.bn2 = Identity()
+        self.norm1 = get_norm(norm, c_out)
+        self.norm2 = get_norm(norm, c_out)
         self.relu = nn.ReLU(inplace=True)
 
     def forward(self, x):
-        x = self.relu(self.bn1(self.conv1(x)))
-        x = self.relu(self.bn2(self.conv2(x)))
+        x = self.relu(self.norm1(self.conv1(x)))
+        x = self.relu(self.norm2(self.conv2(x)))
         return x
 
 
@@ -38,7 +40,7 @@ class ResBlock(nn.Module):
         if c_in != c_out:
             self.skip = nn.Conv2d(c_in, c_out, 1)
         else:
-            self.skip = Identity()
+            self.skip = nn.Identity()
 
         self.convblock = conv_block(c_in, c_out, batch_norm)
 
@@ -65,8 +67,8 @@ class DenseBlock(nn.Module):
             ])
             self.bn_final = nn.BatchNorm2d(c_out)
         else:
-            self.bns = nn.ModuleList([Identity() for i in range(4)])
-            self.bn_final = Identity()
+            self.bns = nn.ModuleList([nn.Identity() for i in range(4)])
+            self.bn_final = nn.Identity()
         self.relu = nn.ReLU(inplace=True)
 
     def forward(self, x):
@@ -97,34 +99,31 @@ class SqueezeExcitation(nn.Module):
 
 
 def WithSE(conv_block, reduction=8):
-    def make_block(c_in, c_out, bn=True):
+    def make_block(c_in, c_out, **kwargs):
         return nn.Sequential(
-            conv_block(c_in, c_out, bn=bn),
+            conv_block(c_in, c_out, **kwargs),
             SqueezeExcitation(c_out, reduction=reduction)
         )
     make_block.__name__ = f"WithSE({conv_block.__name__})"
     return make_block
 
 
+
 class DownBlock(nn.Module):
     """
     UNet Downsampling Block
     """
-    def __init__(self, c_in, c_out, convblock=Convx2,
-                 bn=True, padding_mode='zeros'):
+    def __init__(self, c_in, c_out, conv_block=Convx2, norm=None, padding_mode='zeros'):
         super().__init__()
-        bias = not bn
+        bias = (norm is None)
         self.convdown = nn.Conv2d(c_in, c_in, 2, stride=2, bias=bias)
-        if bn:
-            self.bn = nn.BatchNorm2d(c_in)
-        else:
-            self.bn = Identity()
+        self.norm = get_norm(norm, c_in)
         self.relu = nn.ReLU(inplace=True)
 
-        self.conv_block = convblock(c_in, c_out, bn, padding_mode=padding_mode)
+        self.conv_block = conv_block(c_in, c_out, norm=norm, padding_mode=padding_mode)
 
     def forward(self, x):
-        x = self.relu(self.bn(self.convdown(x)))
+        x = self.relu(self.norm(self.convdown(x)))
         x = self.conv_block(x)
         return x
 
@@ -133,20 +132,16 @@ class UpBlock(nn.Module):
     """
     UNet Upsampling Block
     """
-    def __init__(self, c_in, c_out, convblock=Convx2,
-                 bn=True, padding_mode='zeros'):
+    def __init__(self, c_in, c_out, conv_block=Convx2, norm=None, padding_mode='zeros'):
         super().__init__()
-        bias = not bn
+        bias = (norm is None)
         self.up = nn.ConvTranspose2d(c_in, c_in // 2, 2, stride=2, bias=bias)
-        if bn:
-            self.bn = nn.BatchNorm2d(c_in // 2)
-        else:
-            self.bn = Identity()
+        self.norm = get_norm(norm, c_in // 2)
         self.relu = nn.ReLU(inplace=True)
-        self.conv_block = convblock(c_in, c_out, bn, padding_mode=padding_mode)
+        self.conv_block = conv_block(c_in, c_out, norm=norm, padding_mode=padding_mode)
 
     def forward(self, x, skip):
-        x = self.relu(self.bn(self.up(x)))
+        x = self.relu(self.norm(self.up(x)))
         x = torch.cat([x, skip], dim=1)
         x = self.conv_block(x)
         return x

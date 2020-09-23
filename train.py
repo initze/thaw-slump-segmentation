@@ -16,17 +16,12 @@ Options:
 import sys
 from datetime import datetime
 from pathlib import Path
-import shutil
 
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from torch.utils.data import Subset, ConcatDataset
-import torchsummary
 from tqdm import tqdm
 
 from deep_learning import get_model, get_loss, Metrics, Accuracy, Precision, Recall, F1, IoU
-from deep_learning.utils import showexample, read_metrics_file, plot_metrics, plot_precision_recall
+from deep_learning.utils import showexample, plot_metrics, plot_precision_recall
 from data_loading import get_loader, get_vis_loader, get_slump_loader, get_sources
 
 import re
@@ -155,7 +150,6 @@ def log_images():
 
     outdir = log_dir / 'metrics_plots'
     outdir.mkdir(exist_ok=True)
-    metrics_file = log_dir / 'metrics.txt'
     plot_metrics(trn_metrics, val_metrics, outdir=outdir)
     plot_precision_recall(trn_metrics, val_metrics, outdir=outdir)
     val_writer.flush()

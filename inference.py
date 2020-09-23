@@ -11,26 +11,19 @@ Options:
     --gdal_bin=PATH         Path to gdal binaries (only needed if tile isn't already preprocessed) [default: ]
 """
 from pathlib import Path
-import shutil
 
 import rasterio as rio
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 from tqdm import tqdm
-from rasterio.transform import from_gcps
 
-from deep_learning.utils.images import extract_patches
 from deep_learning.models import get_model
 from deep_learning.utils.plot_info import flatui_cmap
-from data_loading import get_loader
 
 from setup_raw_data import preprocess_directory
-from data_loading import make_transform, DATA_SOURCES, get_sources
-
-import os
+from data_loading import get_sources
 
 from docopt import docopt
 import yaml
@@ -100,7 +93,6 @@ def do_inference(tilename):
         data_part = data_part / np.array(source.normalization_factors, dtype=np.float32).reshape(-1, 1, 1)
         data.append(data_part)
 
-    name_to_source = {src.name: src for src in sources}
     def make_img(filename, source, colorbar=False, **kwargs):
         idx = sources.index(source)
 
@@ -146,9 +138,9 @@ def do_inference(tilename):
     with rio.open(planet_imagery_path) as input_raster:
         profile = input_raster.profile
         profile.update(
-                dtype=rio.float32,
-                count=1,
-                compress='lzw'
+            dtype=rio.float32,
+            count=1,
+            compress='lzw'
         )
         print(input_raster.nodata)
         out_path = output_directory / 'pred_probability.tif'

@@ -4,12 +4,14 @@ from .boring_backbone import BoringBackbone
 from .ocr import OCRNet
 from .logistic_regression import LogisticRegression
 from .enet import ENet
-from .merger import Merger
+from .attention_clustering import AttentionClustering
+
 
 _MODELS = {
     'UNet': UNet,
     'OCR': OCRNet,
-    'ENet': ENet
+    'ENet': ENet,
+    'AttentionClustering': AttentionClustering,
 }
 
 def get_model(model_name):

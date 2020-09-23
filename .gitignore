@@ -2,7 +2,7 @@
 data/*
 data_input/*
 data_backup/*
-data_pytorch/*
+data_h5/*
 __pycache__/
 .vim/
 archive/

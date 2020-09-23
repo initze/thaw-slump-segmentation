@@ -85,7 +85,7 @@ if __name__ == "__main__":
     dir_list = check_input_data(INPUT_DATA_DIR)
     if len(dir_list) > 0:
         for image_dir in dir_list:
-            preprocess_directory(image_dir, gdal_bin=args['--gdal_path'], gdal_path=args['--gdal_path'])
+            preprocess_directory(image_dir, gdal_bin=args['--gdal_bin'], gdal_path=args['--gdal_path'])
 
     else:
         print("Empty Input Data Directory! No Data available to process!")

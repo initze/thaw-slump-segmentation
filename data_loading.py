@@ -1,6 +1,5 @@
 import torch
 import numpy as np
-import cv2
 from torch.utils.data import DataLoader, ConcatDataset, Subset
 from deep_learning.utils.data import H5Dataset, Augment, Transform
 from pathlib import Path
@@ -36,9 +35,10 @@ def make_transform(data_sources=None):
 
     normalize = 1 / torch.tensor(factors, dtype=torch.float32).reshape(-1, 1, 1)
     def transform_fn(sample):
-        data, *rest = sample
-        data = data.to(torch.float) * normalize
-        return data, *rest
+        sample = list(sample)
+        # Imagery is sample[0]
+        sample[0] = sample[0].to(torch.float) * normalize
+        return sample
     return transform_fn
 
 

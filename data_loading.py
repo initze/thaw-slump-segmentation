@@ -1,6 +1,5 @@
 import torch
 import numpy as np
-import cv2
 from torch.utils.data import DataLoader, ConcatDataset, Subset
 from deep_learning.utils.data import H5Dataset, Augment, Transform
 from pathlib import Path

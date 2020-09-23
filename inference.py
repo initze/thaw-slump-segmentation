@@ -28,7 +28,6 @@ from deep_learning.utils.plot_info import flatui_cmap
 from data_loading import get_loader
 
 from setup_raw_data import preprocess_directory
-from prepare_data import read_and_assert_imagedata
 from data_loading import make_transform, DATA_SOURCES, get_sources
 
 import os
@@ -40,8 +39,6 @@ cmap_prob = flatui_cmap('Midnight Blue', 'Alizarin')
 cmap_dem = flatui_cmap('Alizarin', 'Clouds', 'Peter River')
 cmap_slope = flatui_cmap('Clouds', 'Midnight Blue')
 cmap_ndvi = 'RdYlGn'
-
-DEM = '/hdd/AntarcticDEM/Antarctica4326.tif'
 
 FIGSIZE_MAX = 20
 PATCHSIZE = 1024

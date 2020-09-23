@@ -6,7 +6,7 @@ import torch.nn.functional as F
 
 
 def get_norm(name, channels):
-    if name is None:
+    if name is None or name == 'none':
         return nn.Identity()
     if name in ('BN', 'BatchNorm'):
         return nn.BatchNorm2d(channels)

@@ -35,9 +35,10 @@ def make_transform(data_sources=None):
 
     normalize = 1 / torch.tensor(factors, dtype=torch.float32).reshape(-1, 1, 1)
     def transform_fn(sample):
-        data, *rest = sample
-        data = data.to(torch.float) * normalize
-        return data, *rest
+        sample = list(sample)
+        # Imagery is sample[0]
+        sample[0] = sample[0].to(torch.float) * normalize
+        return sample
     return transform_fn
 
 

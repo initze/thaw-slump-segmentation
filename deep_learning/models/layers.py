@@ -13,7 +13,7 @@ def get_norm(name, channels):
     elif name in ('IN', 'InstanceNorm'):
         return nn.InstanceNorm2d(channels)
     elif name in ('SE', 'SqueezeExcitation'):
-        return SqueezeExcitation(c_out, reduction=8)
+        return SqueezeExcitation(channels, reduction=8)
     else:
         raise ValueError(f'No norm named "{name}" known.')
 

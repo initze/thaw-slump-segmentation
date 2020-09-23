@@ -584,11 +584,9 @@ class ENet(nn.Module):
 
     def encode(self, x):
         # Initial block
-        input_size = x.size()
         x = self.initial_block(x)
 
         # Stage 1 - Encoder
-        stage1_input_size = x.size()
         x, max_indices1_0 = self.downsample1_0(x)
         x = self.regular1_1(x)
         x = self.regular1_2(x)
@@ -596,7 +594,6 @@ class ENet(nn.Module):
         x = self.regular1_4(x)
 
         # Stage 2 - Encoder
-        stage2_input_size = x.size()
         x, max_indices2_0 = self.downsample2_0(x)
         x = self.regular2_1(x)
         x = self.dilated2_2(x)

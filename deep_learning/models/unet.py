@@ -1,6 +1,5 @@
 import torch.nn as nn
-import torch.nn.functional as F
-from .layers import Convx2, DownBlock, UpBlock, WithSE
+from .layers import Convx2, DownBlock, UpBlock
 
 
 class UNet(nn.Module):

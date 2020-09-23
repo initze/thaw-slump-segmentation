@@ -95,7 +95,7 @@ def train_epoch(train_loader):
 
         with torch.no_grad():
             metrics.step(y_hat, target, Loss=loss.detach())
-            if (iteration+1) % 10 == 0:
+            if (iteration+1) % 50 == 0:
                 metrics_vals = metrics.evaluate()
                 progress.set_postfix(metrics_vals)
                 logstr = ', '.join(f'{key}: {val:.2f}' for key, val in metrics_vals.items())

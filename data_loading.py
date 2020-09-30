@@ -4,6 +4,7 @@ from torch.utils.data import DataLoader, ConcatDataset, Subset
 from deep_learning.utils.data import H5Dataset, Augment, Transform
 from pathlib import Path
 from collections import namedtuple
+from tqdm import tqdm
 
 
 DataSource = namedtuple('DataSource', ['name', 'channels', 'normalization_factors'])
@@ -60,16 +61,15 @@ def get_loader(scenes, batch_size, augment=False, shuffle=False, num_workers=0, 
     return DataLoader(concatenated, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, pin_memory=True)
 
 
-def get_slump_loader(scenes, batch_size, augment=False, shuffle=False, num_workers=0, names=['data', 'mask'], data_sources=None, transform=None):
+def get_slump_loader(scenes, batch_size, augment=False, shuffle=False, num_workers=0, data_sources=None, transform=None):
     if transform is None:
         transform = make_transform(data_sources)
     filtered_sets = []
-    print("Calculating slump only dataset...", end='', flush=True)
-    for scene in scenes:
-        mask_only = get_dataset(scene, names=['mask'])
-        subset = [i for i, (mask,) in mask_only if mask.max() > 0]
-        unfiltered = get_dataset(scene)
-        filtered_sets.append(Subset(unfiltered, subset))
+    print("Calculating slump only dataset...")
+    for scene in tqdm(scenes):
+        data = get_dataset(scene, data_sources=data_sources)
+        subset = [i for i in range(len(data)) if data[i][1].max() > 0]
+        filtered_sets.append(Subset(data, subset))
 
     dataset = ConcatDataset(filtered_sets)
     if augment:

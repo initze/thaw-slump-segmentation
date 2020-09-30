@@ -62,7 +62,7 @@ def get_dataloader(name):
             if 'batch_size' not in ds_config:
                 ds_config['batch_size'] = config['batch_size']
             ds_config['num_workers'] = config['data_threads']
-            dataset_cache[name] = get_slump_loader(**ds_config)
+            dataset_cache[name] = get_slump_loader(data_sources=data_sources, **ds_config)
 
     return dataset_cache[name]
 

@@ -154,12 +154,16 @@ if __name__ == "__main__":
 
     if overwrite_conflicts:
         print(f"Found old data directories: {', '.join(dir.name for dir in overwrite_conflicts)}.")
-        decision = input("Delete? [y/N]")
-        if decision.lower() == 'y':
+        decision = input("Delete and recreate them [d], skip them [s] or abort [a]? ").lower()
+        if decision == 'd':
             for old_dir in overwrite_conflicts:
                 shutil.rmtree(old_dir)
+        elif decision == 's':
+            already_done = [d.name for d in overwrite_conflicts]
+            datasets = [d for d in datasets if d.name not in already_done]
         else:
-            print("Won't overwrite old data directories.")
+            # When in doubt, don't overwrite/change anything to be safe
+            print("Aborting due to conflicts with existing data directories.")
             sys.exit(1)
 
     for dataset in datasets:

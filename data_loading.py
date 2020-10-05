@@ -44,6 +44,12 @@ def make_transform(data_sources=None):
 
 
 def get_dataset(dataset, data_sources=None, augment=False, transform=None):
+    if data_sources is None:
+        # Use all data sources by default
+        data_sources = DATA_SOURCES
+    # Sort Data Sources to be independent of the order given in the config
+    data_sources = list(sorted(data_sources))
+
     ds_path = 'data_h5/' + dataset + '.h5'
     dataset = H5Dataset(ds_path, data_sources=data_sources)
     if augment:

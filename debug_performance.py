@@ -4,6 +4,7 @@ import time
 import yaml
 
 import torch
+import numpy as np
 
 from deep_learning import get_model
 from data_loading import get_loader, get_sources
@@ -12,14 +13,14 @@ steps = [
     (0, 'Disk cache warmup'),
     (4, 'GPU/CUDA warmup'),
  
-    (1, 'Benchmarking Disk -> RAM'),
-    (2, 'Benchmarking Disk -> RAM -> GPU'),
-    (3, 'Benchmarking Disk -> RAM -> GPU -> Model -> GPU'),
+    (1, 'Benchmarking Disk -> RAM                              '),
+    (2, 'Benchmarking Disk -> RAM -> GPU                       '),
+    (3, 'Benchmarking Disk -> RAM -> GPU -> Model -> GPU       '),
     (4, 'Benchmarking Disk -> RAM -> GPU -> Model -> GPU -> RAM'),
-    (5, 'Benchmarking RAM -> GPU'),
-    (6, 'Benchmarking RAM -> GPU -> Model -> GPU'),
-    (7, 'Benchmarking RAM -> GPU -> Model -> GPU -> RAM'),
-    (8, 'Benchmarking GPU -> Model -> GPU -> RAM'),
+    (5, 'Benchmarking         RAM -> GPU                       '),
+    (6, 'Benchmarking         RAM -> GPU -> Model -> GPU       '),
+    (7, 'Benchmarking         RAM -> GPU -> Model -> GPU -> RAM'),
+    (8, 'Benchmarking                GPU -> Model -> GPU -> RAM'),
 ]
 
 def main():
@@ -41,7 +42,8 @@ def main():
     target_shape = None
 
     for (step, description) in steps:
-        print(description, end=': ')
+        samples_done = 0
+        print(description, end=' – ')
         tic = time.time()
 
         if step >= 5:
@@ -62,11 +64,14 @@ def main():
             if step >= 4:
                 prediction = prediction.cpu()
 
-            if iteration >= 100:
+            samples_done += img.shape[0]
+            if samples_done >= 512:
                 break
 
         toc = time.time()
-        print(f'{toc - tic:.02f} seconds')
+        time_elapsed = toc - tic
+        throughput = 4 * 512 * np.prod(img.shape[1:]) / time_elapsed
+        print(f'{time_elapsed:.02f} seconds. Pipeline Throughput: {throughput / 1e6:.02f}MB/s')
 
 
 class RandomDataGenerator():

@@ -172,15 +172,20 @@ if __name__ == "__main__":
         info_dir = DEST / dataset.name
         info_dir.mkdir(parents=True)
 
-        h5 = h5py.File(h5_path, 'w')
+        tifs = list(dataset.glob('tiles/data/*.tif'))
+
+        h5 = h5py.File(h5_path, 'w',
+            rdcc_nbytes = 2*(1<<30), # 2 GiB
+            rdcc_nslots = 200003,
+        )
         channel_numbers = dict(planet=4, ndvi=1, tcvis=3, relative_elevation=1, slope=1)
 
         datasets = dict()
         for dataset_name, nchannels in channel_numbers.items():
             ds = h5.create_dataset(dataset_name,
                 dtype = np.float32,
-                shape = (512, nchannels, 256, 256),
-                maxshape=(None, nchannels, 256, 256),
+                shape = (min(1024, len(tifs)), nchannels, 256, 256),
+                maxshape = (len(tifs), nchannels, 256, 256),
                 chunks = (1, nchannels, 256, 256),
                 compression = 'lzf',
                 scaleoffset = 3,
@@ -189,8 +194,8 @@ if __name__ == "__main__":
 
         datasets['mask'] = h5.create_dataset("mask",
             dtype = np.uint8,
-            shape = (512, 1, 256, 256),
-            maxshape=(None, 1, 256, 256),
+            shape = (min(1024, len(tifs)), 1, 256, 256),
+            maxshape = (len(tifs), 1, 256, 256),
             chunks = (1, 1, 256, 256),
             compression = 'lzf',
         )
@@ -200,12 +205,14 @@ if __name__ == "__main__":
 
         # Convert data to HDF5 storage for efficient data loading
         i = 0
-        for img in tqdm(list(dataset.glob('tiles/data/*.tif'))):
+        bad_tiles = 0
+        for img in tqdm(tifs):
             tile = {}
             with rio.open(img) as raster:
                 tile['planet'] = raster.read()
 
             if (tile['planet'] == 0).all(axis=0).mean() > THRESHOLD:
+                bad_tiles += 1
                 continue
 
             with rio.open(mask_from_img(img)) as raster:
@@ -213,7 +220,8 @@ if __name__ == "__main__":
             assert tile['mask'].max() <= 1, "Mask can't contain values > 1"
 
             for other in channel_numbers:
-                if other == 'planet': continue  # We already did this!
+                if other == 'planet':
+                    continue  # We already did this!
                 with rio.open(other_from_img(img, other)) as raster:
                     data = raster.read()
                 if data.shape[0] > channel_numbers[other]:
@@ -229,13 +237,17 @@ if __name__ == "__main__":
                     is_narrow = True
                     break
             if is_narrow:
+                bad_tiles += 1
                 continue
 
+            """
             if(datasets['planet'].shape[0] <= i):
                 for ds in datasets.values():
                     ds.resize(ds.shape[0] + 2048, axis=0)
+            """
             for t in tile:
                 datasets[t][i] = tile[t]
+
 
             make_info_picture(tile, info_dir / f'{i}.jpg')
             i += 1

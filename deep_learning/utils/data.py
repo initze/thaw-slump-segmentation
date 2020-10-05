@@ -47,7 +47,10 @@ class H5Dataset(Dataset):
     def assert_open(self):
         # Needed for multi-threading to work
         if self.h5 is None:
-            self.h5 = h5py.File(self.dataset_path, 'r')
+            self.h5 = h5py.File(self.dataset_path, 'r',
+                rdcc_nbytes = 2*(1<<30), # 2 GiB
+                rdcc_nslots = 200003,
+            )
 
     def __getitem__(self, idx):
         self.assert_open()

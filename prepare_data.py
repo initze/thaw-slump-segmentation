@@ -168,14 +168,14 @@ if __name__ == "__main__":
 
     for dataset in datasets:
         print(f'Doing {dataset}')
-        h5_path = DEST / f'{dataset.name}.h5'
-        info_dir = DEST / dataset.name
-        info_dir.mkdir(parents=True)
-
         tifs = list(dataset.glob('tiles/data/*.tif'))
         if len(tifs) == 0:
             print(f'WARNING: No tiles found for {dataset}, skipping this directory.')
             continue
+
+        h5_path = DEST / f'{dataset.name}.h5'
+        info_dir = DEST / dataset.name
+        info_dir.mkdir(parents=True)
 
         h5 = h5py.File(h5_path, 'w',
             rdcc_nbytes = 2*(1<<30), # 2 GiB

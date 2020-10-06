@@ -126,7 +126,7 @@ if __name__ == "__main__":
     OVERLAP = int(args['--tile_overlap'])
 
     # Paths setup
-    RASTERFILTER = '*3B_AnalyticMS_SR.tif'
+    RASTERFILTER = '*3B_AnalyticMS_SR*.tif'
     VECTORFILTER = '*.shp'
     THRESHOLD = float(args['--nodata_threshold']) / 100
 
@@ -168,6 +168,9 @@ if __name__ == "__main__":
 
     for dataset in datasets:
         print(f'Doing {dataset}')
+        if not args['--skip_gdal']:
+            do_gdal_calls(dataset)
+
         tifs = list(dataset.glob('tiles/data/*.tif'))
         if len(tifs) == 0:
             print(f'WARNING: No tiles found for {dataset}, skipping this directory.')
@@ -202,9 +205,6 @@ if __name__ == "__main__":
             chunks = (1, 1, 256, 256),
             compression = 'lzf',
         )
-
-        if not args['--skip_gdal']:
-            do_gdal_calls(dataset)
 
         # Convert data to HDF5 storage for efficient data loading
         i = 0

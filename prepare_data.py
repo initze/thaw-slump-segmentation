@@ -187,7 +187,7 @@ if __name__ == "__main__":
         for dataset_name, nchannels in channel_numbers.items():
             ds = h5.create_dataset(dataset_name,
                 dtype = np.float32,
-                shape = (min(1024, len(tifs)), nchannels, 256, 256),
+                shape = (len(tifs), nchannels, 256, 256),
                 maxshape = (len(tifs), nchannels, 256, 256),
                 chunks = (1, nchannels, 256, 256),
                 compression = 'lzf',

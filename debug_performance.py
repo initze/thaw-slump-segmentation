@@ -1,7 +1,19 @@
-import os
-# os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
+"""
+Usecase 2 Performance Debugging Script
+
+Usage:
+    debug_performance.py [options]
+
+Options:
+    -h --help          Show this screen
+    --config=CONFIG    Specify run config to use [default: config.yml]
+    --dataset=DATASET  Dataset to use for benchmarking, should correspond to
+                       a config section under "datasets" [default: train]
+"""
+
 import time
 import yaml
+from docopt import docopt
 
 import torch
 import numpy as np
@@ -24,11 +36,12 @@ steps = [
 ]
 
 def main():
-    config = yaml.load(open('config.yml'), Loader=yaml.SafeLoader)
+    cli_args = docopt(__doc__, version="Usecase 2 Training Script 1.0")
+    config = yaml.load(open(cli_args['--config']), Loader=yaml.SafeLoader)
 
     data_sources = get_sources(config['data_sources'])
 
-    ds_config = config['datasets']['train']
+    ds_config = config['datasets'][cli_args['--dataset']]
     if 'batch_size' not in ds_config:
         ds_config['batch_size'] = config['batch_size']
     ds_config['num_workers'] = config['data_threads']
@@ -83,6 +96,7 @@ class RandomDataGenerator():
         for _ in range(100):
             data = [torch.zeros(shp, device=self.device) for shp in self.data_shapes]
             yield data
+
 
 if __name__ == "__main__":
     main()

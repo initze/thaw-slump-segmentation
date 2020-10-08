@@ -43,6 +43,7 @@ class H5Dataset(Dataset):
         self.dataset_path = dataset_path
         self.sources = [src.name for src in data_sources]
         self.h5 = None
+        self.length = None
 
     def assert_open(self):
         # Needed for multi-threading to work
@@ -51,6 +52,14 @@ class H5Dataset(Dataset):
                 rdcc_nbytes = 2*(1<<30), # 2 GiB
                 rdcc_nslots = 200003,
             )
+
+    def close_fd(self):
+        # We need to close the h5 file descriptor before going multi-threaded
+        # to allow for pickling on windows
+        self.h5.close()
+        del self.h5 
+        self.h5 = None
+
 
     def __getitem__(self, idx):
         self.assert_open()
@@ -61,8 +70,19 @@ class H5Dataset(Dataset):
         return features, mask
 
     def __len__(self):
-        self.assert_open()
-        return self.h5['mask'].shape[0]
+        # Three branches for this, because __getitem__ should be the only
+        # operation to open the h5 in the long-term (otherwise, threading will fail on windows)
+        # 1. length was already determined -> just use that
+        # 2. we don't know the length & h5 is open -> get length from open h5
+        # 3. we don't know the length & h5 is closed -> open h5, get length and CLOSE AGAIN!
+        if self.length is None:
+            if self.h5 is None:
+                self.assert_open()
+                self.length = self.h5['mask'].shape[0]
+                self.close_fd()
+            else:
+                self.length = self.h5['mask'].shape[0]
+        return self.length
 
 
 class Augment(Dataset):

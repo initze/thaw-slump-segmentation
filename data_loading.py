@@ -90,7 +90,7 @@ def get_vis_loader(vis_config, batch_size, data_sources=None):
     vis_datasets = []
     for scene, indices in vis_config.items():
         dataset = get_dataset(scene, data_sources=data_sources)
-        vis_names += [f'{scene}|{i}' for i in indices]
+        vis_names += [f'{scene}-{i}' for i in indices]
         filtered = Subset(dataset, indices)
         vis_datasets.append(filtered)
     vis_data = ConcatDataset(vis_datasets)

@@ -120,7 +120,8 @@ class Augment(Dataset):
         return len(self.dataset) * 8
 
 
-class Transform(Dataset):
+class Transformed(Dataset):
+    "Wrap a dataset and apply a given transformation to every sample (e.g. Scaling)"
     def __init__(self, dataset, transform):
         self.dataset = dataset
         self.transform = transform
@@ -132,3 +133,15 @@ class Transform(Dataset):
     def __len__(self):
         return len(self.dataset)
 
+
+class Scaling():
+    "Scales tensors by predefined normalization factors"
+    def __init__(self, normalize):
+        self.normalize = normalize
+        # TODO: Also allow for a shifting factor?
+
+    def __call__(self, sample):
+        sample = list(sample)
+        # Imagery is sample[0]
+        sample[0] = sample[0].to(torch.float) * self.normalize
+        return sample

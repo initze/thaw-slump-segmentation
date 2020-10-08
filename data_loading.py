@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 from torch.utils.data import DataLoader, ConcatDataset, Subset
-from deep_learning.utils.data import H5Dataset, Augment, Transform
+from deep_learning.utils.data import H5Dataset, Augment, Transformed, Scaling
 from pathlib import Path
 from collections import namedtuple
 from tqdm import tqdm
@@ -23,7 +23,7 @@ def get_sources(source_names):
     return list(sorted(SOURCE_FROM_NAME[name] for name in source_names))
 
 
-def make_transform(data_sources=None):
+def make_scaling(data_sources=None):
     if data_sources is None:
         # Use all data sources by default
         data_sources = DATA_SOURCES
@@ -35,12 +35,7 @@ def make_transform(data_sources=None):
         factors += source.normalization_factors
 
     normalize = 1 / torch.tensor(factors, dtype=torch.float32).reshape(-1, 1, 1)
-    def transform_fn(sample):
-        sample = list(sample)
-        # Imagery is sample[0]
-        sample[0] = sample[0].to(torch.float) * normalize
-        return sample
-    return transform_fn
+    return Scaling(normalize)
 
 
 def get_dataset(dataset, data_sources=None, augment=False, transform=None):
@@ -55,13 +50,13 @@ def get_dataset(dataset, data_sources=None, augment=False, transform=None):
     if augment:
         dataset = Augment(dataset)
     if transform is not None:
-        dataset = Transform(dataset, transform)
+        dataset = Transformed(dataset, transform)
     return dataset
 
 
 def get_loader(scenes, batch_size, augment=False, shuffle=False, num_workers=0, data_sources=None, transform=None):
     if transform is None:
-        transform = make_transform(data_sources)
+        transform = make_scaling(data_sources)
     scenes = [get_dataset(ds, data_sources=data_sources, augment=augment, transform=transform) for ds in scenes]
     concatenated = ConcatDataset(scenes)
     return DataLoader(concatenated, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, pin_memory=True)
@@ -69,7 +64,7 @@ def get_loader(scenes, batch_size, augment=False, shuffle=False, num_workers=0, 
 
 def get_slump_loader(scenes, batch_size, augment=False, shuffle=False, num_workers=0, data_sources=None, transform=None):
     if transform is None:
-        transform = make_transform(data_sources)
+        transform = make_scaling(data_sources)
     filtered_sets = []
     print("Calculating slump only dataset...")
     for scene in tqdm(scenes):
@@ -80,7 +75,7 @@ def get_slump_loader(scenes, batch_size, augment=False, shuffle=False, num_worke
     dataset = ConcatDataset(filtered_sets)
     if augment:
         dataset = Augment(dataset)
-    dataset = Transform(dataset, transform)
+    dataset = Transformed(dataset, transform)
     print("Done.")
     return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, pin_memory=True)
 
@@ -94,7 +89,7 @@ def get_vis_loader(vis_config, batch_size, data_sources=None):
         filtered = Subset(dataset, indices)
         vis_datasets.append(filtered)
     vis_data = ConcatDataset(vis_datasets)
-    vis_data = Transform(vis_data, make_transform(data_sources))
+    vis_data = Transformed(vis_data, make_scaling(data_sources))
 
     loader = DataLoader(vis_data, batch_size=batch_size, shuffle=False, pin_memory=True)
     return loader, vis_names

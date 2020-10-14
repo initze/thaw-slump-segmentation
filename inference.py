@@ -68,7 +68,8 @@ def do_inference(tilename):
         if not raw_directory.exists():
             print(f"Couldn't find tile '{tilename}' in data/ or data_input/. Skipping this tile")
             return
-        preprocess_directory(raw_directory, gdal_bin=args['--gdal_bin'], gdal_path=args['--gdal_path'])
+        preprocess_directory(raw_directory, gdal_bin=args['--gdal_bin'],
+                             gdal_path=args['--gdal_path'], label_required=False)
         # After this, data_directory should contain all the stuff that we need.
     output_directory = Path('inference') / tilename
     output_directory.mkdir(exist_ok=True)

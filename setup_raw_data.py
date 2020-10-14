@@ -26,7 +26,7 @@ DATA_DIR = os.path.join(BASEDIR, 'data')
 STATUS = {0: 'failed', 1: 'success', 2: 'skipped'}
 SUCCESS_STATES = ['rename', 'label', 'ndvi', 'tcvis', 'rel_dem', 'slope', 'mask', 'move']
 
-def preprocess_directory(image_dir, gdal_bin, gdal_path):
+def preprocess_directory(image_dir, gdal_bin, gdal_path, label_required=True):
     global is_ee_initialized
     if not is_ee_initialized:
         try:
@@ -46,9 +46,10 @@ def preprocess_directory(image_dir, gdal_bin, gdal_path):
         print('Input File has no valid Projection!')
         return
 
-    success_state['label'] = vector_to_raster_mask(image_dir,
-                                                   gdal_bin=gdal_bin,
-                                                   gdal_path=gdal_path)
+    if label_required:
+        success_state['label'] = vector_to_raster_mask(image_dir,
+                                                       gdal_bin=gdal_bin,
+                                                       gdal_path=gdal_path)
 
     success_state['ndvi'] = make_ndvi_file(image_dir)
 

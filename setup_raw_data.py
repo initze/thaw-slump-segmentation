@@ -50,6 +50,8 @@ def preprocess_directory(image_dir, gdal_bin, gdal_path, label_required=True):
         success_state['label'] = vector_to_raster_mask(image_dir,
                                                        gdal_bin=gdal_bin,
                                                        gdal_path=gdal_path)
+    else:
+        success_state['label'] = 2
 
     success_state['ndvi'] = make_ndvi_file(image_dir)
 

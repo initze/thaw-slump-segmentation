@@ -53,7 +53,7 @@ def get_channel_offset(data_sources, target_source):
 
 def showexample(data, preds, filename, data_sources, writer=None):
     ## First plot
-    ROWS = 5
+    ROWS = 6
     m = 0.02
     gridspec_kw = dict(left=m, right=1 - m, top=1 - m, bottom=m,
                        hspace=0.12, wspace=m)
@@ -62,7 +62,7 @@ def showexample(data, preds, filename, data_sources, writer=None):
     ax = ax.T.reshape(-1)
 
     flatui = flatui_cmap('Emerald', 'Silver', 'Alizarin', 'Silver', 'Midnight Blue')
-    heatmap_args = dict(cmap=flatui, vmin=0, vmax=2)
+    heatmap_args = dict(cmap=plt.cm.Greys_r, vmin=0, vmax=1)
     heatmap_dem = dict(cmap='RdBu', vmin=0, vmax=0.9)
 
     img, target = data
@@ -79,26 +79,31 @@ def showexample(data, preds, filename, data_sources, writer=None):
         b, g, r, nir = np.arange(4) + offset
         bgnir = imageize(img[[nir, b, g]])
         ax[0].imshow(bgnir)
-        ax[0].set_title('B-G-NIR')
+        ax[0].set_title('NIR-R-G')
     if 'ndvi' in ds_names:
         c = get_channel_offset(data_sources, 'ndvi')
-        ndvi = imageize(img[[c, c, c]])
-        ax[1].imshow(ndvi)
+        ndvi = img[[c, c, c]].cpu().numpy()
+        ax[1].imshow(ndvi[0], cmap=plt.cm.RdYlGn, vmin=0, vmax=1)
         ax[1].set_title('NDVI')
     if 'tcvis' in ds_names:
         offset = get_channel_offset(data_sources, 'tcvis')
         r, g, b = np.arange(3) + offset
         tcvis = imageize(img[[r, g, b]])
         ax[2].imshow(tcvis)
-        ax[2].set_title('TCVis')
+        ax[2].set_title('TCVIS')
     if 'relative_elevation' in ds_names:
         c = get_channel_offset(data_sources, 'relative_elevation')
         dem = img[[c, c, c]].cpu().numpy()
         ax[3].imshow(np.clip(dem[0], 0, 1), **heatmap_dem)
         ax[3].set_title('DEM')
+    if 'slope' in ds_names:
+        c = get_channel_offset(data_sources, 'slope')
+        slope = img[[c, c, c]].cpu().numpy()
+        ax[4].imshow(np.clip(slope[0], 0, 1), cmap=plt.cm.Reds, vmin=0, vmax=1)
+        ax[4].set_title('Slope')
 
-    ax[4].imshow(target[0], **heatmap_args)
-    ax[4].set_title('Target')
+    ax[5].imshow(target[0], **heatmap_args)
+    ax[5].set_title('Target')
 
     for i, pred in enumerate(preds):
         p = pred.argmax(dim=0).cpu()
@@ -115,7 +120,7 @@ def showexample(data, preds, filename, data_sources, writer=None):
             b, g, r, nir = np.arange(4) + offset
             bgnir = imageize(img[[nir, b, g]])
             ax[0].imshow(bgnir)
-            ax[0].set_title('B-G-NIR')
+            ax[0].set_title('NIR-R-G')
         ax[1].imshow(target[0].cpu(), **heatmap_args)
         ax[1].set_title('Ground Truth')
 

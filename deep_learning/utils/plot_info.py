@@ -108,7 +108,7 @@ def showexample(data, preds, filename, data_sources, writer=None):
     for i, pred in enumerate(preds):
         p = pred.argmax(dim=0).cpu()
         ax[i+ROWS].imshow(p, **heatmap_args)
-        ax[i+ROWS].set_title(f'Epoch {i} Prediction')
+        ax[i+ROWS].set_title(f'Epoch {i+1} Prediction')
 
     filename.parent.mkdir(exist_ok=True)
     plt.savefig(filename, bbox_inches='tight')

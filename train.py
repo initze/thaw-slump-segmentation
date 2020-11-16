@@ -89,7 +89,7 @@ def train_epoch(train_loader):
         opt.step()
 
         with torch.no_grad():
-            metrics.step(y_hat, target, Loss=loss.detach())
+            metrics.step(y_hat.argmax(dim=1), target.squeeze(1), Loss=loss.detach())
             if (iteration+1) % 50 == 0:
                 metrics_vals = metrics.evaluate()
                 progress.set_postfix(metrics_vals)
@@ -116,7 +116,7 @@ def val_epoch(val_loader):
             y_hat = model(img)
 
             loss = loss_function(y_hat, target)
-            metrics.step(y_hat, target, Loss=loss.detach())
+            metrics.step(y_hat.argmax(dim=1), target.squeeze(1), Loss=loss.detach())
 
         m = metrics.evaluate()
         logstr = f'Epoch {epoch:02d} - Val: ' \

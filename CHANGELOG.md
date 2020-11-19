@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.2.0] - 2020-11-19
+### Changed
+- fixed wrong accuracy metrics
+
 ## [0.1.1] - 2020-10-30
 ### Added
 - Slope visualization in tile-predictions

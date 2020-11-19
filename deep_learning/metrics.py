@@ -43,8 +43,8 @@ class Metrics():
         if len(args) == 2:
             prediction = args[0]
             target = args[1]
-            yhat = (prediction.argmax(dim=1) == self.positive_class)
-            y    = (target == self.positive_class)
+            yhat = prediction == self.positive_class
+            y    = target == self.positive_class
             for agg in self.required_aggregators:
                 if agg not in self.state:
                     self.state[agg] = AGGREGATORS[agg](yhat, y)

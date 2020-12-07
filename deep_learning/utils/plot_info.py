@@ -185,8 +185,11 @@ def plot_precision_recall(train_metrics, val_metrics, outdir='.'):
 
     for ax in [ax1, ax2]:
         ax.set_xlabel('Epoch')
+        ax.get_xaxis().set_major_locator(MaxNLocator(integer=True))
         ax.legend(['Precision', 'Recall'])
         ax.grid()
+
+    fig.tight_layout()
 
     outfile = os.path.join(outdir, f'precision_recall.png')
     fig.savefig(outfile)

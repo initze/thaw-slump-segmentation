@@ -90,26 +90,26 @@ def train_epoch(train_loader):
 
         with torch.no_grad():
             metrics.step(y_hat.argmax(dim=1), target.squeeze(1), Loss=loss.detach())
-            if (iteration+1) % 50 == 0:
-                metrics_vals = metrics.evaluate()
-                progress.set_postfix(metrics_vals)
-                logstr = f'{epoch}' +  ','.join(f'{val:.2f}' for key, val in metrics_vals.items())
-                logfile = log_dir / 'train.csv'
-                if not logfile.exists():
-                    # Print header upon first log print
-                    header = 'Epoch' + ','.join(f'{key}' for key, val in metrics_vals.items())
-                    with (log_dir / 'train.csv').open('w') as f:
-                        print(header, file=f)
-                        print(logstr)
-                else:
-                    with logfile.open('a') as f:
-                        print(logstr, file=f, end='')
 
-                for key, val in metrics_vals.items():
-                    trn_writer.add_scalar(key, val, board_idx)
-                    safe_append(trn_metrics, key, val)
-                safe_append(trn_metrics, 'step', board_idx)
-                trn_writer.flush()
+    metrics_vals = metrics.evaluate()
+    progress.set_postfix(metrics_vals)
+    logstr = f'{epoch},' +  ','.join(f'{val}' for key, val in metrics_vals.items())
+    logfile = log_dir / 'train.csv'
+    if not logfile.exists():
+        # Print header upon first log print
+        header = 'Epoch,' + ','.join(f'{key}' for key, val in metrics_vals.items())
+        with logfile.open('w') as f:
+            print(header, file=f)
+            print(logstr, file=f)
+    else:
+        with logfile.open('a') as f:
+            print(logstr, file=f)
+
+    for key, val in metrics_vals.items():
+        trn_writer.add_scalar(key, val, board_idx)
+        safe_append(trn_metrics, key, val)
+    safe_append(trn_metrics, 'step', board_idx)
+    trn_writer.flush()
 
     # Save model Checkpoint
     torch.save(model.state_dict(), checkpoints / f'{epoch:02d}.pt')
@@ -128,17 +128,17 @@ def val_epoch(val_loader):
             metrics.step(y_hat.argmax(dim=1), target.squeeze(1), Loss=loss.detach())
 
         m = metrics.evaluate()
-        logstr = f'{epoch}' +  ','.join(f'{val:.2f}' for key, val in metrics_vals.items())
-        logfile = log_dir / 'train.csv'
+        logstr = f'{epoch},' +  ','.join(f'{val}' for key, val in m.items())
+        logfile = log_dir / 'val.csv'
         if not logfile.exists():
             # Print header upon first log print
-            header = 'Epoch' + ','.join(f'{key}' for key, val in metrics_vals.items())
-            with (log_dir / 'val.csv').open('w') as f:
+            header = 'Epoch,' + ','.join(f'{key}' for key, val in m.items())
+            with logfile.open('w') as f:
                 print(header, file=f)
-                print(logstr)
+                print(logstr, file=f)
         else:
             with logfile.open('a') as f:
-                print(logstr, file=f, end='')
+                print(logstr, file=f)
         for key, val in m.items():
             val_writer.add_scalar(key, val, board_idx)
             safe_append(val_metrics, key, val)

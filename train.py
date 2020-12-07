@@ -93,9 +93,18 @@ def train_epoch(train_loader):
             if (iteration+1) % 50 == 0:
                 metrics_vals = metrics.evaluate()
                 progress.set_postfix(metrics_vals)
-                logstr = ', '.join(f'{key}: {val:.2f}' for key, val in metrics_vals.items())
-                with (log_dir / 'metrics.txt').open('a+') as f:
-                    print(logstr, file=f)
+                logstr = f'{epoch}' +  ','.join(f'{val:.2f}' for key, val in metrics_vals.items())
+                logfile = log_dir / 'train.csv'
+                if not logfile.exists():
+                    # Print header upon first log print
+                    header = 'Epoch' + ','.join(f'{key}' for key, val in metrics_vals.items())
+                    with (log_dir / 'train.csv').open('w') as f:
+                        print(header, file=f)
+                        print(logstr)
+                else:
+                    with logfile.open('a') as f:
+                        print(logstr, file=f, end='')
+
                 for key, val in metrics_vals.items():
                     trn_writer.add_scalar(key, val, board_idx)
                     safe_append(trn_metrics, key, val)
@@ -119,11 +128,17 @@ def val_epoch(val_loader):
             metrics.step(y_hat.argmax(dim=1), target.squeeze(1), Loss=loss.detach())
 
         m = metrics.evaluate()
-        logstr = f'Epoch {epoch:02d} - Val: ' \
-               + ', '.join(f'{key}: {val:.2f}' for key, val in m.items())
-        print(logstr)
-        with (log_dir / 'metrics.txt').open('a+') as f:
-            print(logstr, file=f)
+        logstr = f'{epoch}' +  ','.join(f'{val:.2f}' for key, val in metrics_vals.items())
+        logfile = log_dir / 'train.csv'
+        if not logfile.exists():
+            # Print header upon first log print
+            header = 'Epoch' + ','.join(f'{key}' for key, val in metrics_vals.items())
+            with (log_dir / 'val.csv').open('w') as f:
+                print(header, file=f)
+                print(logstr)
+        else:
+            with logfile.open('a') as f:
+                print(logstr, file=f, end='')
         for key, val in m.items():
             val_writer.add_scalar(key, val, board_idx)
             safe_append(val_metrics, key, val)
@@ -221,8 +236,6 @@ if __name__ == "__main__":
 
     for phase in config['schedule']:
         print(f'Starting phase "{phase["phase"]}"')
-        with (log_dir / 'metrics.txt').open('a+') as f:
-            print(f'Phase {phase["phase"]}', file=f)
         for epoch in range(phase['epochs']):
             # Epoch setup
             loss_function = get_loss(scoped_get('loss_function', phase, config))

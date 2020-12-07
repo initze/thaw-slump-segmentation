@@ -4,6 +4,7 @@ import os
 import pandas as pd
 import torch
 from matplotlib.colors import LinearSegmentedColormap
+from matplotlib.ticker import MaxNLocator
 
 FLATUI = {'Turquoise': (0.10196078431372549, 0.7372549019607844, 0.611764705882353),
  'Emerald': (0.1803921568627451, 0.8, 0.44313725490196076),
@@ -163,6 +164,7 @@ def plot_metrics(train_metrics, val_metrics, outdir='.'):
         if metric in val_metrics:
             ax.plot(val_metrics['epoch'], val_metrics[metric], c='C1', label='Val')
         ax.set_xlabel('Epoch')
+        ax.get_xaxis().set_major_locator(MaxNLocator(integer=True))
         ax.set_ylabel(metric)
         ax.legend()
         ax.grid()

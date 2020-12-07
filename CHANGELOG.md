@@ -1,8 +1,10 @@
 # Changelog
 
-## [master] - 2020-12-07
+## [0.2.1] - 2020-12-07
 ### Changed
-* Metrics are now logged into CSV files: `train.csv`, `val.csv`
+- Metrics are now logged into CSV files: `train.csv`, `val.csv`
+- xlabels of metrics plots in epochs
+- fixed cropped xlabel in precision recall plot
 
 ## [0.2.0] - 2020-11-19
 ### Changed

@@ -90,17 +90,26 @@ def train_epoch(train_loader):
 
         with torch.no_grad():
             metrics.step(y_hat.argmax(dim=1), target.squeeze(1), Loss=loss.detach())
-            if (iteration+1) % 50 == 0:
-                metrics_vals = metrics.evaluate()
-                progress.set_postfix(metrics_vals)
-                logstr = ', '.join(f'{key}: {val:.2f}' for key, val in metrics_vals.items())
-                with (log_dir / 'metrics.txt').open('a+') as f:
-                    print(logstr, file=f)
-                for key, val in metrics_vals.items():
-                    trn_writer.add_scalar(key, val, board_idx)
-                    safe_append(trn_metrics, key, val)
-                safe_append(trn_metrics, 'step', board_idx)
-                trn_writer.flush()
+
+    metrics_vals = metrics.evaluate()
+    progress.set_postfix(metrics_vals)
+    logstr = f'{epoch},' +  ','.join(f'{val}' for key, val in metrics_vals.items())
+    logfile = log_dir / 'train.csv'
+    if not logfile.exists():
+        # Print header upon first log print
+        header = 'Epoch,' + ','.join(f'{key}' for key, val in metrics_vals.items())
+        with logfile.open('w') as f:
+            print(header, file=f)
+            print(logstr, file=f)
+    else:
+        with logfile.open('a') as f:
+            print(logstr, file=f)
+
+    for key, val in metrics_vals.items():
+        trn_writer.add_scalar(key, val, board_idx)
+        safe_append(trn_metrics, key, val)
+    safe_append(trn_metrics, 'step', board_idx)
+    trn_writer.flush()
 
     # Save model Checkpoint
     torch.save(model.state_dict(), checkpoints / f'{epoch:02d}.pt')
@@ -119,11 +128,17 @@ def val_epoch(val_loader):
             metrics.step(y_hat.argmax(dim=1), target.squeeze(1), Loss=loss.detach())
 
         m = metrics.evaluate()
-        logstr = f'Epoch {epoch:02d} - Val: ' \
-               + ', '.join(f'{key}: {val:.2f}' for key, val in m.items())
-        print(logstr)
-        with (log_dir / 'metrics.txt').open('a+') as f:
-            print(logstr, file=f)
+        logstr = f'{epoch},' +  ','.join(f'{val}' for key, val in m.items())
+        logfile = log_dir / 'val.csv'
+        if not logfile.exists():
+            # Print header upon first log print
+            header = 'Epoch,' + ','.join(f'{key}' for key, val in m.items())
+            with logfile.open('w') as f:
+                print(header, file=f)
+                print(logstr, file=f)
+        else:
+            with logfile.open('a') as f:
+                print(logstr, file=f)
         for key, val in m.items():
             val_writer.add_scalar(key, val, board_idx)
             safe_append(val_metrics, key, val)
@@ -221,8 +236,6 @@ if __name__ == "__main__":
 
     for phase in config['schedule']:
         print(f'Starting phase "{phase["phase"]}"')
-        with (log_dir / 'metrics.txt').open('a+') as f:
-            print(f'Phase {phase["phase"]}', file=f)
         for epoch in range(phase['epochs']):
             # Epoch setup
             loss_function = get_loss(scoped_get('loss_function', phase, config))

@@ -1,5 +1,9 @@
 # Changelog
 
+## [master] - 2020-12-07
+### Changed
+* Metrics are now logged into CSV files: `train.csv`, `val.csv`
+
 ## [0.2.0] - 2020-11-19
 ### Changed
 - fixed wrong accuracy metrics

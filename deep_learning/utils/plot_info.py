@@ -182,7 +182,7 @@ def plot_precision_recall(train_metrics, val_metrics, outdir='.'):
     ax2.set_title('Val')
 
     for ax in [ax1, ax2]:
-        ax.set_xlabel('Epoch')
+        ax.set_xlabel('Iteration')
         ax.legend(['Precision', 'Recall'])
         ax.grid()
 

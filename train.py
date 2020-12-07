@@ -109,6 +109,7 @@ def train_epoch(train_loader):
         trn_writer.add_scalar(key, val, board_idx)
         safe_append(trn_metrics, key, val)
     safe_append(trn_metrics, 'step', board_idx)
+    safe_append(trn_metrics, 'epoch', epoch)
     trn_writer.flush()
 
     # Save model Checkpoint
@@ -143,6 +144,7 @@ def val_epoch(val_loader):
             val_writer.add_scalar(key, val, board_idx)
             safe_append(val_metrics, key, val)
         safe_append(val_metrics, 'step', board_idx)
+        safe_append(val_metrics, 'epoch', epoch)
         val_writer.flush()
 
 

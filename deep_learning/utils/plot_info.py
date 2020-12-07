@@ -152,17 +152,17 @@ def read_metrics_file(file_path):
 
 
 def plot_metrics(train_metrics, val_metrics, outdir='.'):
-    metrics = (set(train_metrics) | set(val_metrics)) - set(['step'])
+    metrics = (set(train_metrics) | set(val_metrics)) - set(['step', 'epoch'])
     for metric in metrics:
         outfile = os.path.join(outdir, f'{metric}.png')
         ax = plt.subplot()
         fig = ax.get_figure()
 
         if metric in train_metrics:
-            ax.plot(train_metrics['step'], train_metrics[metric], c='C0', label='Train')
+            ax.plot(train_metrics['epoch'], train_metrics[metric], c='C0', label='Train')
         if metric in val_metrics:
-            ax.plot(val_metrics['step'], val_metrics[metric], c='C1', label='Val')
-        ax.set_xlabel('Iteration')
+            ax.plot(val_metrics['epoch'], val_metrics[metric], c='C1', label='Val')
+        ax.set_xlabel('Epoch')
         ax.set_ylabel(metric)
         ax.legend()
         ax.grid()
@@ -174,15 +174,15 @@ def plot_precision_recall(train_metrics, val_metrics, outdir='.'):
     fig = plt.figure(figsize=(10, 3))
     ax1, ax2 = fig.subplots(1, 2)
 
-    ax1.plot(train_metrics['step'], train_metrics['Precision'])
-    ax1.plot(train_metrics['step'], train_metrics['Recall'])
+    ax1.plot(train_metrics['epoch'], train_metrics['Precision'])
+    ax1.plot(train_metrics['epoch'], train_metrics['Recall'])
     ax1.set_title('Train')
-    ax2.plot(val_metrics['step'], val_metrics['Precision'])
-    ax2.plot(val_metrics['step'], val_metrics['Recall'])
+    ax2.plot(val_metrics['epoch'], val_metrics['Precision'])
+    ax2.plot(val_metrics['epoch'], val_metrics['Recall'])
     ax2.set_title('Val')
 
     for ax in [ax1, ax2]:
-        ax.set_xlabel('Iteration')
+        ax.set_xlabel('Epoch')
         ax.legend(['Precision', 'Recall'])
         ax.grid()
 

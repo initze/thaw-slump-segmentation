@@ -5,24 +5,27 @@ Usage:
     train.py [options]
 
 Options:
-    -h --help          Show this screen
-    --summary          Only print model summary and return (Requires the torchsummary package)
-    --config=CONFIG    Specify run config to use [default: config.yml]
-    --resume=CHKPT     Resume from the specified checkpoint [default: ]
-                       Can be either a run-id (e.g. "2020-06-29_18-12-03") to select the last
-                       checkpoint of that run, or a direct path to a checkpoint to be loaded.
-                       Overrides the resume option in the config file if given.
+    -h --help             Show this screen
+    -n NAME, --name=NAME  Give this run a name, so that it will be logged into [default: ]
+                          logs/<NAME>_<timestamp> 
+    --summary             Only print model summary and return (Requires the torchsummary package)
+    --config=CONFIG       Specify run config to use [default: config.yml]
+    --resume=CHKPT        Resume from the specified checkpoint [default: ]
+                          Can be either a run-id (e.g. "2020-06-29_18-12-03") to select the last
+                          checkpoint of that run, or a direct path to a checkpoint to be loaded.
+                          Overrides the resume option in the config file if given.
 """
 import sys
 from datetime import datetime
 from pathlib import Path
 
-import torch
 from tqdm import tqdm
+import torch
 
 from deep_learning import get_model, get_loss, Metrics, Accuracy, Precision, Recall, F1, IoU
 from deep_learning.utils import showexample, plot_metrics, plot_precision_recall
 from data_loading import get_loader, get_vis_loader, get_slump_loader, get_sources
+import subprocess
 
 import re
 
@@ -219,10 +222,19 @@ if __name__ == "__main__":
     vis_predictions = None
     vis_loader, vis_names = get_vis_loader(config['visualization_tiles'], batch_size=config['batch_size'], data_sources=data_sources)
 
-    log_dir = Path('logs') / datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+    timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+    if cli_args['--name']:
+        log_dir_name = f'{cli_args["--name"]}_{timestamp}'
+    else:
+        log_dir_name = timestamp
+    log_dir = Path('logs') / log_dir_name
     log_dir.mkdir(exist_ok=False)
 
     # Write the config YML to the run-folder
+    config['run_info'] = dict(
+        timestamp = timestamp,
+        git_head = subprocess.check_output(["git", "describe"], encoding='utf8').strip()
+    )
     with open(log_dir / 'config.yml', 'w') as f:
         yaml.dump(config, f)
 

@@ -12,7 +12,7 @@ DataSource = namedtuple('DataSource', ['name', 'channels', 'normalization_factor
 Planet = DataSource('planet', 4, [3000, 3000, 3000, 3000])
 NDVI = DataSource('ndvi', 1, [20000])
 TCVIS = DataSource('tcvis', 3, [255, 255, 255])
-RelativeElevation = DataSource('relative_elevation', 1, [20000])
+RelativeElevation = DataSource('relative_elevation', 1, [30000])
 Slope = DataSource('slope', 1, [90])
 
 DATA_SOURCES = list(sorted([Planet, NDVI, TCVIS, RelativeElevation, Slope]))

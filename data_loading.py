@@ -1,8 +1,6 @@
 import torch
-import numpy as np
 from torch.utils.data import DataLoader, ConcatDataset, Subset
 from deep_learning.utils.data import H5Dataset, Augment, Transformed, Scaling
-from pathlib import Path
 from collections import namedtuple
 from tqdm import tqdm
 
@@ -17,6 +15,7 @@ Slope = DataSource('slope', 1, [90])
 
 DATA_SOURCES = list(sorted([Planet, NDVI, TCVIS, RelativeElevation, Slope]))
 SOURCE_FROM_NAME = {src.name: src for src in DATA_SOURCES}
+
 
 def get_sources(source_names):
     # Always sort the source list

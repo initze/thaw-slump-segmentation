@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.0] - 2021-01-26
+### Added
+- Named training runs
+### Changed
+- Loading Arctic DEM elevations and slopes locally
+  - fixed too low resolution bug (loading from Google Earthengine)
+- minor code style fixes
+
 ## [0.2.1] - 2020-12-07
 ### Changed
 - Metrics are now logged into CSV files: `train.csv`, `val.csv`

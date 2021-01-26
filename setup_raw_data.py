@@ -55,22 +55,22 @@ def preprocess_directory(image_dir, gdal_bin, gdal_path, label_required=True):
 
     success_state['ndvi'] = make_ndvi_file(image_dir)
 
+    # TODO: resample to 3m
     ee_image_tcvis = ee.ImageCollection("users/ingmarnitze/TCTrend_SR_2000-2019_TCVIS").mosaic()
     success_state['tcvis'] = get_tcvis_from_gee(image_dir,
                                                 ee_image_tcvis,
-                                                out_filename='tcvis.tif')
-
-    ee_image_rel_el = get_ArcticDEM_rel_el()
-    success_state['rel_dem'] = get_tcvis_from_gee(image_dir,
-                                                  ee_image_rel_el,
-                                                  out_filename='relative_elevation.tif',
-                                                  resolution=3)
-
-    ee_image_slope = get_ArcticDEM_slope()
-    success_state['slope'] = get_tcvis_from_gee(image_dir,
-                                                ee_image_slope,
-                                                out_filename='slope.tif',
+                                                out_filename='tcvis.tif',
                                                 resolution=3)
+
+    success_state['rel_dem'] = aux_data_to_tiles(image_dir,
+                                                 'data_aux/ArcticDEM/elevation.vrt',
+                                                 'relative_elevation.tif',
+                                                 gdal_bin=gdal_bin, gdal_path=gdal_path)
+
+    success_state['slope'] = aux_data_to_tiles(image_dir,
+                                               'data_aux/ArcticDEM/slope.vrt',
+                                               'slope.tif',
+                                               gdal_bin=gdal_bin, gdal_path=gdal_path)
 
     success_state['mask'] = mask_input_data(image_dir, DATA_DIR)
 

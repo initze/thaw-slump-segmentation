@@ -33,7 +33,7 @@ def ee_geom_from_image_bounds(image_path, buffer=1000):
     return ee.Geometry.Rectangle(coords=region_transformed), [xmin, xmax, ymin, ymax], epsg
 
 
-def get_tcvis_from_gee(image_directory, ee_image, out_filename, buffer=1000, resolution=3, remove_files=True):
+def get_tcvis_from_gee(image_directory, ee_image, out_filename, buffer=200, resolution=3, remove_files=True):
     image_directory = os.path.abspath(image_directory)
     assert os.path.isdir(image_directory)
     outfile_path = os.path.join(image_directory, out_filename)
@@ -59,6 +59,7 @@ def get_tcvis_from_gee(image_directory, ee_image, out_filename, buffer=1000, res
 
     zippath = os.path.join(image_directory, 'out.zip')
     myfile = requests.get(url, allow_redirects=True)
+    # SUper slow large download
     open(zippath, 'wb').write(myfile.content)
 
     with zipfile.ZipFile(zippath, 'r') as zip_ref:

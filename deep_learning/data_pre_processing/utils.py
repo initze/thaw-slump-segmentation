@@ -27,6 +27,7 @@ def has_projection(image_directory):
     image_list = glob.glob(os.path.join(image_directory, r'*3B_AnalyticMS_SR.tif'))
     impath = image_list[0]
 
+    # TODO: crs not detected
     with rio.open(impath) as src:
         try:
             src.crs.to_epsg()
@@ -126,4 +127,26 @@ def vector_to_raster_mask(image_directory, gdal_bin='', gdal_path='', delete_int
         return 2
     if delete_intermediate_files:
         os.remove(maskfile)
+    return 1
+
+def geom_from_image_bounds(image_path):
+    with rio.open(image_path) as src:
+        epsg = 'EPSG:{}'.format(src.crs.to_epsg())
+        return [src.bounds.left, src.bounds.right, src.bounds.bottom, src.bounds.top]
+
+def crs_from_image(image_path):
+    with rio.open(image_path) as src:
+        return 'EPSG:{}'.format(src.crs.to_epsg())
+
+def aux_data_to_tiles(image_directory, aux_data, outfile, gdal_bin='', gdal_path=''):
+    # load template and get props
+    images = get_mask_images(image_directory, udm='udm.tif', udm2='udm2.tif', images=['_SR.tif'])
+    image = images['images'][0]
+    # prepare gdalwarp call
+    xmin, xmax, ymin, ymax = geom_from_image_bounds(image)
+    crs = crs_from_image(image)
+    # run gdalwarp call
+    outfile = f'{image_directory}/{outfile}'#os.path.join(image_directory,outfile)
+    s_run = f'gdalwarp -te {xmin} {ymin} {xmax} {ymax} -tr 3 3 -r cubic -t_srs {crs} -co COMPRESS=DEFLATE {aux_data} {outfile}'
+    os.system(s_run)
     return 1

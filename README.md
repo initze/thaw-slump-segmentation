@@ -1,5 +1,19 @@
 # AICore - Usecase 2
 
+## Data Preparation
+
+1. copy/move data into data_input
+2. copy/move data into data_aux (e.g. prepared ArcticDEM data)
+
+## Data Preprocessing
+
+```bash
+python setup_raw_data.py
+```
+```bash
+python prepare_data.py
+```
+
 ## Training a model
 
 ```bash

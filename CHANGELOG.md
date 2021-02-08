@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.3.1] - 2021-02-08
+### Changed
+- fixed bug causing crash running inference.py
+
 ## [0.3.0] - 2021-01-26
 ### Added
 - Named training runs

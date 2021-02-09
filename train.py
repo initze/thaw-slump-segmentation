@@ -24,7 +24,7 @@ import torch
 
 from deep_learning import get_model, get_loss, Metrics, Accuracy, Precision, Recall, F1, IoU
 from deep_learning.utils import showexample, plot_metrics, plot_precision_recall
-from data_loading import get_loader, get_vis_loader, get_slump_loader, get_sources
+from data_loading import get_loader, get_vis_loader, get_slump_loader, DataSources
 import subprocess
 
 import re
@@ -180,7 +180,7 @@ if __name__ == "__main__":
     config_file = Path(cli_args['--config'])
     config = yaml.load(config_file.open(), Loader=yaml.SafeLoader)
 
-    data_sources = get_sources(config['data_sources'])
+    data_sources = DataSources(config['data_sources'])
     config['model_args']['input_channels'] = sum(src.channels for src in data_sources)
 
     modelclass = get_model(config['model'])

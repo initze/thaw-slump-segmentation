@@ -23,7 +23,7 @@ from deep_learning.models import get_model
 from deep_learning.utils.plot_info import flatui_cmap
 
 from setup_raw_data import preprocess_directory
-from data_loading import get_sources
+from data_loading import DataSources
 
 from docopt import docopt
 import yaml
@@ -215,7 +215,7 @@ if __name__ == "__main__":
     model.load_state_dict(torch.load(ckpt, map_location=dev))
     model = model.to(dev)
 
-    sources = get_sources(config['data_sources'])
+    sources = DataSources(config['data_sources'])
 
     torch.set_grad_enabled(False)
     for tilename in args['<tile_to_predict>']:

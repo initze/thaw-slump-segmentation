@@ -1,4 +1,7 @@
 # Changelog
+## [0.3.2] - 2021-02-15
+- added parallel preprocessing (setup_raw_data.py, prepare_data.py)
+- changed option parsing from docopt to argparse for preprocessing scripts
 
 ## [0.3.1] - 2021-02-08
 ### Changed

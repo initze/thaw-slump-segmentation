@@ -2,36 +2,29 @@
 # flake8: noqa: E501
 """
 Usecase 2 Data Preprocessing Script
-
-Usage:
-    prepare_data.py [options]
-
-Options:
-    -h --help               Show this screen
-    --skip_gdal             Skip the Gdal conversion stage (if it has already been done)
-    --gdal_path=PATH        Path to gdal scripts (ignored if --skip_gdal is passed) [default: ]
-    --gdal_bin=PATH         Path to gdal binaries (ignored if --skip_gdal is passed) [default: ]
-    --nodata_threshold=THR  Throw away data with at least this % of nodata pixels [default: 50]
-    --tile_size=XxY         Tiling size in pixels [default: 256x256]
-    --tile_overlap          Overlap of the tiles in pixels [default: 25]
-    --make_overviews        Make additional overview images in a seperate 'info' folder
 """
+import argparse
 import os
 import shutil
 import sys
 from pathlib import Path
-
 import numpy as np
 import rasterio as rio
 import h5py
-from docopt import docopt
 from skimage.io import imsave
 from tqdm import tqdm
-
-#import parsl
-#from parsl.app.app import python_app
-#parsl.load()
 from joblib import Parallel, delayed
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--skip_gdal", action='store_true', help="Skip the Gdal conversion stage (if it has already been "
+                                                             "done)")
+parser.add_argument("--gdal_bin", default='', help="Path to gdal binaries (ignored if --skip_gdal is passed)")
+parser.add_argument("--gdal_path", default='', help="Path to gdal scripts (ignored if --skip_gdal is passed)")
+parser.add_argument("--n_jobs", default=-1, type=int, help="number of parallel joblib jobs")
+parser.add_argument("--nodata_threshold", default=50, type=float, help="Throw away data with at least this % of "
+                                                                       "nodata pixels")
+parser.add_argument("--tile_size", default='256x256', type=str, help="Tiling size in pixels e.g. '256x256'")
+parser.add_argument("--tile_overlap", default=25, type=int, help="Overlap of the tiles in pixels")
 
 
 def read_and_assert_imagedata(image_path):
@@ -124,10 +117,9 @@ def make_info_picture(tile, filename):
     imsave(filename, img)
 
 
-#@python_app
 def main_function(dataset):
     print(f'Doing {dataset}')
-    if not args['--skip_gdal']:
+    if not args.skip_gdal:
         do_gdal_calls(dataset)
 
     tifs = list(dataset.glob('tiles/data/*.tif'))
@@ -217,20 +209,19 @@ def main_function(dataset):
         datasets[t].resize(i, axis=0)
 
 if __name__ == "__main__":
-    args = docopt(__doc__, version="Usecase 2 Data Preprocessing Script 1.0")
+    args = parser.parse_args()
     # Tiling Settings
-    XSIZE, YSIZE = map(int, args['--tile_size'].split('x'))
-    OVERLAP = int(args['--tile_overlap'])
+    XSIZE, YSIZE = map(int, args.tile_size.split('x'))
+    OVERLAP = args.tile_overlap
 
     # Paths setup
     RASTERFILTER = '*3B_AnalyticMS_SR*.tif'
     VECTORFILTER = '*.shp'
-    THRESHOLD = float(args['--nodata_threshold']) / 100
+    THRESHOLD = args.nodata_threshold / 100
 
-    if not args['--skip_gdal']:
-        gdal_path = args['--gdal_path']
-        gdal_bin = args['--gdal_bin']
-        # TODO: we're only using gdal_retile here... is it safe to delete the others?
+    if not args.skip_gdal:
+        gdal_path = args.gdal_path
+        gdal_bin = args.gdal_bin
         gdal_merge = os.path.join(gdal_path, 'gdal_merge.py')
         gdal_retile = os.path.join(gdal_path, 'gdal_retile.py')
         gdal_rasterize = os.path.join(gdal_bin, 'gdal_rasterize')
@@ -263,8 +254,4 @@ if __name__ == "__main__":
             print("Aborting due to conflicts with existing data directories.")
             sys.exit(1)
 
-    Parallel(n_jobs=-1)(delayed(main_function)(dataset) for dataset in datasets)
-    """
-    for dataset in datasets:
-        main_function(dataset)
-    """
+    Parallel(n_jobs=args.n_jobs)(delayed(main_function)(dataset) for dataset in datasets)

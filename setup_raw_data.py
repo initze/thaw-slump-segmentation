@@ -1,24 +1,16 @@
 #!/usr/bin/env python
 """
 Usecase 2 Data Preprocessing Script
-
-Usage:
-    prepare_data.py [options]
-
-Options:
-    -h --help               Show this screen
-    --skip_gdal             Skip the Gdal conversion stage (if it has already been done)
-    --gdal_path=PATH        Path to gdal scripts (ignored if --skip_gdal is passed) [default: ]
-    --gdal_bin=PATH         Path to gdal binaries (ignored if --skip_gdal is passed) [default: ]
 """
-
+import argparse
 from deep_learning.data_pre_processing import *
-from docopt import docopt
 from deep_learning.data_pre_processing import get_tcvis_from_gee
-#from parsl.app.app import python_app
-#import parsl
-#parsl.load()
 from joblib import Parallel, delayed
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--gdal_bin", default='', help="Path to gdal binaries (ignored if --skip_gdal is passed)")
+parser.add_argument("--gdal_path", default='', help="Path to gdal scripts (ignored if --skip_gdal is passed)")
+parser.add_argument("--n_jobs", default=-1, type=int, help="number of parallel joblib jobs")
 
 is_ee_initialized = False  # Module-global flag to avoid calling ee.Initialize multiple times
 
@@ -31,7 +23,6 @@ STATUS = {0: 'failed', 1: 'success', 2: 'skipped'}
 SUCCESS_STATES = ['rename', 'label', 'ndvi', 'tcvis', 'rel_dem', 'slope', 'mask', 'move']
 
 
-#@python_app
 def preprocess_directory(image_dir, gdal_bin, gdal_path, label_required=True):
     global is_ee_initialized
     if not is_ee_initialized:
@@ -61,7 +52,6 @@ def preprocess_directory(image_dir, gdal_bin, gdal_path, label_required=True):
 
     success_state['ndvi'] = make_ndvi_file(image_dir)
 
-    # TODO: resample to 3m
     ee_image_tcvis = ee.ImageCollection("users/ingmarnitze/TCTrend_SR_2000-2019_TCVIS").mosaic()
     success_state['tcvis'] = get_tcvis_from_gee(image_dir,
                                                 ee_image_tcvis,
@@ -89,15 +79,11 @@ def preprocess_directory(image_dir, gdal_bin, gdal_path, label_required=True):
 
 
 if __name__ == "__main__":
-    args = docopt(__doc__, version="Usecase 2 Data Preprocessing Script 1.0")
+    args = parser.parse_args()
 
     dir_list = check_input_data(INPUT_DATA_DIR)
     if len(dir_list) > 0:
-        # TODO: Joblib
-        Parallel(n_jobs=-1)(delayed(preprocess_directory)(image_dir, gdal_bin=args['--gdal_bin'], gdal_path=args['--gdal_path']) for image_dir in dir_list)
-        #_ = preprocess_directory(image_dir, gdal_bin=args['--gdal_bin'], gdal_path=args['--gdal_path'])
-        #for image_dir in dir_list:
-        #    preprocess_directory(image_dir, gdal_bin=args['--gdal_bin'], gdal_path=args['--gdal_path'])
+        Parallel(n_jobs=args.n_jobs)(delayed(preprocess_directory)(image_dir, gdal_bin=args.gdal_bin, gdal_path=args.gdal_path) for image_dir in dir_list)
 
     else:
         print("Empty Input Data Directory! No Data available to process!")

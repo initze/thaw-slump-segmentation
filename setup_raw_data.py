@@ -15,9 +15,10 @@ Options:
 from deep_learning.data_pre_processing import *
 from docopt import docopt
 from deep_learning.data_pre_processing import get_tcvis_from_gee
-from parsl.app.app import python_app
-import parsl
-parsl.load()
+#from parsl.app.app import python_app
+#import parsl
+#parsl.load()
+from joblib import Parallel, delayed
 
 is_ee_initialized = False  # Module-global flag to avoid calling ee.Initialize multiple times
 
@@ -30,7 +31,7 @@ STATUS = {0: 'failed', 1: 'success', 2: 'skipped'}
 SUCCESS_STATES = ['rename', 'label', 'ndvi', 'tcvis', 'rel_dem', 'slope', 'mask', 'move']
 
 
-@python_app
+#@python_app
 def preprocess_directory(image_dir, gdal_bin, gdal_path, label_required=True):
     global is_ee_initialized
     if not is_ee_initialized:
@@ -92,8 +93,11 @@ if __name__ == "__main__":
 
     dir_list = check_input_data(INPUT_DATA_DIR)
     if len(dir_list) > 0:
-        for image_dir in dir_list:
-            preprocess_directory(image_dir, gdal_bin=args['--gdal_bin'], gdal_path=args['--gdal_path'])
+        # TODO: Joblib
+        Parallel(n_jobs=-1)(delayed(preprocess_directory)(image_dir, gdal_bin=args['--gdal_bin'], gdal_path=args['--gdal_path']) for image_dir in dir_list)
+        #_ = preprocess_directory(image_dir, gdal_bin=args['--gdal_bin'], gdal_path=args['--gdal_path'])
+        #for image_dir in dir_list:
+        #    preprocess_directory(image_dir, gdal_bin=args['--gdal_bin'], gdal_path=args['--gdal_path'])
 
     else:
         print("Empty Input Data Directory! No Data available to process!")

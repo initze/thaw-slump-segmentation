@@ -15,6 +15,9 @@ Options:
 from deep_learning.data_pre_processing import *
 from docopt import docopt
 from deep_learning.data_pre_processing import get_tcvis_from_gee
+from parsl.app.app import python_app
+import parsl
+parsl.load()
 
 is_ee_initialized = False  # Module-global flag to avoid calling ee.Initialize multiple times
 
@@ -26,6 +29,8 @@ DATA_DIR = os.path.join(BASEDIR, 'data')
 STATUS = {0: 'failed', 1: 'success', 2: 'skipped'}
 SUCCESS_STATES = ['rename', 'label', 'ndvi', 'tcvis', 'rel_dem', 'slope', 'mask', 'move']
 
+
+@python_app
 def preprocess_directory(image_dir, gdal_bin, gdal_path, label_required=True):
     global is_ee_initialized
     if not is_ee_initialized:

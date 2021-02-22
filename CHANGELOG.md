@@ -1,4 +1,7 @@
 # Changelog
+## [0.3.3] - 2021-02-22
+- added robust futureproof datasource sorting
+
 ## [0.3.2] - 2021-02-15
 - added parallel preprocessing (setup_raw_data.py, prepare_data.py)
 - changed option parsing from docopt to argparse for preprocessing scripts

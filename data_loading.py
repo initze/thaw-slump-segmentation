@@ -5,29 +5,48 @@ from collections import namedtuple
 from tqdm import tqdm
 
 
-DataSource = namedtuple('DataSource', ['name', 'channels', 'normalization_factors'])
+class DataSources:
+    DataSource = namedtuple('DataSource',
+            ['name', 'channels', 'normalization_factors'])
+    Planet = DataSource('planet', 4, [3000, 3000, 3000, 3000])
+    NDVI = DataSource('ndvi', 1, [20000])
+    TCVIS = DataSource('tcvis', 3, [255, 255, 255])
+    RelativeElevation = DataSource('relative_elevation', 1, [30000])
+    Slope = DataSource('slope', 1, [90])
+    LIST = list(sorted([Planet, NDVI, TCVIS, RelativeElevation, Slope]))
+    NAME2SOURCE = {src.name: src for src in LIST}
 
-Planet = DataSource('planet', 4, [3000, 3000, 3000, 3000])
-NDVI = DataSource('ndvi', 1, [20000])
-TCVIS = DataSource('tcvis', 3, [255, 255, 255])
-RelativeElevation = DataSource('relative_elevation', 1, [30000])
-Slope = DataSource('slope', 1, [90])
+    def __init__(self, sources):
+        sources = (self._get_source(source) for source in sources)
+        # Sort Data Sources to be independent of the order given in the config
+        self.sources = tuple(sorted(sources))
 
-DATA_SOURCES = list(sorted([Planet, NDVI, TCVIS, RelativeElevation, Slope]))
-SOURCE_FROM_NAME = {src.name: src for src in DATA_SOURCES}
+    def _get_source(self, source):
+        if type(source) is str:
+            return DataSources.NAME2SOURCE[source]
+        elif type(source) is DataSources.DataSource:
+            return source
+        else:
+            raise ValueError(f"Can't convert object {source}"
+                             f"of type {type(source)} to DataSource")
 
+    @staticmethod
+    def all():
+        return DataSources([src.name for src in DataSources.LIST])
 
-def get_sources(source_names):
-    # Always sort the source list
-    return list(sorted(SOURCE_FROM_NAME[name] for name in source_names))
+    def __iter__(self):
+        return self.sources.__iter__()
+
+    def index(self, element):
+        return self.sources.index(element)
 
 
 def make_scaling(data_sources=None):
     if data_sources is None:
         # Use all data sources by default
-        data_sources = DATA_SOURCES
+        data_sources = DataSources.all()
     # Sort Data Sources to be independent of the order given in the config
-    data_sources = list(sorted(data_sources))
+    data_sources = DataSources(data_sources)
 
     factors = []
     for source in data_sources:
@@ -40,9 +59,8 @@ def make_scaling(data_sources=None):
 def get_dataset(dataset, data_sources=None, augment=False, transform=None):
     if data_sources is None:
         # Use all data sources by default
-        data_sources = DATA_SOURCES
-    # Sort Data Sources to be independent of the order given in the config
-    data_sources = list(sorted(data_sources))
+        data_sources = DataSources.all()
+    data_sources = DataSources(data_sources)
 
     ds_path = 'data_h5/' + dataset + '.h5'
     dataset = H5Dataset(ds_path, data_sources=data_sources)

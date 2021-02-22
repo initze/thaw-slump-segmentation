@@ -19,7 +19,7 @@ import torch
 import numpy as np
 
 from deep_learning import get_model
-from data_loading import get_loader, get_sources
+from data_loading import get_loader, DataSources
 
 steps = [
     (0, 'Disk cache warmup'),
@@ -39,7 +39,7 @@ def main():
     cli_args = docopt(__doc__, version="Usecase 2 Training Script 1.0")
     config = yaml.load(open(cli_args['--config']), Loader=yaml.SafeLoader)
 
-    data_sources = get_sources(config['data_sources'])
+    data_sources = DataSources(config['data_sources'])
 
     ds_config = config['datasets'][cli_args['--dataset']]
     if 'batch_size' not in ds_config:

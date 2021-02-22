@@ -13,7 +13,6 @@ dependencies:
   - numpy=1.18.5
   - numpy-base=1.18.5
   - pandas=1.0.5
-  - parsl=0.7.2
   - pip=20.1.1
   - pyproj=2.6.1.post1
   - python=3.7.7
@@ -24,6 +23,9 @@ dependencies:
   - scikit-image=0.17.2 
   - tensorboard=2.2.1
   - tqdm=4.48.0
-  
+  - torchvision=0.8.2
+  - pretrainedmodels=0.7.4
+  - efficientnet-pytorch=0.6.3
+  - timm=0.3.2
   - pip:
     - torchsummary==1.5.1

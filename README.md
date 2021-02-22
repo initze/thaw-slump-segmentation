@@ -32,14 +32,25 @@ Configuration is done via the `config.yml` file. Example config:
 
 ```yaml
 # Model Specification
-model: UNet
-model_args:
+model:
+  # Model Architecture. Available:
+  # Unet, UnetPlusPlus, MAnet, Linknet, FPN, PSPNet, DeepLabV3, DeepLabV3Plus, PAN]
+  architecture: Unet
+  # Model Encoder. Examples:
+  # resnet18, resnet34, resnet50, resnet101, resnet152
+  # Check https://github.com/qubvel/segmentation_models.pytorch#encoders for the full list of available encoders
+  encoder: resnet34
+  # Encoder weights to use (if transfer learning is desired)
+  # `imagenet` is available for all encoders, some of them have more options available
+  # `random` initializes the weights randomly
+  # Check https://github.com/qubvel/segmentation_models.pytorch#encoders for the
+  # full list of weights available for each encoder
+  encoder_weights: random
   # Number of classes in the training data (e.g. 2 for background & thaw slump)
-  output_channels: 2
-  # LayerNorm to use (Available: none, BatchNorm, InstanceNorm, SqueezeExcitation)
-  norm: none
-  # Other model parameters, e.g. number of down-/upsampling blocks for a UNet
-  stack_height: 4
+  classes: 2
+# Loss Function to use. Available:
+# JaccardLoss, DiceLoss, FocalLoss, LovaszLoss, SoftBCEWithLogitsLoss
+loss_function: FocalLoss
 # Data Configuration
 data_threads: 4  # Number of threads for data loading
 data_sources:  # Enabled input features
@@ -69,8 +80,6 @@ datasets:
 # Training Parameters
 batch_size: 4
 learning_rate: 0.001
-loss_function:
-  type: AutoCE
 # Training Schedule
 schedule:
   - phase: Training

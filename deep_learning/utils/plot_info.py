@@ -103,11 +103,11 @@ def showexample(data, preds, filename, data_sources, writer=None):
         ax[4].imshow(np.clip(slope[0], 0, 1), cmap='Reds', vmin=0, vmax=1)
         ax[4].set_title('Slope')
 
-    ax[5].imshow(target[0], **heatmap_args)
+    ax[5].imshow(target, **heatmap_args)
     ax[5].set_title('Target')
 
     for i, pred in enumerate(preds):
-        p = pred.argmax(dim=0).cpu()
+        p = torch.sigmoid(pred).cpu()
         ax[i + ROWS].imshow(p, **heatmap_args)
         ax[i + ROWS].set_title(f'Epoch {i + 1} Prediction')
 
@@ -122,10 +122,10 @@ def showexample(data, preds, filename, data_sources, writer=None):
             bgnir = imageize(img[[nir, b, g]])
             ax[0].imshow(bgnir)
             ax[0].set_title('NIR-R-G')
-        ax[1].imshow(target[0].cpu(), **heatmap_args)
+        ax[1].imshow(target.cpu(), **heatmap_args)
         ax[1].set_title('Ground Truth')
 
-        pred = preds[-1].argmax(dim=0)
+        pred = torch.sigmoid(preds[-1])
         ax[2].imshow(pred, **heatmap_args)
         ax[2].set_title('Prediction')
         for axis in ax:

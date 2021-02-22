@@ -60,13 +60,12 @@ class H5Dataset(Dataset):
         del self.h5 
         self.h5 = None
 
-
     def __getitem__(self, idx):
         self.assert_open()
         features = [self.h5[source][idx] for source in self.sources]
         features = torch.from_numpy(np.concatenate(features, axis=0))
 
-        mask = torch.from_numpy(self.h5['mask'][idx])
+        mask = torch.from_numpy(self.h5['mask'][idx])[0]
         return features, mask
 
     def __len__(self):
@@ -95,11 +94,11 @@ class Augment(Dataset):
         augmented = []
         for field in base:
             if transpose == 1:
-                field = field.transpose(2, 1)
+                field = field.transpose(-1, -2)
             if flipx or flipy:
                 dims = []
-                if flipy: dims.append(1)
-                if flipx: dims.append(2)
+                if flipy: dims.append(-2)
+                if flipx: dims.append(-1)
                 field = torch.flip(field, dims)
             augmented.append(field.contiguous())
         return tuple(augmented)

@@ -15,6 +15,7 @@ dependencies:
   - pandas=1.0.5
   - parsl=0.7.2
   - pip=20.1.1
+  - plotly
   - pyproj=2.6.1.post1
   - python=3.7.7
   - pytorch=1.5.1

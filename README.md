@@ -46,8 +46,6 @@ model:
   # Check https://github.com/qubvel/segmentation_models.pytorch#encoders for the
   # full list of weights available for each encoder
   encoder_weights: random
-  # Number of classes in the training data (e.g. 2 for background & thaw slump)
-  classes: 2
 # Loss Function to use. Available:
 # JaccardLoss, DiceLoss, FocalLoss, LovaszLoss, SoftBCEWithLogitsLoss
 loss_function: FocalLoss

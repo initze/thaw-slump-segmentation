@@ -122,10 +122,10 @@ def main_function(dataset):
     if not args.skip_gdal:
         do_gdal_calls(dataset)
 
-    tifs = list(dataset.glob('tiles/data/*.tif'))
+    tifs = list(sorted(dataset.glob('tiles/data/*.tif')))
     if len(tifs) == 0:
         print(f'WARNING: No tiles found for {dataset}, skipping this directory.')
-        pass
+        return
 
     h5_path = DEST / f'{dataset.name}.h5'
     info_dir = DEST / dataset.name

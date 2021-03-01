@@ -55,11 +55,16 @@ data_sources:  # Enabled input features
   - planet
   - ndvi
   - tcvis
-  # - relative_elevation
-  # - slope
+  - relative_elevation
+  - slope
 datasets:
   train:
     augment: true
+    augment_types:
+      - "HorizontalFlip"
+      - "VerticalFlip"
+      - "Blur"
+      - "RandomRotate90"
     shuffle: true
     scenes:
       - "20190618_201847_1035"

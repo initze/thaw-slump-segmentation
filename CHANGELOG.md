@@ -1,9 +1,18 @@
 # Changelog
+
+## [0.4.0] - 2021-03-01
+### Added
+- selection of different DL models and backbones
+- implementation of augmentation types based on the albumentations package
+
 ## [0.3.3] - 2021-02-22
+### Added
 - added robust futureproof datasource sorting
 
 ## [0.3.2] - 2021-02-15
+### Added
 - added parallel preprocessing (setup_raw_data.py, prepare_data.py)
+### Changed
 - changed option parsing from docopt to argparse for preprocessing scripts
 
 ## [0.3.1] - 2021-02-08

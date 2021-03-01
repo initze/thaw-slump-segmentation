@@ -86,24 +86,25 @@ class H5Dataset(Dataset):
 
 
 class Augment(Dataset):
-    def __init__(self, dataset):
+    def __init__(self, dataset, augment_types=None):
         self.dataset = dataset
-
+        if not augment_types:
+            self.augment_types = ['HorizontalFlip', 'VerticalFlip', 'Blur', 'RandomRotate90']
+        else:
+            self.augment_types = augment_types
+        
     def __getitem__(self, idx):
         idx, (flipx, flipy, transpose) = self._augmented_idx_and_ops(idx)
         base = self.dataset[idx]
-        augment_types = ['HorizontalFlip', 'VerticalFlip', 'Blur', 'RandomRotate90']
+
+        # add Augmentation types
         augment_list = []
-        if 'HorizontalFlip' in augment_types:
-            augment_list.append(A.HorizontalFlip(p=0.5))
-        if 'VerticalFlip'  in augment_types:
-            augment_list.append(A.VerticalFlip(p=0.5))
-        if 'Blur'  in augment_types:
-            augment_list.append(A.Blur(p=0.5))
-        if 'RandomRotate90'  in augment_types:
-            augment_list.append(A.Rotate(p=0.5))
+        if self.augment_types:
+            for aug_type in self.augment_types:
+                augment_list.append(getattr(A, aug_type)())
         else:
             return base
+        # scale data
         transform = A.Compose(augment_list)
 
         augmented = transform(image=np.array(base[0].permute(1,2,0)), mask=np.array(base[1]))
@@ -111,7 +112,6 @@ class Augment(Dataset):
         mask = torch.from_numpy(np.ascontiguousarray(augmented['mask']).copy())
 
         return (data, mask)
-
 
     def _augmented_idx_and_ops(self, idx):
         idx, carry = divmod(idx, 8)

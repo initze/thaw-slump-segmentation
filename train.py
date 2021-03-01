@@ -151,6 +151,7 @@ class Engine():
             if 'batch_size' not in ds_config:
                 ds_config['batch_size'] = self.config['batch_size']
             ds_config['num_workers'] = self.config['data_threads']
+            ds_config['augment_types'] = self.config['datasets']
             self.dataset_cache[name] = get_loader(data_sources=self.data_sources, **ds_config)
         else:
             func, arg = re.search(r'(\w+)\((\w+)\)', name).groups()

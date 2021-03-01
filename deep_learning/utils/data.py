@@ -3,6 +3,7 @@ import numpy as np
 import h5py
 from torch.utils.data import Dataset
 from pathlib import Path
+import albumentations as A
 
 
 class PTDataset(Dataset):
@@ -85,23 +86,32 @@ class H5Dataset(Dataset):
 
 
 class Augment(Dataset):
-    def __init__(self, dataset):
+    def __init__(self, dataset, augment_types=None):
         self.dataset = dataset
-
+        if not augment_types:
+            self.augment_types = ['HorizontalFlip', 'VerticalFlip', 'Blur', 'RandomRotate90']
+        else:
+            self.augment_types = augment_types
+        
     def __getitem__(self, idx):
         idx, (flipx, flipy, transpose) = self._augmented_idx_and_ops(idx)
         base = self.dataset[idx]
-        augmented = []
-        for field in base:
-            if transpose == 1:
-                field = field.transpose(-1, -2)
-            if flipx or flipy:
-                dims = []
-                if flipy: dims.append(-2)
-                if flipx: dims.append(-1)
-                field = torch.flip(field, dims)
-            augmented.append(field.contiguous())
-        return tuple(augmented)
+
+        # add Augmentation types
+        augment_list = []
+        if self.augment_types:
+            for aug_type in self.augment_types:
+                augment_list.append(getattr(A, aug_type)())
+        else:
+            return base
+        # scale data
+        transform = A.Compose(augment_list)
+
+        augmented = transform(image=np.array(base[0].permute(1,2,0)), mask=np.array(base[1]))
+        data = torch.from_numpy(np.ascontiguousarray(augmented['image']).transpose(2,0,1).copy())
+        mask = torch.from_numpy(np.ascontiguousarray(augmented['mask']).copy())
+
+        return (data, mask)
 
     def _augmented_idx_and_ops(self, idx):
         idx, carry = divmod(idx, 8)

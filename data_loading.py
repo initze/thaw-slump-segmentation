@@ -56,7 +56,7 @@ def make_scaling(data_sources=None):
     return Scaling(normalize)
 
 
-def get_dataset(dataset, data_sources=None, augment=False, transform=None):
+def get_dataset(dataset, data_sources=None, augment=False, transform=None, augment_types=None):
     if data_sources is None:
         # Use all data sources by default
         data_sources = DataSources.all()
@@ -65,21 +65,21 @@ def get_dataset(dataset, data_sources=None, augment=False, transform=None):
     ds_path = 'data_h5/' + dataset + '.h5'
     dataset = H5Dataset(ds_path, data_sources=data_sources)
     if augment:
-        dataset = Augment(dataset)
+        dataset = Augment(dataset, augment_types=augment_types)
     if transform is not None:
         dataset = Transformed(dataset, transform)
     return dataset
 
 
-def get_loader(scenes, batch_size, augment=False, shuffle=False, num_workers=0, data_sources=None, transform=None):
+def get_loader(scenes, batch_size, augment=False, augment_types=None, shuffle=False, num_workers=0, data_sources=None, transform=None):
     if transform is None:
         transform = make_scaling(data_sources)
-    scenes = [get_dataset(ds, data_sources=data_sources, augment=augment, transform=transform) for ds in scenes]
+    scenes = [get_dataset(ds, data_sources=data_sources, augment=augment, augment_types=None, transform=transform) for ds in scenes]
     concatenated = ConcatDataset(scenes)
     return DataLoader(concatenated, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, pin_memory=True)
 
 
-def get_slump_loader(scenes, batch_size, augment=False, shuffle=False, num_workers=0, data_sources=None, transform=None):
+def get_slump_loader(scenes, batch_size, augment=False, augment_types=None, shuffle=False, num_workers=0, data_sources=None, transform=None):
     if transform is None:
         transform = make_scaling(data_sources)
     filtered_sets = []
@@ -91,7 +91,7 @@ def get_slump_loader(scenes, batch_size, augment=False, shuffle=False, num_worke
 
     dataset = ConcatDataset(filtered_sets)
     if augment:
-        dataset = Augment(dataset)
+        dataset = Augment(dataset, augment_types=augment_types)
     dataset = Transformed(dataset, transform)
     print("Done.")
     return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, pin_memory=True)

@@ -19,7 +19,7 @@ import torch
 import torch.nn.functional as F
 from tqdm import tqdm
 
-from deep_learning.models import get_model
+from deep_learning.models import create_model, create_loss
 from deep_learning.utils.plot_info import flatui_cmap
 
 from setup_raw_data import preprocess_directory
@@ -202,8 +202,14 @@ if __name__ == "__main__":
     model_name = model_dir.name
     config = yaml.load((model_dir / 'config.yml').open(), Loader=yaml.SafeLoader)
 
-    modelclass = get_model(config['model'])
-    model = modelclass(**config['model_args'])
+    m = config['model']
+    self.model = create_model(
+        arch=m['architecture'],
+        encoder_name=m['encoder'],
+        encoder_weights=None if m['encoder_weights'] == 'random' else m['encoder_weights'],
+        classes=1,
+        in_channels=m['input_channels']
+    )
 
     if args['--ckpt'] == 'latest':
         ckpt_nums = [int(ckpt.stem) for ckpt in model_dir.glob('checkpoints/*.pt')]

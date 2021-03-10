@@ -203,7 +203,7 @@ if __name__ == "__main__":
     config = yaml.load((model_dir / 'config.yml').open(), Loader=yaml.SafeLoader)
 
     m = config['model']
-    self.model = create_model(
+    model = create_model(
         arch=m['architecture'],
         encoder_name=m['encoder'],
         encoder_weights=None if m['encoder_weights'] == 'random' else m['encoder_weights'],

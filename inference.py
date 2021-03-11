@@ -52,7 +52,7 @@ def predict(imagery):
                 continue
             patch_imagery = patch_imagery.to(dev)
             patch_pred = model(patch_imagery)
-            patch_pred = F.softmax(patch_pred, dim=1)[0, [1]]
+            patch_pred = torch.sigmoid(patch_pred)[0, 0]
             prediction[:, y:y+PATCHSIZE, x:x+PATCHSIZE] += patch_pred.cpu()
             num_preds[:, y:y+PATCHSIZE, x:x+PATCHSIZE] += 1
     final_pred = prediction / torch.clamp_min(num_preds, 1)

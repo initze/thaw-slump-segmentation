@@ -19,7 +19,7 @@ import torch
 import torch.nn.functional as F
 from tqdm import tqdm
 
-from deep_learning.models import get_model
+from deep_learning.models import create_model, create_loss
 from deep_learning.utils.plot_info import flatui_cmap
 
 from setup_raw_data import preprocess_directory
@@ -35,28 +35,40 @@ cmap_ndvi = 'RdYlGn'
 
 FIGSIZE_MAX = 20
 PATCHSIZE = 1024
+MARGIN = 256 # Margin
 
-
-def predict(imagery):
+def predict(model, imagery, device='cpu'):
     prediction = torch.zeros(1, *imagery.shape[2:])
-    num_preds  = torch.zeros(1, *imagery.shape[2:])
+    weights     = torch.zeros(1, *imagery.shape[2:])
 
-    for y in tqdm(np.arange(0, imagery.shape[2], PATCHSIZE // 2)):
-        for x in np.arange(0, imagery.shape[3], PATCHSIZE // 2):
-            if y + PATCHSIZE > imagery.shape[2]:
-                y = imagery.shape[2] - PATCHSIZE
-            if x + PATCHSIZE > imagery.shape[3]:
-                x = imagery.shape[3] - PATCHSIZE
-            patch_imagery = imagery[:, :, y:y+PATCHSIZE, x:x+PATCHSIZE]
+    PS = PATCHSIZE
+
+    for y in np.arange(0, imagery.shape[2], (PS - MARGIN)):
+        for x in np.arange(0, imagery.shape[3], (PS - MARGIN)):
+            if y + PS > imagery.shape[2]:
+                y = imagery.shape[2] - PS
+            if x + PS > imagery.shape[3]:
+                x = imagery.shape[3] - PS
+            patch_imagery = imagery[:, :, y:y+PS, x:x+PS]
             if patch_imagery[0, 0].max() == 0:
                 continue
-            patch_imagery = patch_imagery.to(dev)
-            patch_pred = model(patch_imagery)
-            patch_pred = F.softmax(patch_pred, dim=1)[0, [1]]
-            prediction[:, y:y+PATCHSIZE, x:x+PATCHSIZE] += patch_pred.cpu()
-            num_preds[:, y:y+PATCHSIZE, x:x+PATCHSIZE] += 1
-    final_pred = prediction / torch.clamp_min(num_preds, 1)
-    return final_pred
+            patch_pred  = torch.sigmoid(model(patch_imagery.to(device))[0].cpu())
+            margin_ramp = torch.cat([
+                torch.linspace(0, 1, MARGIN),
+                torch.ones(PS - 2 * MARGIN),
+                torch.linspace(1, 0, MARGIN),
+            ])
+
+            soft_margin = margin_ramp.reshape(1, 1, PS) * \
+                          margin_ramp.reshape(1, PS, 1)
+
+            # Essentially premultiplied alpha blending
+            prediction[:, y:y+PS, x:x+PS] += patch_pred * soft_margin
+            weights[   :, y:y+PS, x:x+PS]  += soft_margin
+
+    # Avoid division by zero
+    weights = torch.where(weights == 0, torch.ones_like(weights), weights)
+    return prediction / weights
 
 
 def do_inference(tilename):
@@ -131,7 +143,7 @@ def do_inference(tilename):
     full_data = torch.from_numpy(full_data)
     full_data = full_data.unsqueeze(0)  # Pretend this is a batch of size 1
 
-    res = predict(full_data).numpy()
+    res = predict(model, full_data, dev).numpy()
     del full_data
 
     res[nodata] = np.nan
@@ -143,7 +155,6 @@ def do_inference(tilename):
             count=1,
             compress='lzw'
         )
-        print(input_raster.nodata)
         out_path = output_directory / 'pred_probability.tif'
         with rio.open(out_path, 'w', **profile) as output_raster:
             output_raster.write(res.astype(np.float32))
@@ -202,8 +213,14 @@ if __name__ == "__main__":
     model_name = model_dir.name
     config = yaml.load((model_dir / 'config.yml').open(), Loader=yaml.SafeLoader)
 
-    modelclass = get_model(config['model'])
-    model = modelclass(**config['model_args'])
+    m = config['model']
+    model = create_model(
+        arch=m['architecture'],
+        encoder_name=m['encoder'],
+        encoder_weights=None if m['encoder_weights'] == 'random' else m['encoder_weights'],
+        classes=1,
+        in_channels=m['input_channels']
+    )
 
     if args['--ckpt'] == 'latest':
         ckpt_nums = [int(ckpt.stem) for ckpt in model_dir.glob('checkpoints/*.pt')]

@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.4.1] - 2021-03-01
+### Changed
+- fixed broken inference
+
 ## [0.4.0] - 2021-03-01
 ### Added
 - selection of different DL models and backbones

@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.4.1] - 2021-03-01
+## [0.4.1] - 2021-03-11
 ### Changed
 - fixed broken inference
 

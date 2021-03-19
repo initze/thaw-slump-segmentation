@@ -12,10 +12,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 import torch
-import torch.nn.functional as F
 from tqdm import tqdm
 
-from deep_learning.models import create_model, create_loss
+from deep_learning.models import create_model
 from deep_learning.utils.plot_info import flatui_cmap
 
 from setup_raw_data import preprocess_directory
@@ -30,7 +29,7 @@ cmap_ndvi = 'RdYlGn'
 
 FIGSIZE_MAX = 20
 PATCHSIZE = 1024
-MARGIN = 256 # Margin
+MARGIN = 256  # Margin
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--gdal_bin", default='', help="Path to gdal binaries")
@@ -41,6 +40,7 @@ parser.add_argument("model_path", type=str, help="path to model")
 parser.add_argument("tile_to_predict", type=str, help="path to model", nargs='+')
 
 args = parser.parse_args()
+
 
 def predict(model, imagery, device='cpu'):
     prediction = torch.zeros(1, *imagery.shape[2:])
@@ -54,10 +54,10 @@ def predict(model, imagery, device='cpu'):
                 y = imagery.shape[2] - PS
             if x + PS > imagery.shape[3]:
                 x = imagery.shape[3] - PS
-            patch_imagery = imagery[:, :, y:y+PS, x:x+PS]
+            patch_imagery = imagery[:, :, y:y + PS, x:x + PS]
             if patch_imagery[0, 0].max() == 0:
                 continue
-            patch_pred  = torch.sigmoid(model(patch_imagery.to(device))[0].cpu())
+            patch_pred = torch.sigmoid(model(patch_imagery.to(device))[0].cpu())
             margin_ramp = torch.cat([
                 torch.linspace(0, 1, MARGIN),
                 torch.ones(PS - 2 * MARGIN),
@@ -68,8 +68,8 @@ def predict(model, imagery, device='cpu'):
                           margin_ramp.reshape(1, PS, 1)
 
             # Essentially premultiplied alpha blending
-            prediction[:, y:y+PS, x:x+PS] += patch_pred * soft_margin
-            weights[   :, y:y+PS, x:x+PS]  += soft_margin
+            prediction[:, y:y + PS, x:x + PS] += patch_pred * soft_margin
+            weights[:, y:y + PS, x:x + PS] += soft_margin
 
     # Avoid division by zero
     weights = torch.where(weights == 0, torch.ones_like(weights), weights)
@@ -95,16 +95,13 @@ def do_inference(tilename):
 
     data = []
     for source in sources:
-        print(f'loading {source.name}')
+        # print(f'loading {source.name}')
         if source.name == 'planet':
             tif_path = planet_imagery_path
         else:
             tif_path = data_directory / f'{source.name}.tif'
 
         data_part = rio.open(tif_path).read().astype(np.float32)
-
-        if source.name == 'tcvis':
-            data_part = data_part[:3]  # TODO: make this redundant!
 
         data_part = data_part / np.array(source.normalization_factors, dtype=np.float32).reshape(-1, 1, 1)
         data.append(data_part)
@@ -244,6 +241,6 @@ if __name__ == "__main__":
     sources = DataSources(config['data_sources'])
 
     torch.set_grad_enabled(False)
-    # TODO: parallelize? - joblib
+
     for tilename in tqdm(args.tile_to_predict):
         do_inference(tilename)

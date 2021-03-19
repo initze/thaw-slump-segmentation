@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.4.2] - 2021-03-19
+### Added
+- shapefiles as inference output
+### Changed
+- improved inference control figures
+
 ## [0.4.1] - 2021-03-11
 ### Changed
 - fixed broken inference

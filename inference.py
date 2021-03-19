@@ -1,20 +1,16 @@
+#!/usr/bin/env python
+# flake8: noqa: E501
 """
 Usecase 2 Inference Script
-
-Usage:
-    inference.py [options] <model_path> <tile_to_predict> ... 
-
-Options:
-    -h --help          Show this screen
-    --ckpt=<CKPT>      Checkpoint to use [default: latest]
-    --gdal_path=PATH        Path to gdal scripts (only needed if tile isn't already preprocessed) [default: ]
-    --gdal_bin=PATH         Path to gdal binaries (only needed if tile isn't already preprocessed) [default: ]
 """
+
+import argparse
 from pathlib import Path
 
 import rasterio as rio
 import numpy as np
 import matplotlib.pyplot as plt
+import os
 import torch
 import torch.nn.functional as F
 from tqdm import tqdm
@@ -25,7 +21,6 @@ from deep_learning.utils.plot_info import flatui_cmap
 from setup_raw_data import preprocess_directory
 from data_loading import DataSources
 
-from docopt import docopt
 import yaml
 
 cmap_prob = flatui_cmap('Midnight Blue', 'Alizarin')
@@ -37,9 +32,19 @@ FIGSIZE_MAX = 20
 PATCHSIZE = 1024
 MARGIN = 256 # Margin
 
+parser = argparse.ArgumentParser()
+parser.add_argument("--gdal_bin", default='', help="Path to gdal binaries")
+parser.add_argument("--gdal_path", default='', help="Path to gdal scripts")
+parser.add_argument("--n_jobs", default=-1, type=int, help="number of parallel joblib jobs")
+parser.add_argument("--ckpt", default='latest', type=str, help="Checkpoint to use")
+parser.add_argument("model_path", type=str, help="path to model")
+parser.add_argument("tile_to_predict", type=str, help="path to model", nargs='+')
+
+args = parser.parse_args()
+
 def predict(model, imagery, device='cpu'):
     prediction = torch.zeros(1, *imagery.shape[2:])
-    weights     = torch.zeros(1, *imagery.shape[2:])
+    weights = torch.zeros(1, *imagery.shape[2:])
 
     PS = PATCHSIZE
 
@@ -80,8 +85,8 @@ def do_inference(tilename):
         if not raw_directory.exists():
             print(f"Couldn't find tile '{tilename}' in data/ or data_input/. Skipping this tile")
             return
-        preprocess_directory(raw_directory, gdal_bin=args['--gdal_bin'],
-                             gdal_path=args['--gdal_path'], label_required=False)
+        preprocess_directory(raw_directory, gdal_bin=args.gdal_bin,
+                             gdal_path=args.gdal_path, label_required=False)
         # After this, data_directory should contain all the stuff that we need.
     output_directory = Path('inference') / tilename
     output_directory.mkdir(exist_ok=True)
@@ -99,8 +104,6 @@ def do_inference(tilename):
         data_part = rio.open(tif_path).read().astype(np.float32)
 
         if source.name == 'tcvis':
-            if data_part.shape[0] == 3:
-                print('TCVIS alpha channel was fixed, you can delete this if-block now')
             data_part = data_part[:3]  # TODO: make this redundant!
 
         data_part = data_part / np.array(source.normalization_factors, dtype=np.float32).reshape(-1, 1, 1)
@@ -148,6 +151,11 @@ def do_inference(tilename):
 
     res[nodata] = np.nan
 
+    # define output file paths
+    out_path_proba = output_directory / 'pred_probability.tif'
+    out_path_label = output_directory / 'pred_binarized.tif'
+    out_path_shp = output_directory / 'pred_binarized.shp'
+
     with rio.open(planet_imagery_path) as input_raster:
         profile = input_raster.profile
         profile.update(
@@ -155,19 +163,21 @@ def do_inference(tilename):
             count=1,
             compress='lzw'
         )
-        out_path = output_directory / 'pred_probability.tif'
-        with rio.open(out_path, 'w', **profile) as output_raster:
+        with rio.open(out_path_proba, 'w', **profile) as output_raster:
             output_raster.write(res.astype(np.float32))
 
-        out_path = output_directory / 'pred_binarized.tif'
         profile.update(
             dtype=rio.uint8,
             nodata=255
         )
-        with rio.open(out_path, 'w', **profile) as output_raster:
+        with rio.open(out_path_label, 'w', **profile) as output_raster:
             binarized = (res > 0.5).astype(np.uint8)
             binarized[nodata] = 255
             output_raster.write(binarized)
+
+    # create vectors
+    gdal_polygonize = os.path.join(args.gdal_path, 'gdal_polygonize.py')
+    os.system(f'python {gdal_polygonize} {out_path_label} -q -mask {out_path_label} -f "ESRI Shapefile" {out_path_shp}')
 
     h, w = res.shape[1:]
     if h > w:
@@ -191,14 +201,13 @@ def do_inference(tilename):
 
 
 if __name__ == "__main__":
-    args = docopt(__doc__, version="Usecase 3 Inference Script 1.0")
 
     # ===== LOAD THE MODEL =====
     cuda = True if torch.cuda.is_available() else False
     dev = torch.device("cpu") if not cuda else torch.device("cuda")
     print(f'Running on {dev} device')
 
-    if not args['<model_path>']:
+    if not args.model_path:
         last_modified = 0
         last_modeldir = None
 
@@ -207,9 +216,9 @@ if __name__ == "__main__":
             if modified > last_modified:
                 last_modified = modified
                 last_modeldir = config_file.parent
-        args['<model_path>'] = last_modeldir
+        args.model_path = last_modeldir
 
-    model_dir = Path(args['<model_path>'])
+    model_dir = Path(args.model_path)
     model_name = model_dir.name
     config = yaml.load((model_dir / 'config.yml').open(), Loader=yaml.SafeLoader)
 
@@ -222,11 +231,11 @@ if __name__ == "__main__":
         in_channels=m['input_channels']
     )
 
-    if args['--ckpt'] == 'latest':
+    if args.ckpt == 'latest':
         ckpt_nums = [int(ckpt.stem) for ckpt in model_dir.glob('checkpoints/*.pt')]
         last_ckpt = max(ckpt_nums)
     else:
-        last_ckpt = int(args['--ckpt'])
+        last_ckpt = int(args.ckpt)
     ckpt = model_dir / 'checkpoints' / f'{last_ckpt:02d}.pt'
     print(f"Loading checkpoint {ckpt}")
     model.load_state_dict(torch.load(ckpt, map_location=dev))
@@ -235,5 +244,6 @@ if __name__ == "__main__":
     sources = DataSources(config['data_sources'])
 
     torch.set_grad_enabled(False)
-    for tilename in args['<tile_to_predict>']:
+    # TODO: parallelize? - joblib
+    for tilename in tqdm(args.tile_to_predict):
         do_inference(tilename)

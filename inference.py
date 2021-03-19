@@ -106,10 +106,11 @@ def do_inference(tilename):
         data_part = data_part / np.array(source.normalization_factors, dtype=np.float32).reshape(-1, 1, 1)
         data.append(data_part)
 
-    def make_img(filename, source, colorbar=False, **kwargs):
+    def make_img(filename, source, colorbar=False, mask=None, **kwargs):
         idx = sources.index(source)
-
         h, w = data[idx].shape[1:]
+        if mask is None:
+            mask = np.zeros((h, w), dtype=np.bool)
         if h > w:
             figsize = (FIGSIZE_MAX * w / h, FIGSIZE_MAX)
         else:
@@ -118,25 +119,24 @@ def do_inference(tilename):
         ax.axis('off')
 
         if source.channels >= 3:
-            rgb = np.stack([data[idx][i, ::10, ::10] for i in range(3)], axis=-1)
+            rgb = np.stack([np.ma.masked_where(mask, data[idx][i])[::10, ::10] for i in range(3)], axis=-1)
             rgb = np.clip(rgb, 0, 1)
             ax.imshow(rgb, aspect='equal')
         elif source.channels == 1:
-            image = ax.imshow(data[idx][0], aspect='equal', **kwargs)
+            image = ax.imshow(np.ma.masked_where(mask, data[idx][0]), aspect='equal', **kwargs)
             if colorbar:
                 plt.colorbar(image)
         plt.savefig(output_directory / filename, bbox_inches='tight', pad_inches=0)
         plt.close()
 
-    for src in sources:
-        kwargs = dict()
-        if src.name == 'ndvi':
-            kwargs = dict(colorbar=True, cmap=cmap_ndvi, vmin=0, vmax=1)
-        elif src.name == 'relative_elevation':
-            kwargs = dict(colorbar=True, cmap=cmap_dem, vmin=-0.01, vmax=0.01)
-        elif src.name == 'slope':
-            kwargs = dict(colorbar=True, cmap=cmap_slope, vmin=0, vmax=0.5)
-        make_img(f'{src.name}.jpg', src, **kwargs)
+    def plot_results(image, outfile):
+        fig, ax = plt.subplots(figsize=figsize)
+        ax.axis('off')
+        mappable = ax.imshow(image, vmin=0, vmax=1, cmap=cmap_prob, aspect='equal')
+        plt.colorbar(mappable)
+        plt.savefig(outfile, bbox_inches='tight', pad_inches=0)
+        plt.close()
+
 
     full_data = np.concatenate(data, axis=0)
     nodata = np.all(full_data == 0, axis=0, keepdims=True)
@@ -147,6 +147,8 @@ def do_inference(tilename):
     del full_data
 
     res[nodata] = np.nan
+    binarized = np.ones_like(res, dtype=np.uint8) * 255
+    binarized[~nodata] = (res[~nodata] > 0.5).astype(np.uint8)
 
     # define output file paths
     out_path_proba = output_directory / 'pred_probability.tif'
@@ -168,8 +170,6 @@ def do_inference(tilename):
             nodata=255
         )
         with rio.open(out_path_label, 'w', **profile) as output_raster:
-            binarized = (res > 0.5).astype(np.uint8)
-            binarized[nodata] = 255
             output_raster.write(binarized)
 
     # create vectors
@@ -182,20 +182,21 @@ def do_inference(tilename):
     else:
         figsize = (FIGSIZE_MAX, FIGSIZE_MAX * h / w)
 
-    fig, ax = plt.subplots(figsize=figsize)
-    ax.axis('off')
-    mappable = ax.imshow(res[0], vmin=0, vmax=1, cmap=cmap_prob, aspect='equal')
-    plt.colorbar(mappable)
-    plt.savefig(output_directory / 'pred_probability.jpg', bbox_inches='tight', pad_inches=0)
-    plt.close()
+    for src in sources:
+        kwargs = dict()
+        if src.name == 'ndvi':
+            kwargs = dict(colorbar=True, cmap=cmap_ndvi, vmin=0, vmax=1)
+        elif src.name == 'relative_elevation':
+            kwargs = dict(colorbar=True, cmap=cmap_dem, vmin=0, vmax=1)
+        elif src.name == 'slope':
+            kwargs = dict(colorbar=True, cmap=cmap_slope, vmin=0, vmax=0.5)
+        make_img(f'{src.name}.jpg', src, mask=nodata[0],**kwargs)
 
-    fig, ax = plt.subplots(figsize=figsize)
-    ax.axis('off')
-    mappable = ax.imshow(res[0] > 0.5, vmin=0, vmax=1, cmap=cmap_prob, aspect='equal')
-    plt.colorbar(mappable)
-    plt.savefig(output_directory / 'pred_binarized.jpg', bbox_inches='tight', pad_inches=0)
-    plt.close()
+    outpath = output_directory / 'pred_probability.jpg'
+    plot_results(np.ma.masked_where(nodata[0], res[0]), outpath)
 
+    outpath = output_directory / 'pred_binarized.jpg'
+    plot_results(np.ma.masked_where(nodata[0], binarized[0]), outpath)
 
 if __name__ == "__main__":
 

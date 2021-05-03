@@ -22,7 +22,8 @@ dependencies:
   - pyyaml=5.3.1
   - rasterio=1.1.5
   - requests=2.24.0
-  - scikit-image=0.17.2 
+  - scikit-image=0.17.2
+  - seaborn>=0.9
   - tensorboard=2.2.1
   - tqdm=4.48.0
   

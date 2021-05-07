@@ -52,7 +52,7 @@ class Engine():
         self.log_dir = Path('logs') / log_dir_name
         self.log_dir.mkdir(exist_ok=False)
 
-        init_logging(self.log_dir / 'train_log.txt')
+        init_logging(self.log_dir / 'train.log')
         self.logger = get_logger('train')
 
         self.data_sources = DataSources(self.config['data_sources'])

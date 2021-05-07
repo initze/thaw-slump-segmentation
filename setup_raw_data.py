@@ -4,7 +4,8 @@ Usecase 2 Data Preprocessing Script
 """
 import argparse
 from deep_learning.data_pre_processing import *
-from deep_learning.data_pre_processing import get_tcvis_from_gee
+from deep_learning import data_pre_processing
+from deep_learning.utils import init_logging, get_logger
 from joblib import Parallel, delayed
 
 parser = argparse.ArgumentParser()
@@ -24,23 +25,31 @@ SUCCESS_STATES = ['rename', 'label', 'ndvi', 'tcvis', 'rel_dem', 'slope', 'mask'
 
 
 def preprocess_directory(image_dir, gdal_bin, gdal_path, label_required=True):
+    init_logging('setup_raw_data.log')
+    image_name = os.path.basename(image_dir)
+    thread_logger = get_logger(f'setup_raw_data.{image_name}')
+    data_pre_processing.earthengine._logger = get_logger(f'setup_raw_data.{image_name}.ee')
+    data_pre_processing.utils._logger = get_logger(f'setup_raw_data.{image_name}.utils')
+
     global is_ee_initialized
     if not is_ee_initialized:
         try:
+            thread_logger.debug('Initializing Earth Engine')
             ee.Initialize()
         except:
+            thread_logger.warn('Initializing Earth Engine failed, trying to authenticate')
             ee.Authenticate()
             ee.Initialize()
         is_ee_initialized = True
     success_state = dict(rename=0, label=0, ndvi=0, tcvis=0, rel_dem=0, slope=0, mask=0, move=0)
-    print(f'\nStarting preprocessing: {os.path.basename(image_dir)}')
+    thread_logger.info(f'Starting preprocessing {image_name}')
 
     pre_cleanup(image_dir)
 
     success_state['rename'] = rename_clip_to_standard(image_dir)
 
     if not has_projection(image_dir):
-        print('Input File has no valid Projection!')
+        thread_logger.error('Input File has no valid Projection!')
         return
 
     if label_required:
@@ -74,16 +83,22 @@ def preprocess_directory(image_dir, gdal_bin, gdal_path, label_required=True):
     success_state['move'] = move_files(image_dir, backup_dir)
 
     for status in SUCCESS_STATES:
-        print(status + ':', STATUS[success_state[status]])
+        thread_logger.info(status + ': ' + STATUS[success_state[status]])
     return success_state
 
 
 if __name__ == "__main__":
     args = parser.parse_args()
 
+    init_logging('setup_raw_data.log')
+    logger = get_logger('setup_raw_data')
+    logger.info('###########################')
+    logger.info('# Starting Raw Data Setup #')
+    logger.info('###########################')
+
     dir_list = check_input_data(INPUT_DATA_DIR)
     if len(dir_list) > 0:
         Parallel(n_jobs=args.n_jobs)(delayed(preprocess_directory)(image_dir, gdal_bin=args.gdal_bin, gdal_path=args.gdal_path) for image_dir in dir_list)
 
     else:
-        print("Empty Input Data Directory! No Data available to process!")
+        logger.error("Empty Input Data Directory! No Data available to process!")

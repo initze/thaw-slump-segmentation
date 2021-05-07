@@ -10,3 +10,4 @@ archive/
 logs/
 .config
 inference/
+*.log

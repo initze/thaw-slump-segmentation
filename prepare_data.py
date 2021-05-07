@@ -5,10 +5,9 @@ Usecase 2 Data Preprocessing Script
 """
 import argparse
 import os
-import subprocess
 import shutil
 import sys
-from deep_learning.utils import init_logging, get_logger
+from deep_learning.utils import init_logging, get_logger, log_run
 from pathlib import Path
 import numpy as np
 import rasterio as rio
@@ -91,15 +90,15 @@ def do_gdal_calls(DATASET, aux_data=['ndvi', 'tcvis', 'slope', 'relative_elevati
     rasterfile = glob_file(DATASET, RASTERFILTER)
 
     # Retile data, mask
-    run(f'python {gdal_retile} -ps {XSIZE} {YSIZE} -overlap {OVERLAP} -targetDir {tile_dir_data} {rasterfile}', logger)
-    run(f'python {gdal_retile} -ps {XSIZE} {YSIZE} -overlap {OVERLAP} -targetDir {tile_dir_mask} {maskfile}', logger)
+    log_run(f'python {gdal_retile} -ps {XSIZE} {YSIZE} -overlap {OVERLAP} -targetDir {tile_dir_data} {rasterfile}', logger)
+    log_run(f'python {gdal_retile} -ps {XSIZE} {YSIZE} -overlap {OVERLAP} -targetDir {tile_dir_mask} {maskfile}', logger)
 
     # Retile additional data
     for aux in aux_data:
         auxfile = DATASET / f'{aux}.tif'
         tile_dir_aux = DATASET / 'tiles' / aux
         tile_dir_aux.mkdir(exist_ok=True)
-        run(f'python {gdal_retile} -ps {XSIZE} {YSIZE} -overlap {OVERLAP} -targetDir {tile_dir_aux} {auxfile}', logger)
+        log_run(f'python {gdal_retile} -ps {XSIZE} {YSIZE} -overlap {OVERLAP} -targetDir {tile_dir_aux} {auxfile}', logger)
 
 
 def make_info_picture(tile, filename):
@@ -118,18 +117,8 @@ def make_info_picture(tile, filename):
     imsave(filename, img)
 
 
-def run(command, logger=None):
-    proc = subprocess.run(command, shell=True, capture_output=True)
-    if logger is not None:
-        logger.info(f'Called `{proc.args}`')
-        if proc.stdout:
-            logger.info(proc.stdout.decode('utf8').strip())
-        if proc.stderr:
-            logger.error(proc.stderr.decode('utf8').strip())
-
-
 def main_function(dataset):
-    init_logging('prepare_data.txt')
+    init_logging('prepare_data.log')
     thread_logger = get_logger(f'prepare_data.{dataset.name}')
     thread_logger.info(f'Starting preparation on dataset {dataset}')
     if not args.skip_gdal:
@@ -233,7 +222,7 @@ if __name__ == "__main__":
     XSIZE, YSIZE = map(int, args.tile_size.split('x'))
     OVERLAP = args.tile_overlap
 
-    init_logging('prepare_data.txt')
+    init_logging('prepare_data.log')
     logger = get_logger('prepare_data')
     logger.info('#############################')
     logger.info('# Starting Data Preparation #')

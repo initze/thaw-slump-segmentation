@@ -1,5 +1,9 @@
 # Changelog
 
+## [master] - 2021-05-07
+### Added
+* Training/Inference/Data Preparation logs are now written to corresponding log files
+
 ## [0.4.2] - 2021-03-19
 ### Added
 - shapefiles as inference output

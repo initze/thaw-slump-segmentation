@@ -10,3 +10,5 @@ archive/
 logs/
 .config
 inference/
+*.log
+*.yml

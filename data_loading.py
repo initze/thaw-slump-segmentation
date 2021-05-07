@@ -1,5 +1,7 @@
+import logging
 import torch
 from torch.utils.data import DataLoader, ConcatDataset, Subset
+from deep_learning.utils import get_logger
 from deep_learning.utils.data import H5Dataset, Augment, Transformed, Scaling
 from collections import namedtuple
 from tqdm import tqdm
@@ -80,10 +82,12 @@ def get_loader(scenes, batch_size, augment=False, augment_types=None, shuffle=Fa
 
 
 def get_slump_loader(scenes, batch_size, augment=False, augment_types=None, shuffle=False, num_workers=0, data_sources=None, transform=None):
+    logger = get_logger('data_loading')
+
     if transform is None:
         transform = make_scaling(data_sources)
     filtered_sets = []
-    print("Calculating slump only dataset...")
+    logger.info("Start calculating slump only dataset.")
     for scene in tqdm(scenes):
         data = get_dataset(scene, data_sources=data_sources)
         subset = [i for i in range(len(data)) if data[i][1].max() > 0]
@@ -93,7 +97,7 @@ def get_slump_loader(scenes, batch_size, augment=False, augment_types=None, shuf
     if augment:
         dataset = Augment(dataset, augment_types=augment_types)
     dataset = Transformed(dataset, transform)
-    print("Done.")
+    logger.info("Done calculating slump only dataset.")
     return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, pin_memory=True)
 
 

@@ -26,9 +26,10 @@ from deep_learning.state import state
 from deep_learning.models import create_model, create_loss
 
 from deep_learning import Metrics, Accuracy, Precision, Recall, F1, IoU
-from deep_learning.utils import showexample, plot_metrics, plot_precision_recall
+from deep_learning.utils import showexample, plot_metrics, plot_precision_recall, init_logging, get_logger
 from data_loading import get_loader, get_vis_loader, get_slump_loader, DataSources
 import subprocess
+import logging
 
 import re
 
@@ -42,6 +43,18 @@ class Engine():
         cli_args = docopt(__doc__, version="Usecase 2 Training Script 1.0")
         config_file = Path(cli_args['--config'])
         self.config = yaml.load(config_file.open(), Loader=yaml.SafeLoader)
+
+        # Logging setup
+        timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+        if cli_args['--name']:
+            log_dir_name = f'{cli_args["--name"]}_{timestamp}'
+        else:
+            log_dir_name = timestamp
+        self.log_dir = Path('logs') / log_dir_name
+        self.log_dir.mkdir(exist_ok=False)
+
+        init_logging(self.log_dir / 'train_log.txt')
+        self.logger = get_logger('train')
 
         self.data_sources = DataSources(self.config['data_sources'])
         self.config['model']['input_channels'] = sum(src.channels for src in self.data_sources)
@@ -67,11 +80,11 @@ class Engine():
                 ckpt_nums = [int(ckpt.stem) for ckpt in checkpoint.glob('checkpoints/*.pt')]
                 last_ckpt = max(ckpt_nums)
                 self.config['resume'] = checkpoint / 'checkpoints' / f'{last_ckpt:02d}.pt'
-            print(f"Resuming training from checkpoint {self.config['resume']}")
+            self.logger.info(f"Resuming training from checkpoint {self.config['resume']}")
             self.model.load_state_dict(torch.load(self.config['resume']))
 
         self.dev = torch.device("cpu") if not torch.cuda.is_available() else torch.device("cuda")
-        print(f'Training on {self.dev} device')
+        self.logger.info(f'Training on {self.dev} device')
         self.model = self.model.to(self.dev)
 
         self.opt = torch.optim.AdamW(self.model.parameters(), lr=self.config['learning_rate'])
@@ -89,14 +102,6 @@ class Engine():
 
         self.vis_predictions = None
         self.vis_loader, self.vis_names = get_vis_loader(self.config['visualization_tiles'], batch_size=self.config['batch_size'], data_sources=self.data_sources)
-
-        timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-        if cli_args['--name']:
-            log_dir_name = f'{cli_args["--name"]}_{timestamp}'
-        else:
-            log_dir_name = timestamp
-        self.log_dir = Path('logs') / log_dir_name
-        self.log_dir.mkdir(exist_ok=False)
 
         # Write the config YML to the run-folder
         self.config['run_info'] = dict(
@@ -118,7 +123,7 @@ class Engine():
 
     def run(self):
         for phase in self.config['schedule']:
-            print(f'Starting phase "{phase["phase"]}"')
+            self.logger.info(f'Starting phase "{phase["phase"]}"')
             for epoch in range(phase['epochs']):
                 # Epoch setup
                 self.loss_function = create_loss(scoped_get('loss_function', phase, self.config)).to(self.dev)
@@ -166,6 +171,7 @@ class Engine():
 
     def train_epoch(self, train_loader):
         self.epoch += 1
+        self.logger.info(f'Epoch {self.epoch} - Training Started')
         progress = tqdm(train_loader)
         self.model.train(True)
         for iteration, (img, target) in enumerate(progress):
@@ -192,6 +198,7 @@ class Engine():
         progress.set_postfix(metrics_vals)
         logstr = f'{self.epoch},' +  ','.join(f'{val}' for key, val in metrics_vals.items())
         logfile = self.log_dir / 'train.csv'
+        self.logger.info(f'Epoch {self.epoch} - Training Metrics: {metrics_vals}')
         if not logfile.exists():
             # Print header upon first log print
             header = 'Epoch,' + ','.join(f'{key}' for key, val in metrics_vals.items())
@@ -213,6 +220,7 @@ class Engine():
         torch.save(self.model.state_dict(), self.checkpoints / f'{self.epoch:02d}.pt')
 
     def val_epoch(self, val_loader):
+        self.logger.info(f'Epoch {self.epoch} - Validation Started')
         self.metrics.reset()
         self.model.train(False)
         with torch.no_grad():
@@ -227,6 +235,7 @@ class Engine():
             m = self.metrics.evaluate()
             logstr = f'{self.epoch},' +  ','.join(f'{val}' for key, val in m.items())
             logfile = self.log_dir / 'val.csv'
+            self.logger.info(f'Epoch {self.epoch} - Validation Metrics: {m}')
             if not logfile.exists():
                 # Print header upon first log print
                 header = 'Epoch,' + ','.join(f'{key}' for key, val in m.items())
@@ -244,6 +253,7 @@ class Engine():
             self.val_writer.flush()
 
     def log_images(self):
+        self.logger.debug(f'Epoch {self.epoch} - Image Logging')
         with torch.no_grad():
             preds = []
             for vis_imgs, vis_masks in self.vis_loader:

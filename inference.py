@@ -41,6 +41,7 @@ parser.add_argument("model_path", type=str, help="path to model")
 parser.add_argument("tile_to_predict", type=str, help="path to model", nargs='+')
 
 args = parser.parse_args()
+gdal.initialize(args)
 
 
 def predict(model, imagery, device='cpu'):
@@ -87,8 +88,7 @@ def do_inference(tilename):
         if not raw_directory.exists():
             logger.error(f"Couldn't find tile '{tilename}' in data/ or data_input/. Skipping this tile")
             return
-        preprocess_directory(raw_directory, gdal_bin=args.gdal_bin,
-                             gdal_path=args.gdal_path, label_required=False)
+        preprocess_directory(raw_directory, label_required=False)
         # After this, data_directory should contain all the stuff that we need.
     output_directory = Path('inference') / tilename
     output_directory.mkdir(exist_ok=True)
@@ -175,8 +175,7 @@ def do_inference(tilename):
             output_raster.write(binarized)
 
     # create vectors
-    gdal_polygonize = os.path.join(args.gdal_path, 'gdal_polygonize.py')
-    log_run(f'python {gdal_polygonize} {out_path_label} -q -mask {out_path_label} -f "ESRI Shapefile" {out_path_shp}', tile_logger)
+    log_run(f'python {gdal.polygonize} {out_path_label} -q -mask {out_path_label} -f "ESRI Shapefile" {out_path_shp}', tile_logger)
 
     h, w = res.shape[1:]
     if h > w:

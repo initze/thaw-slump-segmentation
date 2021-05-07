@@ -7,6 +7,7 @@ import argparse
 import os
 import shutil
 import sys
+from deep_learning.data_pre_processing import gdal
 from deep_learning.utils import init_logging, get_logger, log_run
 from pathlib import Path
 import numpy as np
@@ -90,15 +91,15 @@ def do_gdal_calls(DATASET, aux_data=['ndvi', 'tcvis', 'slope', 'relative_elevati
     rasterfile = glob_file(DATASET, RASTERFILTER)
 
     # Retile data, mask
-    log_run(f'python {gdal_retile} -ps {XSIZE} {YSIZE} -overlap {OVERLAP} -targetDir {tile_dir_data} {rasterfile}', logger)
-    log_run(f'python {gdal_retile} -ps {XSIZE} {YSIZE} -overlap {OVERLAP} -targetDir {tile_dir_mask} {maskfile}', logger)
+    log_run(f'python {gdal.retile} -ps {XSIZE} {YSIZE} -overlap {OVERLAP} -targetDir {tile_dir_data} {rasterfile}', logger)
+    log_run(f'python {gdal.retile} -ps {XSIZE} {YSIZE} -overlap {OVERLAP} -targetDir {tile_dir_mask} {maskfile}', logger)
 
     # Retile additional data
     for aux in aux_data:
         auxfile = DATASET / f'{aux}.tif'
         tile_dir_aux = DATASET / 'tiles' / aux
         tile_dir_aux.mkdir(exist_ok=True)
-        log_run(f'python {gdal_retile} -ps {XSIZE} {YSIZE} -overlap {OVERLAP} -targetDir {tile_dir_aux} {auxfile}', logger)
+        log_run(f'python {gdal.retile} -ps {XSIZE} {YSIZE} -overlap {OVERLAP} -targetDir {tile_dir_aux} {auxfile}', logger)
 
 
 def make_info_picture(tile, filename):
@@ -117,7 +118,10 @@ def make_info_picture(tile, filename):
     imsave(filename, img)
 
 
-def main_function(dataset):
+def main_function(dataset, args):
+    if not args.skip_gdal:
+        gdal.initialize(args)
+
     init_logging('prepare_data.log')
     thread_logger = get_logger(f'prepare_data.{dataset.name}')
     thread_logger.info(f'Starting preparation on dataset {dataset}')
@@ -234,12 +238,7 @@ if __name__ == "__main__":
     THRESHOLD = args.nodata_threshold / 100
 
     if not args.skip_gdal:
-        gdal_path = args.gdal_path
-        gdal_bin = args.gdal_bin
-        gdal_merge = os.path.join(gdal_path, 'gdal_merge.py')
-        gdal_retile = os.path.join(gdal_path, 'gdal_retile.py')
-        gdal_rasterize = os.path.join(gdal_bin, 'gdal_rasterize')
-        gdal_translate = os.path.join(gdal_bin, 'gdal_translate')
+        gdal.initialize(args)
 
     DATA = Path('data')
     DEST = Path('data_h5')
@@ -270,4 +269,4 @@ if __name__ == "__main__":
             logger.error("Aborting due to conflicts with existing data directories.")
             sys.exit(1)
 
-    Parallel(n_jobs=args.n_jobs)(delayed(main_function)(dataset) for dataset in datasets)
+    Parallel(n_jobs=args.n_jobs)(delayed(main_function)(dataset, args) for dataset in datasets)

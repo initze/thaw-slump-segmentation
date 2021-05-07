@@ -24,7 +24,8 @@ STATUS = {0: 'failed', 1: 'success', 2: 'skipped'}
 SUCCESS_STATES = ['rename', 'label', 'ndvi', 'tcvis', 'rel_dem', 'slope', 'mask', 'move']
 
 
-def preprocess_directory(image_dir, gdal_bin, gdal_path, label_required=True):
+def preprocess_directory(image_dir, args, label_required=True):
+    gdal.initialize(args)
     init_logging('setup_raw_data.log')
     image_name = os.path.basename(image_dir)
     thread_logger = get_logger(f'setup_raw_data.{image_name}')
@@ -53,9 +54,7 @@ def preprocess_directory(image_dir, gdal_bin, gdal_path, label_required=True):
         return
 
     if label_required:
-        success_state['label'] = vector_to_raster_mask(image_dir,
-                                                       gdal_bin=gdal_bin,
-                                                       gdal_path=gdal_path)
+        success_state['label'] = vector_to_raster_mask(image_dir)
     else:
         success_state['label'] = 2
 
@@ -69,13 +68,13 @@ def preprocess_directory(image_dir, gdal_bin, gdal_path, label_required=True):
 
     success_state['rel_dem'] = aux_data_to_tiles(image_dir,
                                                  'data_aux/ArcticDEM/elevation.vrt',
-                                                 'relative_elevation.tif',
-                                                 gdal_bin=gdal_bin, gdal_path=gdal_path)
+                                                 'relative_elevation.tif')
+                                                 
 
     success_state['slope'] = aux_data_to_tiles(image_dir,
                                                'data_aux/ArcticDEM/slope.vrt',
-                                               'slope.tif',
-                                               gdal_bin=gdal_bin, gdal_path=gdal_path)
+                                               'slope.tif')
+                                               
 
     success_state['mask'] = mask_input_data(image_dir, DATA_DIR)
 
@@ -98,7 +97,6 @@ if __name__ == "__main__":
 
     dir_list = check_input_data(INPUT_DATA_DIR)
     if len(dir_list) > 0:
-        Parallel(n_jobs=args.n_jobs)(delayed(preprocess_directory)(image_dir, gdal_bin=args.gdal_bin, gdal_path=args.gdal_path) for image_dir in dir_list)
-
+        Parallel(n_jobs=args.n_jobs)(delayed(preprocess_directory)(image_dir, args) for image_dir in dir_list)
     else:
         logger.error("Empty Input Data Directory! No Data available to process!")

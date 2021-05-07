@@ -7,6 +7,7 @@ import rasterio as rio
 import requests
 from pyproj import Transformer
 from ..utils import get_logger, log_run
+from . import gdal
 
 _logger = get_logger('preprocessing.ee')
 
@@ -71,7 +72,7 @@ def get_tcvis_from_gee(image_directory, ee_image, out_filename, buffer=200, reso
     infile = os.path.join(image_directory, basename_tmpimage + '.tif')
 
     xmin, xmax, ymin, ymax = coords
-    s_warp = f'gdalwarp -t_srs {epsg} -tr {resolution} {resolution} \
+    s_warp = f'{gdal.warp} -t_srs {epsg} -tr {resolution} {resolution} \
                -srcnodata None -te {xmin} {ymin} {xmax} {ymax} {infile} {outfile_path}'
     log_run(s_warp, _logger)
 

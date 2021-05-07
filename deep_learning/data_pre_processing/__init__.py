@@ -1,4 +1,4 @@
-from . import utils, earthengine 
+from . import utils, earthengine, gdal
 from .utils import *
 from .earthengine import *
 

@@ -5,8 +5,10 @@ Usecase 2 Data Preprocessing Script
 """
 import argparse
 import os
+import subprocess
 import shutil
 import sys
+from deep_learning.utils import init_logging, get_logger
 from pathlib import Path
 import numpy as np
 import rasterio as rio
@@ -69,14 +71,14 @@ def other_from_img(img_path, other):
 def glob_file(DATASET, filter_string):
     candidates = list(DATASET.glob(f'{filter_string}'))
     if len(candidates) == 1:
-        print('Found file:', candidates[0])
+        logger.debug(f'Found file: {candidates[0]}')
         return candidates[0]
     else:
         raise ValueError(f'Found {len(candidates)} candidates.'
                          'Please make selection more specific!')
 
 
-def do_gdal_calls(DATASET, aux_data=['ndvi', 'tcvis', 'slope', 'relative_elevation']):
+def do_gdal_calls(DATASET, aux_data=['ndvi', 'tcvis', 'slope', 'relative_elevation'], logger=None):
     maskfile = DATASET / f'{DATASET.name}_mask.tif'
 
     tile_dir_data = DATASET / 'tiles' / 'data'
@@ -89,16 +91,15 @@ def do_gdal_calls(DATASET, aux_data=['ndvi', 'tcvis', 'slope', 'relative_elevati
     rasterfile = glob_file(DATASET, RASTERFILTER)
 
     # Retile data, mask
-    os.system(f'python {gdal_retile} -ps {XSIZE} {YSIZE} -overlap {OVERLAP} -targetDir {tile_dir_data} {rasterfile}')
-    os.system(f'python {gdal_retile} -ps {XSIZE} {YSIZE} -overlap {OVERLAP} -targetDir {tile_dir_mask} {maskfile}')
+    run(f'python {gdal_retile} -ps {XSIZE} {YSIZE} -overlap {OVERLAP} -targetDir {tile_dir_data} {rasterfile}', logger)
+    run(f'python {gdal_retile} -ps {XSIZE} {YSIZE} -overlap {OVERLAP} -targetDir {tile_dir_mask} {maskfile}', logger)
 
     # Retile additional data
     for aux in aux_data:
         auxfile = DATASET / f'{aux}.tif'
         tile_dir_aux = DATASET / 'tiles' / aux
         tile_dir_aux.mkdir(exist_ok=True)
-        os.system(
-            f'python {gdal_retile} -ps {XSIZE} {YSIZE} -overlap {OVERLAP} -targetDir {tile_dir_aux} {auxfile}')
+        run(f'python {gdal_retile} -ps {XSIZE} {YSIZE} -overlap {OVERLAP} -targetDir {tile_dir_aux} {auxfile}', logger)
 
 
 def make_info_picture(tile, filename):
@@ -117,20 +118,37 @@ def make_info_picture(tile, filename):
     imsave(filename, img)
 
 
+def run(command, logger=None):
+    proc = subprocess.run(command, shell=True, capture_output=True)
+    if logger is not None:
+        logger.info(f'Called `{proc.args}`')
+        if proc.stdout:
+            logger.info(proc.stdout.decode('utf8').strip())
+        if proc.stderr:
+            logger.error(proc.stderr.decode('utf8').strip())
+
+
 def main_function(dataset):
-    print(f'Doing {dataset}')
+    init_logging('prepare_data.txt')
+    thread_logger = get_logger(f'prepare_data.{dataset.name}')
+    thread_logger.info(f'Starting preparation on dataset {dataset}')
     if not args.skip_gdal:
-        do_gdal_calls(dataset)
+        thread_logger.info('Doing GDAL Calls')
+        do_gdal_calls(dataset, logger=thread_logger)
+    else:
+        thread_logger.info('Skipping GDAL Calls')
+
 
     tifs = list(sorted(dataset.glob('tiles/data/*.tif')))
     if len(tifs) == 0:
-        print(f'WARNING: No tiles found for {dataset}, skipping this directory.')
+        logger.warning(f'No tiles found for {dataset}, skipping this directory.')
         return
 
     h5_path = DEST / f'{dataset.name}.h5'
     info_dir = DEST / dataset.name
     info_dir.mkdir(parents=True)
 
+    thread_logger.info(f'Creating H5File at {h5_path}')
     h5 = h5py.File(h5_path, 'w',
                    rdcc_nbytes=2 * (1 << 30),  # 2 GiB
                    rdcc_nslots=200003,
@@ -160,7 +178,7 @@ def main_function(dataset):
     # Convert data to HDF5 storage for efficient data loading
     i = 0
     bad_tiles = 0
-    for img in tqdm(tifs):
+    for img in tifs:
         tile = {}
         with rio.open(img) as raster:
             tile['planet'] = raster.read()
@@ -208,11 +226,18 @@ def main_function(dataset):
     for t in datasets:
         datasets[t].resize(i, axis=0)
 
+
 if __name__ == "__main__":
     args = parser.parse_args()
     # Tiling Settings
     XSIZE, YSIZE = map(int, args.tile_size.split('x'))
     OVERLAP = args.tile_overlap
+
+    init_logging('prepare_data.txt')
+    logger = get_logger('prepare_data')
+    logger.info('#############################')
+    logger.info('# Starting Data Preparation #')
+    logger.info('#############################')
 
     # Paths setup
     RASTERFILTER = '*3B_AnalyticMS_SR*.tif'
@@ -241,17 +266,19 @@ if __name__ == "__main__":
             overwrite_conflicts.append(check_dir)
 
     if overwrite_conflicts:
-        print(f"Found old data directories: {', '.join(dir.name for dir in overwrite_conflicts)}.")
+        logger.warning(f"Found old data directories: {', '.join(dir.name for dir in overwrite_conflicts)}.")
         decision = input("Delete and recreate them [d], skip them [s] or abort [a]? ").lower()
         if decision == 'd':
+            logger.info(f"User chose to delete old directories.")
             for old_dir in overwrite_conflicts:
                 shutil.rmtree(old_dir)
         elif decision == 's':
+            logger.info(f"User chose to skip old directories.")
             already_done = [d.name for d in overwrite_conflicts]
             datasets = [d for d in datasets if d.name not in already_done]
         else:
             # When in doubt, don't overwrite/change anything to be safe
-            print("Aborting due to conflicts with existing data directories.")
+            logger.error("Aborting due to conflicts with existing data directories.")
             sys.exit(1)
 
     Parallel(n_jobs=args.n_jobs)(delayed(main_function)(dataset) for dataset in datasets)

@@ -8,7 +8,7 @@ def init_logging(log_file):
         file_handler.setLevel(logging.DEBUG)
         stdout_handler = logging.StreamHandler()
         stdout_handler.setLevel(logging.INFO)  # Hide DEBUG messages from terminal output
-        formatter = logging.Formatter('[%(asctime)s] %(name)s %(levelname)s: %(message)s', datefmt='%H:%M:%S')
+        formatter = logging.Formatter('[%(asctime)s] %(name)s %(levelname)s: %(message)s')
         file_handler.setFormatter(formatter)
         stdout_handler.setFormatter(formatter)
         root_logger.addHandler(file_handler)

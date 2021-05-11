@@ -16,6 +16,7 @@ from tqdm import tqdm
 
 from deep_learning.models import create_model
 from deep_learning.utils.plot_info import flatui_cmap
+from deep_learning.utils import init_logging, get_logger, log_run
 
 from setup_raw_data import preprocess_directory
 from data_loading import DataSources
@@ -40,6 +41,7 @@ parser.add_argument("model_path", type=str, help="path to model")
 parser.add_argument("tile_to_predict", type=str, help="path to model", nargs='+')
 
 args = parser.parse_args()
+gdal.initialize(args)
 
 
 def predict(model, imagery, device='cpu'):
@@ -77,16 +79,16 @@ def predict(model, imagery, device='cpu'):
 
 
 def do_inference(tilename):
+    tile_logger = get_logger(f'inference.{tilename}')
     # ===== PREPARE THE DATA =====
     data_directory = Path('data') / tilename
     if not data_directory.exists():
-        print('Preprocessing directory')
+        logger.info(f'Preprocessing directory {tilename}')
         raw_directory = Path('data_input') / tilename
         if not raw_directory.exists():
-            print(f"Couldn't find tile '{tilename}' in data/ or data_input/. Skipping this tile")
+            logger.error(f"Couldn't find tile '{tilename}' in data/ or data_input/. Skipping this tile")
             return
-        preprocess_directory(raw_directory, gdal_bin=args.gdal_bin,
-                             gdal_path=args.gdal_path, label_required=False)
+        preprocess_directory(raw_directory, label_required=False)
         # After this, data_directory should contain all the stuff that we need.
     output_directory = Path('inference') / tilename
     output_directory.mkdir(exist_ok=True)
@@ -95,7 +97,7 @@ def do_inference(tilename):
 
     data = []
     for source in sources:
-        # print(f'loading {source.name}')
+        tile_logger.debug(f'loading {source.name}')
         if source.name == 'planet':
             tif_path = planet_imagery_path
         else:
@@ -173,8 +175,7 @@ def do_inference(tilename):
             output_raster.write(binarized)
 
     # create vectors
-    gdal_polygonize = os.path.join(args.gdal_path, 'gdal_polygonize.py')
-    os.system(f'python {gdal_polygonize} {out_path_label} -q -mask {out_path_label} -f "ESRI Shapefile" {out_path_shp}')
+    log_run(f'python {gdal.polygonize} {out_path_label} -q -mask {out_path_label} -f "ESRI Shapefile" {out_path_shp}', tile_logger)
 
     h, w = res.shape[1:]
     if h > w:
@@ -199,11 +200,13 @@ def do_inference(tilename):
     plot_results(np.ma.masked_where(nodata[0], binarized[0]), outpath)
 
 if __name__ == "__main__":
+    init_logging('inference.log')
+    logger = get_logger('inference')
 
     # ===== LOAD THE MODEL =====
     cuda = True if torch.cuda.is_available() else False
     dev = torch.device("cpu") if not cuda else torch.device("cuda")
-    print(f'Running on {dev} device')
+    logger.info(f'Running on {dev} device')
 
     if not args.model_path:
         last_modified = 0
@@ -235,7 +238,7 @@ if __name__ == "__main__":
     else:
         last_ckpt = int(args.ckpt)
     ckpt = model_dir / 'checkpoints' / f'{last_ckpt:02d}.pt'
-    print(f"Loading checkpoint {ckpt}")
+    logger.info(f"Loading checkpoint {ckpt}")
     model.load_state_dict(torch.load(ckpt, map_location=dev))
     model = model.to(dev)
 

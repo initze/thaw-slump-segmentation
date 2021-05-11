@@ -6,6 +6,10 @@ import ee
 import rasterio as rio
 import requests
 from pyproj import Transformer
+from ..utils import get_logger, log_run
+from . import gdal
+
+_logger = get_logger('preprocessing.ee')
 
 
 def get_ArcticDEM_rel_el(kernel_size=300, offset=30, factor=300):
@@ -38,10 +42,10 @@ def get_tcvis_from_gee(image_directory, ee_image, out_filename, buffer=200, reso
     assert os.path.isdir(image_directory)
     outfile_path = os.path.join(image_directory, out_filename)
     if os.path.exists(outfile_path):
-        print(f'{out_filename} already exists. Skipping download!')
+        _logger.info(f'{out_filename} already exists. Skipping download!')
         return 2
     else:
-        print("Starting download Dataset from Google Earthengine")
+        _logger.info("Starting download Dataset from Google Earthengine")
     image_list = glob.glob(os.path.join(image_directory, r'*3B_AnalyticMS_SR.tif'))
     impath = image_list[0]
     basepath = os.path.basename(image_directory)
@@ -68,9 +72,9 @@ def get_tcvis_from_gee(image_directory, ee_image, out_filename, buffer=200, reso
     infile = os.path.join(image_directory, basename_tmpimage + '.tif')
 
     xmin, xmax, ymin, ymax = coords
-    s_warp = f'gdalwarp -t_srs {epsg} -tr {resolution} {resolution} \
+    s_warp = f'{gdal.warp} -t_srs {epsg} -tr {resolution} {resolution} \
                -srcnodata None -te {xmin} {ymin} {xmax} {ymax} {infile} {outfile_path}'
-    os.system(s_warp)
+    log_run(s_warp, _logger)
 
     if remove_files:
         os.remove(zippath)

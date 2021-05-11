@@ -2,10 +2,13 @@ import glob
 import os
 import shutil
 import numpy as np
-
 import rasterio as rio
 
 from deep_learning.data_pre_processing.udm import burn_mask
+from ..utils import get_logger, log_run
+from . import gdal
+
+_logger = get_logger('preprocessing.data')
 
 
 def check_input_data(input_directory):
@@ -18,7 +21,7 @@ def pre_cleanup(input_directory):
     if len(flist_dirty) > 0:
         for f in flist_dirty:
             os.remove(f)
-            print(f'Removed File {f}')
+            _logger.info(f'Removed File {f}')
 
 
 def has_projection(image_directory):
@@ -46,7 +49,7 @@ def rename_clip_to_standard(image_directory):
                 os.rename(p, p_out)
         return 1
     else:
-        print('No "_clip" naming found. Assume renaming not necessary')
+        _logger.info('No "_clip" naming found. Assume renaming not necessary')
         return 2
 
 
@@ -103,26 +106,22 @@ def mask_input_data(image_directory, output_directory):
     return 1
 
 
-def vector_to_raster_mask(image_directory, gdal_bin='', gdal_path='', delete_intermediate_files=True):
+def vector_to_raster_mask(image_directory, delete_intermediate_files=True):
     basename = os.path.basename(image_directory)
     vectorfile = glob.glob(os.path.join(image_directory, '*.shp'))[0]
     rasterfile = glob.glob(os.path.join(image_directory, r'*3B_AnalyticMS_SR.tif'))[0]
     maskfile = os.path.join(image_directory, 'mask.tif')
     maskfile2 = os.path.join(image_directory, f'{basename}_mask.tif')
 
-    gdal_merge = os.path.join(gdal_path, 'gdal_merge.py')
-    gdal_translate = os.path.join(gdal_bin, 'gdal_translate')
-    gdal_rasterize = os.path.join(gdal_bin, 'gdal_rasterize')
-
     try:
-        s_merge = f'python {gdal_merge} -createonly -init 0 -o {maskfile} -ot Byte -co COMPRESS=DEFLATE {rasterfile}'
-        os.system(s_merge)
+        s_merge = f'python {gdal.merge} -createonly -init 0 -o {maskfile} -ot Byte -co COMPRESS=DEFLATE {rasterfile}'
+        log_run(s_merge, _logger)
         # Add empty band to mask
-        s_translate = f'{gdal_translate} -of GTiff -ot Byte -co COMPRESS=DEFLATE -b 1 {maskfile} {maskfile2}'
-        os.system(s_translate)
+        s_translate = f'{gdal.translate} -of GTiff -ot Byte -co COMPRESS=DEFLATE -b 1 {maskfile} {maskfile2}'
+        log_run(s_translate, _logger)
         # Burn digitized polygons into mask
-        s_rasterize = f'{gdal_rasterize} -l {basename} -a label {vectorfile} {maskfile2}'
-        os.system(s_rasterize)
+        s_rasterize = f'{gdal.rasterize} -l {basename} -a label {vectorfile} {maskfile2}'
+        log_run(s_rasterize, _logger)
     except:
         return 2
     if delete_intermediate_files:
@@ -138,7 +137,7 @@ def crs_from_image(image_path):
     with rio.open(image_path) as src:
         return 'EPSG:{}'.format(src.crs.to_epsg())
 
-def aux_data_to_tiles(image_directory, aux_data, outfile, gdal_bin='', gdal_path=''):
+def aux_data_to_tiles(image_directory, aux_data, outfile):
     # load template and get props
     images = get_mask_images(image_directory, udm='udm.tif', udm2='udm2.tif', images=['_SR.tif'])
     image = images['images'][0]
@@ -147,6 +146,6 @@ def aux_data_to_tiles(image_directory, aux_data, outfile, gdal_bin='', gdal_path
     crs = crs_from_image(image)
     # run gdalwarp call
     outfile = f'{image_directory}/{outfile}'#os.path.join(image_directory,outfile)
-    s_run = f'gdalwarp -te {xmin} {ymin} {xmax} {ymax} -tr 3 3 -r cubic -t_srs {crs} -co COMPRESS=DEFLATE {aux_data} {outfile}'
-    os.system(s_run)
+    s_run = f'{gdal.warp} -te {xmin} {ymin} {xmax} {ymax} -tr 3 3 -r cubic -t_srs {crs} -co COMPRESS=DEFLATE {aux_data} {outfile}'
+    log_run(s_run, _logger)
     return 1

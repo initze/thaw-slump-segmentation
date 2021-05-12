@@ -1,5 +1,15 @@
+from datetime import datetime
 import logging
 import subprocess
+
+class ISO8601LoggingFormatter(logging.Formatter):
+    def __init__(self, format_string):
+        super().__init__(format_string)
+
+    def formatTime(self, record, datefmt=None):
+        dt = datetime.fromtimestamp(record.created).astimezone()
+        return dt.isoformat(timespec='milliseconds')
+
 
 def init_logging(log_file):
     root_logger = logging.getLogger('uc2')
@@ -8,7 +18,7 @@ def init_logging(log_file):
         file_handler.setLevel(logging.DEBUG)
         stdout_handler = logging.StreamHandler()
         stdout_handler.setLevel(logging.INFO)  # Hide DEBUG messages from terminal output
-        formatter = logging.Formatter('[%(asctime)s] %(name)s %(levelname)s: %(message)s', datefmt='%H:%M:%S')
+        formatter = ISO8601LoggingFormatter('[%(asctime)s] %(name)s %(levelname)s: %(message)s')
         file_handler.setFormatter(formatter)
         stdout_handler.setFormatter(formatter)
         root_logger.addHandler(file_handler)

@@ -22,9 +22,7 @@ from pathlib import Path
 from tqdm import tqdm
 import torch
 
-from deep_learning.state import state
 from deep_learning.models import create_model, create_loss
-
 from deep_learning import Metrics, Accuracy, Precision, Recall, F1, IoU
 from deep_learning.utils import showexample, plot_metrics, plot_precision_recall, init_logging, get_logger
 from data_loading import get_loader, get_vis_loader, get_slump_loader, DataSources

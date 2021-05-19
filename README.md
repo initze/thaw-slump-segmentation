@@ -28,6 +28,8 @@ python inference.py logs/TrainedModel 20190727_160426_104e 20190709_042959_08_10
 
 ## Configuration
 
+### Run Configuration
+
 Configuration is done via the `config.yml` file. Example config:
 
 ```yaml
@@ -97,3 +99,8 @@ visualization_tiles:
 
 ```
 
+### Preprocessing Configuration
+
+In order to correctly find the required `gdal` libraries,
+the scripts look for `gdal_path` and `gdal_bin` in the `system.yml` file.
+An example for this file is given in `system.yml.sample`.

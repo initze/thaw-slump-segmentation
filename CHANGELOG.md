@@ -1,8 +1,10 @@
 # Changelog
 
-## [master] - 2021-05-07
+## [0.5.0] - 2021-05-19
 ### Added
-* Training/Inference/Data Preparation logs are now written to corresponding log files
+- Training/Inference/Data Preparation logs are now written to corresponding log files
+- gdal configuration file
+- minor code cleanup
 
 ## [0.4.2] - 2021-03-19
 ### Added

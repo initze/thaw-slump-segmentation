@@ -4,7 +4,7 @@ import shutil
 import numpy as np
 import rasterio as rio
 
-from deep_learning.data_pre_processing.udm import burn_mask
+from .udm import burn_mask
 from ..utils import get_logger, log_run
 from . import gdal
 

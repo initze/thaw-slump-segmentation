@@ -156,6 +156,7 @@ def do_inference(tilename):
     # define output file paths
     out_path_proba = output_directory / 'pred_probability.tif'
     out_path_label = output_directory / 'pred_binarized.tif'
+    out_path_pre_poly = output_directory / 'pred_binarized_tmp.tif'
     out_path_shp = output_directory / 'pred_binarized.shp'
 
     with rio.open(planet_imagery_path) as input_raster:
@@ -175,8 +176,12 @@ def do_inference(tilename):
         with rio.open(out_path_label, 'w', **profile) as output_raster:
             output_raster.write(binarized)
 
+        with rio.open(out_path_pre_poly, 'w', **profile) as output_raster:
+            output_raster.write((binarized == 1).astype(np.uint8))
+
     # create vectors
-    log_run(f'python {gdal.polygonize} {out_path_label} -q -mask {out_path_label} -f "ESRI Shapefile" {out_path_shp}', tile_logger)
+    log_run(f'python {gdal.polygonize} {out_path_pre_poly} -q -mask {out_path_pre_poly} -f "ESRI Shapefile" {out_path_shp}', tile_logger)
+    out_path_pre_poly.unlink()
 
     h, w = res.shape[1:]
     if h > w:

@@ -3,9 +3,9 @@
 Usecase 2 Data Preprocessing Script
 """
 import argparse
-from deep_learning.data_pre_processing import *
-from deep_learning import data_pre_processing
-from deep_learning.utils import init_logging, get_logger
+from lib import data_pre_processing
+from lib.data_pre_processing import *
+from lib.utils import init_logging, get_logger
 from joblib import Parallel, delayed
 
 parser = argparse.ArgumentParser()

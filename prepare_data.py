@@ -7,8 +7,8 @@ import argparse
 import os
 import shutil
 import sys
-from deep_learning.data_pre_processing import gdal
-from deep_learning.utils import init_logging, get_logger, log_run
+from lib.data_pre_processing import gdal
+from lib.utils import init_logging, get_logger, log_run
 from pathlib import Path
 import numpy as np
 import rasterio as rio

@@ -14,9 +14,9 @@ import os
 import torch
 from tqdm import tqdm
 
-from deep_learning.models import create_model
-from deep_learning.utils.plot_info import flatui_cmap
-from deep_learning.utils import init_logging, get_logger, log_run
+from lib.models import create_model
+from lib.utils.plot_info import flatui_cmap
+from lib.utils import init_logging, get_logger, log_run
 
 from setup_raw_data import preprocess_directory
 from data_loading import DataSources

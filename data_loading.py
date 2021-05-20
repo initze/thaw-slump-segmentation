@@ -64,7 +64,7 @@ def get_dataset(dataset, data_sources=None, augment=False, transform=None, augme
         data_sources = DataSources.all()
     data_sources = DataSources(data_sources)
 
-    ds_path = 'data_h5/' + dataset + '.h5'
+    ds_path = 'data_h5/' + str(dataset) + '.h5'
     dataset = H5Dataset(ds_path, data_sources=data_sources)
     if augment:
         dataset = Augment(dataset, augment_types=augment_types)

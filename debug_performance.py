@@ -18,7 +18,7 @@ from docopt import docopt
 import torch
 import numpy as np
 
-from deep_learning import get_model
+from lib import get_model
 from data_loading import get_loader, DataSources
 
 steps = [

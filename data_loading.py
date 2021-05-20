@@ -1,8 +1,8 @@
 import logging
 import torch
 from torch.utils.data import DataLoader, ConcatDataset, Subset
-from deep_learning.utils import get_logger
-from deep_learning.utils.data import H5Dataset, Augment, Transformed, Scaling
+from lib.utils import get_logger
+from lib.utils.data import H5Dataset, Augment, Transformed, Scaling
 from collections import namedtuple
 from tqdm import tqdm
 

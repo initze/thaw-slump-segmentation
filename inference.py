@@ -17,6 +17,7 @@ from tqdm import tqdm
 from lib.models import create_model
 from lib.utils.plot_info import flatui_cmap
 from lib.utils import init_logging, get_logger, log_run
+from lib.data_pre_processing import gdal
 
 from setup_raw_data import preprocess_directory
 from data_loading import DataSources

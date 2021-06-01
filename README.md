@@ -5,6 +5,21 @@
 1. copy/move data into data_input
 2. copy/move data into data_aux (e.g. prepared ArcticDEM data)
 
+## Set gdal paths in system.yml file
+#### Linux
+
+```yaml
+gdal_path: '$CONDA_PREFIX/bin' # must be single quote
+gdal_bin: '$CONDA_PREFIX/bin' # must be single quote
+```
+
+#### Windows version
+
+```yaml
+gdal_path: '%CONDA_PREFIX%\Scripts' # must be single quote
+gdal_bin: '%CONDA_PREFIX%\Library\bin' # must be single quote
+```
+
 ## Data Preprocessing
 
 ```bash
@@ -23,7 +38,7 @@ python train.py
 ## Running Inference
 
 ```bash
-python inference.py logs/TrainedModel 20190727_160426_104e 20190709_042959_08_1057
+python inference.py logs/<TrainedModel> 20190727_160426_104e 20190709_042959_08_1057
 ```
 
 ## Configuration
@@ -98,9 +113,3 @@ visualization_tiles:
   20190727_160426_104e: [5, 52, 75, 87, 113, 139, 239, 270, 277, 291, 305]
 
 ```
-
-### Preprocessing Configuration
-
-In order to correctly find the required `gdal` libraries,
-the scripts look for `gdal_path` and `gdal_bin` in the `system.yml` file.
-An example for this file is given in `system.yml.sample`.

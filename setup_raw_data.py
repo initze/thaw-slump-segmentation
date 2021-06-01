@@ -4,11 +4,13 @@ Usecase 2 Data Preprocessing Script
 """
 import argparse
 from datetime import datetime
+from pathlib import Path
+
+from joblib import Parallel, delayed
+
 from lib import data_pre_processing
 from lib.data_pre_processing import *
 from lib.utils import init_logging, get_logger
-from joblib import Parallel, delayed
-from pathlib import Path
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--gdal_bin", default='', help="Path to gdal binaries (ignored if --skip_gdal is passed)")
@@ -71,12 +73,10 @@ def preprocess_directory(image_dir, args, log_path, label_required=True):
     success_state['rel_dem'] = aux_data_to_tiles(image_dir,
                                                  'data_aux/ArcticDEM/elevation.vrt',
                                                  'relative_elevation.tif')
-                                                 
 
     success_state['slope'] = aux_data_to_tiles(image_dir,
                                                'data_aux/ArcticDEM/slope.vrt',
                                                'slope.tif')
-                                               
 
     success_state['mask'] = mask_input_data(image_dir, DATA_DIR)
 

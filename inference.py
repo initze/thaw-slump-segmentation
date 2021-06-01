@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 import os
 import torch
 from tqdm import tqdm
+from datetime import datetime
 
 from lib.models import create_model
 from lib.utils.plot_info import flatui_cmap
@@ -79,7 +80,7 @@ def predict(model, imagery, device='cpu'):
     return prediction / weights
 
 
-def do_inference(tilename):
+def do_inference(tilename, args=None, log_path=None):
     tile_logger = get_logger(f'inference.{tilename}')
     # ===== PREPARE THE DATA =====
     data_directory = Path('data') / tilename
@@ -89,7 +90,7 @@ def do_inference(tilename):
         if not raw_directory.exists():
             logger.error(f"Couldn't find tile '{tilename}' in data/ or data_input/. Skipping this tile")
             return
-        preprocess_directory(raw_directory, label_required=False)
+        preprocess_directory(raw_directory, args, log_path, label_required=False)
         # After this, data_directory should contain all the stuff that we need.
     output_directory = Path('inference') / tilename
     output_directory.mkdir(exist_ok=True)
@@ -201,7 +202,9 @@ def do_inference(tilename):
     plot_results(np.ma.masked_where(nodata[0], binarized[0]), outpath)
 
 if __name__ == "__main__":
-    init_logging('inference.log')
+    timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+    log_path = Path('logs') / f'inference-{timestamp}.log'
+    init_logging(log_path)
     logger = get_logger('inference')
 
     # ===== LOAD THE MODEL =====
@@ -248,4 +251,4 @@ if __name__ == "__main__":
     torch.set_grad_enabled(False)
 
     for tilename in tqdm(args.tile_to_predict):
-        do_inference(tilename)
+        do_inference(tilename, args, log_path)

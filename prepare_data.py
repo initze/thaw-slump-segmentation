@@ -16,6 +16,7 @@ import h5py
 from skimage.io import imsave
 from tqdm import tqdm
 from joblib import Parallel, delayed
+from datetime import datetime
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--skip_gdal", action='store_true', help="Skip the Gdal conversion stage (if it has already been "
@@ -118,11 +119,11 @@ def make_info_picture(tile, filename):
     imsave(filename, img)
 
 
-def main_function(dataset, args):
+def main_function(dataset, args, log_path):
     if not args.skip_gdal:
         gdal.initialize(args)
 
-    init_logging('prepare_data.log')
+    init_logging(log_path)
     thread_logger = get_logger(f'prepare_data.{dataset.name}')
     thread_logger.info(f'Starting preparation on dataset {dataset}')
     if not args.skip_gdal:
@@ -226,7 +227,9 @@ if __name__ == "__main__":
     XSIZE, YSIZE = map(int, args.tile_size.split('x'))
     OVERLAP = args.tile_overlap
 
-    init_logging('prepare_data.log')
+    timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+    log_path = Path('logs') / f'prepare_data-{timestamp}.log'
+    init_logging(log_path)
     logger = get_logger('prepare_data')
     logger.info('#############################')
     logger.info('# Starting Data Preparation #')
@@ -269,4 +272,4 @@ if __name__ == "__main__":
             logger.error("Aborting due to conflicts with existing data directories.")
             sys.exit(1)
 
-    Parallel(n_jobs=args.n_jobs)(delayed(main_function)(dataset, args) for dataset in datasets)
+    Parallel(n_jobs=args.n_jobs)(delayed(main_function)(dataset, args, log_path) for dataset in datasets)

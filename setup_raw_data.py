@@ -3,10 +3,12 @@
 Usecase 2 Data Preprocessing Script
 """
 import argparse
+from datetime import datetime
 from lib import data_pre_processing
 from lib.data_pre_processing import *
 from lib.utils import init_logging, get_logger
 from joblib import Parallel, delayed
+from pathlib import Path
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--gdal_bin", default='', help="Path to gdal binaries (ignored if --skip_gdal is passed)")
@@ -24,9 +26,9 @@ STATUS = {0: 'failed', 1: 'success', 2: 'skipped'}
 SUCCESS_STATES = ['rename', 'label', 'ndvi', 'tcvis', 'rel_dem', 'slope', 'mask', 'move']
 
 
-def preprocess_directory(image_dir, args, label_required=True):
+def preprocess_directory(image_dir, args, log_path, label_required=True):
     gdal.initialize(args)
-    init_logging('setup_raw_data.log')
+    init_logging(log_path)
     image_name = os.path.basename(image_dir)
     thread_logger = get_logger(f'setup_raw_data.{image_name}')
     data_pre_processing.earthengine._logger = get_logger(f'setup_raw_data.{image_name}.ee')
@@ -89,7 +91,9 @@ def preprocess_directory(image_dir, args, label_required=True):
 if __name__ == "__main__":
     args = parser.parse_args()
 
-    init_logging('setup_raw_data.log')
+    timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+    log_path = Path('logs') / f'setup_raw_data-{timestamp}.log'
+    init_logging(log_path)
     logger = get_logger('setup_raw_data')
     logger.info('###########################')
     logger.info('# Starting Raw Data Setup #')
@@ -97,6 +101,6 @@ if __name__ == "__main__":
 
     dir_list = check_input_data(INPUT_DATA_DIR)
     if len(dir_list) > 0:
-        Parallel(n_jobs=args.n_jobs)(delayed(preprocess_directory)(image_dir, args) for image_dir in dir_list)
+        Parallel(n_jobs=args.n_jobs)(delayed(preprocess_directory)(image_dir, args, log_path) for image_dir in dir_list)
     else:
         logger.error("Empty Input Data Directory! No Data available to process!")

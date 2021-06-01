@@ -24,7 +24,7 @@ import torch
 
 from lib import Metrics, Accuracy, Precision, Recall, F1, IoU
 from lib.models import create_model, create_loss
-from lib.utils import showexample, plot_metrics, plot_precision_recall, init_logging, get_logger
+from lib.utils import showexample, plot_metrics, plot_precision_recall, init_logging, get_logger, yaml_custom
 from data_loading import get_loader, get_vis_loader, get_slump_loader, DataSources
 import subprocess
 
@@ -39,7 +39,7 @@ class Engine():
         # TODO: Replace with argparse
         cli_args = docopt(__doc__, version="Usecase 2 Training Script 1.0")
         config_file = Path(cli_args['--config'])
-        self.config = yaml.load(config_file.open(), Loader=yaml.SafeLoader)
+        self.config = yaml.load(config_file.open(), Loader=yaml_custom.SaneYAMLLoader)
 
         # Logging setup
         timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')

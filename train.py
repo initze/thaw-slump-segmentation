@@ -4,22 +4,20 @@
 Usecase 2 Training Script
 """
 import argparse
+import re
+import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
 
-from tqdm import tqdm
 import torch
+import yaml
+from tqdm import tqdm
 
+from data_loading import get_loader, get_vis_loader, get_slump_loader, DataSources
 from lib import Metrics, Accuracy, Precision, Recall, F1, IoU
 from lib.models import create_model, create_loss
 from lib.utils import showexample, plot_metrics, plot_precision_recall, init_logging, get_logger, yaml_custom
-from data_loading import get_loader, get_vis_loader, get_slump_loader, DataSources
-import subprocess
-
-import re
-
-import yaml
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--name", "-n", default='',

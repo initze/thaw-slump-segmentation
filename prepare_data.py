@@ -4,19 +4,19 @@
 Usecase 2 Data Preprocessing Script
 """
 import argparse
-import os
 import shutil
 import sys
-from lib.data_pre_processing import gdal
-from lib.utils import init_logging, get_logger, log_run
+from datetime import datetime
 from pathlib import Path
+
+import h5py
 import numpy as np
 import rasterio as rio
-import h5py
-from skimage.io import imsave
-from tqdm import tqdm
 from joblib import Parallel, delayed
-from datetime import datetime
+from skimage.io import imsave
+
+from lib.data_pre_processing import gdal
+from lib.utils import init_logging, get_logger, log_run
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--skip_gdal", action='store_true', help="Skip the Gdal conversion stage (if it has already been "

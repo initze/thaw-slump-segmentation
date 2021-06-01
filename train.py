@@ -1,20 +1,9 @@
+#!/usr/bin/env python
+# flake8: noqa: E501
 """
 Usecase 2 Training Script
-
-Usage:
-    train.py [options]
-
-Options:
-    -h --help             Show this screen
-    -n NAME, --name=NAME  Give this run a name, so that it will be logged into [default: ]
-                          logs/<NAME>_<timestamp> 
-    --summary             Only print model summary and return (Requires the torchsummary package)
-    --config=CONFIG       Specify run config to use [default: config.yml]
-    --resume=CHKPT        Resume from the specified checkpoint [default: ]
-                          Can be either a run-id (e.g. "2020-06-29_18-12-03") to select the last
-                          checkpoint of that run, or a direct path to a checkpoint to be loaded.
-                          Overrides the resume option in the config file if given.
 """
+import argparse
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -30,21 +19,31 @@ import subprocess
 
 import re
 
-from docopt import docopt
 import yaml
 
+parser = argparse.ArgumentParser()
+parser.add_argument("--name", "-n", default='',
+                    help="Give this run a name, so that it will be logged into [default: ] logs/<NAME>_<timestamp> ")
+parser.add_argument("--summary", action='store_true', help="Only print model summary and return (Requires the "
+                                                           "torchsummary package)")
+parser.add_argument("--config", default='config.yml', type=str, help="Specify run config to use [default: config.yml]")
+parser.add_argument("--resume", default='', type=str, help='Resume from the specified checkpoint [default: ] Can be '
+                                                           'either a run-id (e.g. "2020-06-29_18-12-03") to select '
+                                                           'the last checkpoint of that run, or a direct path to a '
+                                                           'checkpoint to be loaded. Overrides the resume option in '
+                                                           'the config file if given.')
 
-class Engine():
+
+class Engine:
     def __init__(self):
-        # TODO: Replace with argparse
-        cli_args = docopt(__doc__, version="Usecase 2 Training Script 1.0")
-        config_file = Path(cli_args['--config'])
+
+        config_file = Path(cli_args.config)
         self.config = yaml.load(config_file.open(), Loader=yaml_custom.SaneYAMLLoader)
 
         # Logging setup
         timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-        if cli_args['--name']:
-            log_dir_name = f'{cli_args["--name"]}_{timestamp}'
+        if cli_args.name:
+            log_dir_name = f'{cli_args.name}_{timestamp}'
         else:
             log_dir_name = timestamp
         self.log_dir = Path('logs') / log_dir_name
@@ -65,8 +64,8 @@ class Engine():
             in_channels=m['input_channels']
         )
 
-        if cli_args['--resume']:
-            self.config['resume'] = cli_args['--resume']
+        if cli_args.resume:
+            self.config['resume'] = cli_args.resume
 
         if 'resume' in self.config and self.config['resume']:
             checkpoint = Path(self.config['resume'])
@@ -90,20 +89,22 @@ class Engine():
         self.epoch = 0
         self.metrics = Metrics(Accuracy, Precision, Recall, F1, IoU)
 
-        if cli_args['--summary']:
+        if cli_args.summary:
             from torchsummary import summary
-            summary(self.model, [(len(self.config['channels_used']), 256, 256)])
+            summary(self.model, [(m['input_channels'], 256, 256)])
             sys.exit(0)
 
         self.dataset_cache = {}
 
         self.vis_predictions = None
-        self.vis_loader, self.vis_names = get_vis_loader(self.config['visualization_tiles'], batch_size=self.config['batch_size'], data_sources=self.data_sources)
+        self.vis_loader, self.vis_names = get_vis_loader(self.config['visualization_tiles'],
+                                                         batch_size=self.config['batch_size'],
+                                                         data_sources=self.data_sources)
 
         # Write the config YML to the run-folder
         self.config['run_info'] = dict(
-            timestamp = timestamp,
-            git_head = subprocess.check_output(["git", "describe"], encoding='utf8').strip()
+            timestamp=timestamp,
+            git_head=subprocess.check_output(["git", "describe"], encoding='utf8').strip()
         )
         with open(self.log_dir / 'config.yml', 'w') as f:
             yaml.dump(self.config, f)
@@ -124,7 +125,6 @@ class Engine():
             for epoch in range(phase['epochs']):
                 # Epoch setup
                 self.loss_function = create_loss(scoped_get('loss_function', phase, self.config)).to(self.dev)
-                datasets_config = scoped_get('datasets', phase, self.config)
 
                 for step in phase['steps']:
                     if type(step) is dict:
@@ -193,7 +193,7 @@ class Engine():
 
         metrics_vals = self.metrics.evaluate()
         progress.set_postfix(metrics_vals)
-        logstr = f'{self.epoch},' +  ','.join(f'{val}' for key, val in metrics_vals.items())
+        logstr = f'{self.epoch},' + ','.join(f'{val}' for key, val in metrics_vals.items())
         logfile = self.log_dir / 'train.csv'
         self.logger.info(f'Epoch {self.epoch} - Training Metrics: {metrics_vals}')
         if not logfile.exists():
@@ -230,7 +230,7 @@ class Engine():
                 self.metrics.step(y_hat, target, Loss=loss.detach())
 
             m = self.metrics.evaluate()
-            logstr = f'{self.epoch},' +  ','.join(f'{val}' for key, val in m.items())
+            logstr = f'{self.epoch},' + ','.join(f'{val}' for key, val in m.items())
             logfile = self.log_dir / 'val.csv'
             self.logger.info(f'Epoch {self.epoch} - Validation Metrics: {m}')
             if not logfile.exists():
@@ -264,7 +264,7 @@ class Engine():
         for i, tile in enumerate(self.vis_names):
             filename = self.log_dir / 'tile_predictions' / f'{tile}.jpg'
             showexample(self.vis_loader.dataset[i], self.vis_predictions[i],
-                    filename, self.data_sources, self.val_writer)
+                        filename, self.data_sources, self.val_writer)
 
         outdir = self.log_dir / 'metrics_plots'
         outdir.mkdir(exist_ok=True)
@@ -289,4 +289,5 @@ def safe_append(dictionary, key, value):
 
 
 if __name__ == "__main__":
+    cli_args = parser.parse_args()
     Engine().run()

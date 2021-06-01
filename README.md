@@ -1,11 +1,18 @@
 # AICore - Usecase 2
 
-## Data Preparation
+## System and Data Setup
+### Environment setup
+We recommend using a new conda environment from the provided environment.yml file
+```bash
+conda env create -n aicore -f environment.yml
+```
+
+### Data Preparation
 
 1. copy/move data into data_input
 2. copy/move data into data_aux (e.g. prepared ArcticDEM data)
 
-## Set gdal paths in system.yml file
+### Set gdal paths in system.yml file
 #### Linux
 
 ```yaml
@@ -20,7 +27,9 @@ gdal_path: '%CONDA_PREFIX%\Scripts' # must be single quote
 gdal_bin: '%CONDA_PREFIX%\Library\bin' # must be single quote
 ```
 
-## Data Preprocessing
+## Data Processing
+
+### Data Preprocessing
 
 ```bash
 python setup_raw_data.py
@@ -29,13 +38,13 @@ python setup_raw_data.py
 python prepare_data.py
 ```
 
-## Training a model
+### Training a model
 
 ```bash
 python train.py
 ```
 
-## Running Inference
+### Running Inference
 
 ```bash
 python inference.py logs/<TrainedModel> 20190727_160426_104e 20190709_042959_08_1057
@@ -67,7 +76,7 @@ model:
 # JaccardLoss, DiceLoss, FocalLoss, LovaszLoss, SoftBCEWithLogitsLoss
 loss_function: FocalLoss
 # Data Configuration
-data_threads: 4  # Number of threads for data loading
+data_threads: 4  # Number of threads for data loading, must be 0 on Windows
 data_sources:  # Enabled input features
   - planet
   - ndvi

@@ -76,7 +76,7 @@ class Engine():
                 # Load last checkpoint in run dir
                 ckpt_nums = [int(ckpt.stem) for ckpt in checkpoint.glob('checkpoints/*.pt')]
                 last_ckpt = max(ckpt_nums)
-                self.config['resume'] = checkpoint / 'checkpoints' / f'{last_ckpt:02d}.pt'
+                self.config['resume'] = str(checkpoint / 'checkpoints' / f'{last_ckpt:02d}.pt')
             self.logger.info(f"Resuming training from checkpoint {self.config['resume']}")
             self.model.load_state_dict(torch.load(self.config['resume']))
 

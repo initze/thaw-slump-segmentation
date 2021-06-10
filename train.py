@@ -1,20 +1,3 @@
-"""
-Usecase 2 Training Script
-
-Usage:
-    train.py [options]
-
-Options:
-    -h --help             Show this screen
-    -n NAME, --name=NAME  Give this run a name, so that it will be logged into [default: ]
-                          logs/<NAME>_<timestamp> 
-    --summary             Only print model summary and return (Requires the torchsummary package)
-    --config=CONFIG       Specify run config to use [default: config.yml]
-    --resume=CHKPT        Resume from the specified checkpoint [default: ]
-                          Can be either a run-id (e.g. "2020-06-29_18-12-03") to select the last
-                          checkpoint of that run, or a direct path to a checkpoint to be loaded.
-                          Overrides the resume option in the config file if given.
-"""
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -27,24 +10,36 @@ from lib.models import create_model, create_loss
 from lib.utils import showexample, plot_metrics, plot_precision_recall, init_logging, get_logger, yaml_custom
 from data_loading import get_loader, get_vis_loader, get_slump_loader, DataSources
 import subprocess
-
+import argparse
 import re
-
-from docopt import docopt
 import yaml
+
+parser = argparse.ArgumentParser()
+parser.add_argument('-s', '--summary', action='store_true',
+        help='Only print model summary and return.')
+parser.add_argument('-n', '--name', default='',
+        help='Give this run a name, so that it will be logged into logs/<NAME>_<timestamp>.')
+parser.add_argument('-c', '--config', default='config.yml', type=Path,
+        help='Specify run config to use.')
+parser.add_argument('-r', '--resume', default='',
+        help='Resume from the specified checkpoint.'
+             'Can be either a run-id (e.g. "2020-06-29_18-12-03") to select the last'
+             'checkpoint of that run, or a direct path to a checkpoint to be loaded.'
+             'Overrides the resume option in the config file if given.'
+)
 
 
 class Engine():
     def __init__(self):
         # TODO: Replace with argparse
-        cli_args = docopt(__doc__, version="Usecase 2 Training Script 1.0")
-        config_file = Path(cli_args['--config'])
+        cli_args = parser.parse_args()
+        config_file = Path(cli_args.config)
         self.config = yaml.load(config_file.open(), Loader=yaml_custom.SaneYAMLLoader)
 
         # Logging setup
         timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-        if cli_args['--name']:
-            log_dir_name = f'{cli_args["--name"]}_{timestamp}'
+        if cli_args.name:
+            log_dir_name = f'{cli_args.name}_{timestamp}'
         else:
             log_dir_name = timestamp
         self.log_dir = Path('logs') / log_dir_name
@@ -65,8 +60,8 @@ class Engine():
             in_channels=m['input_channels']
         )
 
-        if cli_args['--resume']:
-            self.config['resume'] = cli_args['--resume']
+        if cli_args.resume:
+            self.config['resume'] = cli_args.resume
 
         if 'resume' in self.config and self.config['resume']:
             checkpoint = Path(self.config['resume'])
@@ -90,9 +85,9 @@ class Engine():
         self.epoch = 0
         self.metrics = Metrics(Accuracy, Precision, Recall, F1, IoU)
 
-        if cli_args['--summary']:
+        if cli_args.summary:
             from torchsummary import summary
-            summary(self.model, [(len(self.config['channels_used']), 256, 256)])
+            summary(self.model, [(self.config['model']['input_channels'], 256, 256)])
             sys.exit(0)
 
         self.dataset_cache = {}

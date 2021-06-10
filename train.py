@@ -1,18 +1,23 @@
+#!/usr/bin/env python
+# flake8: noqa: E501
+"""
+Usecase 2 Training Script
+"""
+import argparse
+import re
+import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
 
-from tqdm import tqdm
 import torch
+import yaml
+from tqdm import tqdm
 
+from data_loading import get_loader, get_vis_loader, get_slump_loader, DataSources
 from lib import Metrics, Accuracy, Precision, Recall, F1, IoU
 from lib.models import create_model, create_loss
 from lib.utils import showexample, plot_metrics, plot_precision_recall, init_logging, get_logger, yaml_custom
-from data_loading import get_loader, get_vis_loader, get_slump_loader, DataSources
-import subprocess
-import argparse
-import re
-import yaml
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-s', '--summary', action='store_true',
@@ -29,12 +34,10 @@ parser.add_argument('-r', '--resume', default='',
 )
 
 
-class Engine():
+class Engine:
     def __init__(self):
-        # TODO: Replace with argparse
         cli_args = parser.parse_args()
-        config_file = Path(cli_args.config)
-        self.config = yaml.load(config_file.open(), Loader=yaml_custom.SaneYAMLLoader)
+        self.config = yaml.load(cli_args.config.open(), Loader=yaml_custom.SaneYAMLLoader)
 
         # Logging setup
         timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
@@ -93,12 +96,14 @@ class Engine():
         self.dataset_cache = {}
 
         self.vis_predictions = None
-        self.vis_loader, self.vis_names = get_vis_loader(self.config['visualization_tiles'], batch_size=self.config['batch_size'], data_sources=self.data_sources)
+        self.vis_loader, self.vis_names = get_vis_loader(self.config['visualization_tiles'],
+                                                         batch_size=self.config['batch_size'],
+                                                         data_sources=self.data_sources)
 
         # Write the config YML to the run-folder
         self.config['run_info'] = dict(
-            timestamp = timestamp,
-            git_head = subprocess.check_output(["git", "describe"], encoding='utf8').strip()
+            timestamp=timestamp,
+            git_head=subprocess.check_output(["git", "describe"], encoding='utf8').strip()
         )
         with open(self.log_dir / 'config.yml', 'w') as f:
             yaml.dump(self.config, f)
@@ -119,7 +124,6 @@ class Engine():
             for epoch in range(phase['epochs']):
                 # Epoch setup
                 self.loss_function = create_loss(scoped_get('loss_function', phase, self.config)).to(self.dev)
-                datasets_config = scoped_get('datasets', phase, self.config)
 
                 for step in phase['steps']:
                     if type(step) is dict:
@@ -188,7 +192,7 @@ class Engine():
 
         metrics_vals = self.metrics.evaluate()
         progress.set_postfix(metrics_vals)
-        logstr = f'{self.epoch},' +  ','.join(f'{val}' for key, val in metrics_vals.items())
+        logstr = f'{self.epoch},' + ','.join(f'{val}' for key, val in metrics_vals.items())
         logfile = self.log_dir / 'train.csv'
         self.logger.info(f'Epoch {self.epoch} - Training Metrics: {metrics_vals}')
         if not logfile.exists():
@@ -225,7 +229,7 @@ class Engine():
                 self.metrics.step(y_hat, target, Loss=loss.detach())
 
             m = self.metrics.evaluate()
-            logstr = f'{self.epoch},' +  ','.join(f'{val}' for key, val in m.items())
+            logstr = f'{self.epoch},' + ','.join(f'{val}' for key, val in m.items())
             logfile = self.log_dir / 'val.csv'
             self.logger.info(f'Epoch {self.epoch} - Validation Metrics: {m}')
             if not logfile.exists():
@@ -259,7 +263,7 @@ class Engine():
         for i, tile in enumerate(self.vis_names):
             filename = self.log_dir / 'tile_predictions' / f'{tile}.jpg'
             showexample(self.vis_loader.dataset[i], self.vis_predictions[i],
-                    filename, self.data_sources, self.val_writer)
+                        filename, self.data_sources, self.val_writer)
 
         outdir = self.log_dir / 'metrics_plots'
         outdir.mkdir(exist_ok=True)
@@ -284,4 +288,5 @@ def safe_append(dictionary, key, value):
 
 
 if __name__ == "__main__":
+    cli_args = parser.parse_args()
     Engine().run()

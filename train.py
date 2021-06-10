@@ -20,23 +20,24 @@ from lib.models import create_model, create_loss
 from lib.utils import showexample, plot_metrics, plot_precision_recall, init_logging, get_logger, yaml_custom
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--name", "-n", default='',
-                    help="Give this run a name, so that it will be logged into [default: ] logs/<NAME>_<timestamp> ")
-parser.add_argument("--summary", action='store_true', help="Only print model summary and return (Requires the "
-                                                           "torchsummary package)")
-parser.add_argument("--config", default='config.yml', type=str, help="Specify run config to use [default: config.yml]")
-parser.add_argument("--resume", default='', type=str, help='Resume from the specified checkpoint [default: ] Can be '
-                                                           'either a run-id (e.g. "2020-06-29_18-12-03") to select '
-                                                           'the last checkpoint of that run, or a direct path to a '
-                                                           'checkpoint to be loaded. Overrides the resume option in '
-                                                           'the config file if given.')
+parser.add_argument('-s', '--summary', action='store_true',
+        help='Only print model summary and return.')
+parser.add_argument('-n', '--name', default='',
+        help='Give this run a name, so that it will be logged into logs/<NAME>_<timestamp>.')
+parser.add_argument('-c', '--config', default='config.yml', type=Path,
+        help='Specify run config to use.')
+parser.add_argument('-r', '--resume', default='',
+        help='Resume from the specified checkpoint.'
+             'Can be either a run-id (e.g. "2020-06-29_18-12-03") to select the last'
+             'checkpoint of that run, or a direct path to a checkpoint to be loaded.'
+             'Overrides the resume option in the config file if given.'
+)
 
 
 class Engine:
     def __init__(self):
-
-        config_file = Path(cli_args.config)
-        self.config = yaml.load(config_file.open(), Loader=yaml_custom.SaneYAMLLoader)
+        cli_args = parser.parse_args()
+        self.config = yaml.load(cli_args.config.open(), Loader=yaml_custom.SaneYAMLLoader)
 
         # Logging setup
         timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
@@ -73,7 +74,7 @@ class Engine:
                 # Load last checkpoint in run dir
                 ckpt_nums = [int(ckpt.stem) for ckpt in checkpoint.glob('checkpoints/*.pt')]
                 last_ckpt = max(ckpt_nums)
-                self.config['resume'] = checkpoint / 'checkpoints' / f'{last_ckpt:02d}.pt'
+                self.config['resume'] = str(checkpoint / 'checkpoints' / f'{last_ckpt:02d}.pt')
             self.logger.info(f"Resuming training from checkpoint {self.config['resume']}")
             self.model.load_state_dict(torch.load(self.config['resume']))
 
@@ -89,7 +90,7 @@ class Engine:
 
         if cli_args.summary:
             from torchsummary import summary
-            summary(self.model, [(m['input_channels'], 256, 256)])
+            summary(self.model, [(self.config['model']['input_channels'], 256, 256)])
             sys.exit(0)
 
         self.dataset_cache = {}

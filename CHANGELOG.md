@@ -1,6 +1,13 @@
 # Changelog
 
-## [0.5.0] - 2021-05-19
+## [0.5.1] - 2021-06-10
+### Changed
+- bugs from 0.5.0 fixed
+- logfiles moved to logs directory
+- completely moved to argparse (from docopt) for argument parsing
+- (false) nodata removed from inference vector output
+
+## [0.5.0] - 2021-05-19 - Broken Version
 ### Added
 - Training/Inference/Data Preparation logs are now written to corresponding log files
 - gdal configuration file

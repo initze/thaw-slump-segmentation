@@ -1,57 +1,31 @@
+import torch
 import numpy as np
 
 
-def true_positive(prediction, target):
-    return (prediction & target).float().sum()
-
-
-def false_positive(prediction, target):
-    return (prediction & ~target).float().sum()
-
-
-def false_negative(prediction, target):
-    return (~prediction & target).float().sum()
-
-
-def true_negative(prediction, target):
-    return (~(prediction | target)).float().sum()
-
-
-AGGREGATORS = {
-    'TP': true_positive,
-    'FP': false_positive,
-    'FN': false_negative,
-    'TN': true_negative,
-}
+def nan_to_zero(ary):
+    ary[ary.isnan()] = 0
+    return ary
 
 
 class Metrics():
-    def __init__(self, *metrics, positive_class=1):
-        self.metrics = metrics
-        self.positive_class = positive_class
-        self.required_aggregators = set()
-        for m in self.metrics:
-            self.required_aggregators |= m.required_aggregators()
+    def __init__(self, n_classes):
+        self.n_classes = n_classes
         self.reset()
 
     def reset(self):
-        self.state = {}
+        self.running_confusion_matrix = torch.zeros(self.n_classes, self.n_classes, dtype=torch.long)
         self.running_agg = {}
         self.running_count = {}
 
-    def step(self, *args, **additional_terms):
-        if len(args) == 2:
-            prediction = args[0]
-            target = args[1]
-            #yhat = (prediction > 0)
-            yhat = prediction.argmax(dim=1)
+    def step(self, prediction, target, **additional_terms):
+        # Make sure the CM is on the same device as our predictions
+        self.running_confusion_matrix = self.running_confusion_matrix.to(prediction.device)
 
-            y    = (target > 0.5)
-            for agg in self.required_aggregators:
-                if agg not in self.state:
-                    self.state[agg] = AGGREGATORS[agg](yhat, y)
-                else:
-                    self.state[agg] += AGGREGATORS[agg](yhat, y)
+        prediction = prediction.argmax(dim=1)
+        confusion_idx = target.flatten() + self.n_classes * prediction.flatten()
+        batch_confusion_matrix = torch.bincount(confusion_idx, minlength=self.n_classes*self.n_classes)
+        batch_confusion_matrix = batch_confusion_matrix.reshape(self.n_classes, self.n_classes)
+        self.running_confusion_matrix += batch_confusion_matrix
 
         for term in additional_terms:
             if term not in self.running_agg:
@@ -61,76 +35,55 @@ class Metrics():
                 self.running_agg[term] += additional_terms[term]
                 self.running_count[term] += 1
 
+
     def evaluate(self):
+        CM = self.running_confusion_matrix
+
         values = {}
-        if self.state:
-            for m in self.metrics:
-                values[m.__name__] = m.evaluate(self.state)
+
+        # Accuracy: #TrueClassifications / #AllClassifications
+        values['Accuracy'] = CM.diag().sum() \
+                           / CM.sum()
+
+        # Calculate TP, FP, FN, TN for each class
+        # (these are vectors of length n_classes)
+        TP = CM.diag()  # diagonal: prediction == ground_truth
+        FP = CM.sum(dim=1) - TP  # FP = #PixelsActuallyInClass - TP
+        FN = CM.sum(dim=0) - TP  # FN = #PixelsPredictedAsClass - TP
+        TN = CM.sum() - TP - FP - FN  # FN = #Pixels - TP - FP - FN
+
+        IoU = TP / (FP + FN + TP)
+        values['mIoU'] = IoU.mean()
+
+        Precision = nan_to_zero(TP / (TP + FP))
+        Recall    = nan_to_zero(TP / (TP + FN))
+        F1        = nan_to_zero(2 * (Precision * Recall) / (Precision + Recall))
+
+        support = CM.sum(dim=0)  # Frequency of each class
+
+        # https://scikit-learn.org/stable/modules/generated/sklearn.metrics.f1_score.html
+        # There are different implementations of F1/Precision/Recall score for multiclass:
+        values['F1_macro'] = F1.mean()  # == sklearn's f1_score(average='macro')
+        values['F1_weighted'] = (F1 * support).sum() / support.sum() # == sklearn's f1_score(average='weighted')
+
+        values['Precision_macro'] = Precision.mean()
+        values['Precision_weighted'] = (Precision * support).sum() / support.sum()
+        values['Recall_macro'] = Recall.mean()
+        values['Recall_weighted'] = (Recall * support).sum() / support.sum()
+
+        for cls in range(self.n_classes):
+            values[f'Class{cls}_F1'] = F1[cls]
+            values[f'Class{cls}_Precision'] = Precision[cls]
+            values[f'Class{cls}_Recall'] = Precision[cls]
+            values[f'Class{cls}_IoU'] = IoU[cls]
+
+        metrics = {}
+
         for key in self.running_agg:
-            values[key] = float(self.running_agg[key] / self.running_count[key])
+            metrics[key] = float(self.running_agg[key] / self.running_count[key])
+
+        for key in values:
+            metrics[key] = values[key].item()
+
         self.reset()
-        return values
-
-
-class Accuracy():
-    @staticmethod
-    def required_aggregators():
-        return set(['TP', 'FP', 'FN', 'TN'])
-
-    @staticmethod
-    def evaluate(state):
-        correct = state['TP'] + state['TN']
-        wrong = state['FP'] + state['FN']
-        if correct + wrong == 0:
-            return np.nan
-        return float(correct / (correct + wrong))
-
-
-class Precision():
-    @staticmethod
-    def required_aggregators():
-        return set(['TP', 'FP'])
-
-    @staticmethod
-    def evaluate(state):
-        if state['TP'] + state['FP'] == 0:
-            return np.nan
-        return float(state['TP'] / (state['TP'] + state['FP']))
-
-
-class Recall():
-    @staticmethod
-    def required_aggregators():
-        return set(['TP', 'FN'])
-
-    @staticmethod
-    def evaluate(state):
-        if state['TP'] + state['FN'] == 0:
-            return np.nan
-        return float(state['TP'] / (state['TP'] + state['FN']))
-
-
-class F1():
-    @staticmethod
-    def required_aggregators():
-        return set(['TP', 'FP', 'FN', 'TN'])
-
-    @staticmethod
-    def evaluate(state):
-        precision = Precision.evaluate(state)
-        recall = Recall.evaluate(state)
-        if precision + recall == 0:
-            return np.nan
-        return float(2 * precision * recall / (precision + recall))
-
-
-class IoU():
-    @staticmethod
-    def required_aggregators():
-        return set(['TP', 'FP', 'FN'])
-
-    @staticmethod
-    def evaluate(state):
-        intersection = state['TP']
-        union = state['TP'] + state['FN'] + state['FP']
-        return float(intersection / union)
+        return metrics 

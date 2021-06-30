@@ -15,7 +15,7 @@ import yaml
 from tqdm import tqdm
 
 from data_loading import get_loader, get_vis_loader, get_slump_loader, DataSources
-from lib import Metrics, Accuracy, Precision, Recall, F1, IoU
+from lib import Metrics
 from lib.models import create_model, create_loss
 from lib.utils import showexample, plot_metrics, plot_precision_recall, init_logging, get_logger, yaml_custom
 
@@ -62,7 +62,7 @@ class Engine:
             #Aleks: Here adapt classes based on the ones found in the mask??
             # Diff channels vs classes?
             #classes=1,
-            classes=3, #Aleks edit
+            classes=m['output_classes'],
             in_channels=m['input_channels']
         )
 
@@ -89,7 +89,7 @@ class Engine:
 
         self.board_idx = 0
         self.epoch = 0
-        self.metrics = Metrics(Accuracy, Precision, Recall, F1, IoU)
+        self.metrics = Metrics(self.config['model']['output_classes'])
 
         if cli_args.summary:
             from torchsummary import summary
@@ -197,7 +197,8 @@ class Engine:
         progress.set_postfix(metrics_vals)
         logstr = f'{self.epoch},' + ','.join(f'{val}' for key, val in metrics_vals.items())
         logfile = self.log_dir / 'train.csv'
-        self.logger.info(f'Epoch {self.epoch} - Training Metrics: {metrics_vals}')
+        m_repr = ', '.join(f'{key}: {val:.3f}' for key, val in metrics_vals.items())
+        self.logger.info(f'Epoch {self.epoch} - Training Metrics: {m_repr}')
         if not logfile.exists():
             # Print header upon first log print
             header = 'Epoch,' + ','.join(f'{key}' for key, val in metrics_vals.items())
@@ -226,7 +227,7 @@ class Engine:
             for iteration, (img, target) in enumerate(val_loader):
                 img = img.to(self.dev, torch.float)
                 target = target.to(self.dev, torch.long, non_blocking=True)
-                y_hat = self.model(img).squeeze(1)
+                y_hat = self.model(img)
 
                 loss = self.loss_function(y_hat, target)
                 self.metrics.step(y_hat, target, Loss=loss.detach())
@@ -234,7 +235,8 @@ class Engine:
             m = self.metrics.evaluate()
             logstr = f'{self.epoch},' + ','.join(f'{val}' for key, val in m.items())
             logfile = self.log_dir / 'val.csv'
-            self.logger.info(f'Epoch {self.epoch} - Validation Metrics: {m}')
+            m_repr = ', '.join(f'{key}: {val:.3f}' for key, val in m.items())
+            self.logger.info(f'Epoch {self.epoch} - Validation Metrics: {m_repr}')
             if not logfile.exists():
                 # Print header upon first log print
                 header = 'Epoch,' + ','.join(f'{key}' for key, val in m.items())
@@ -256,7 +258,7 @@ class Engine:
         with torch.no_grad():
             preds = []
             for vis_imgs, vis_masks in self.vis_loader:
-                preds.append(self.model(vis_imgs.to(self.dev)).cpu().argmax(dim=1))
+                preds.append(self.model(vis_imgs.to(self.dev)).argmax(dim=1).cpu())
             preds = torch.cat(preds).unsqueeze(1)
             if self.vis_predictions is None:
                 self.vis_predictions = preds

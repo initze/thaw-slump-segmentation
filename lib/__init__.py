@@ -1,3 +1,3 @@
 # flake8: noqa
-from .metrics import Metrics, Accuracy, Precision, Recall, F1, IoU
+from .metrics import Metrics
 from .utils import showexample

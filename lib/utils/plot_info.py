@@ -132,6 +132,7 @@ def showexample(data, preds, filename, data_sources, writer=None):
 
 
 def read_metrics_file(file_path):
+    # TODO: It seems that this function is never called, do we actually need it?
     with open(file_path) as src:
         lines = src.readlines()
     data = []
@@ -174,11 +175,11 @@ def plot_precision_recall(train_metrics, val_metrics, outdir='.'):
     fig = plt.figure(figsize=(10, 3))
     ax1, ax2 = fig.subplots(1, 2)
 
-    ax1.plot(train_metrics['epoch'], train_metrics['Precision'])
-    ax1.plot(train_metrics['epoch'], train_metrics['Recall'])
+    ax1.plot(train_metrics['epoch'], train_metrics['Class1_Precision'])
+    ax1.plot(train_metrics['epoch'], train_metrics['Class1_Recall'])
     ax1.set_title('Train')
-    ax2.plot(val_metrics['epoch'], val_metrics['Precision'])
-    ax2.plot(val_metrics['epoch'], val_metrics['Recall'])
+    ax2.plot(val_metrics['epoch'], val_metrics['Class1_Precision'])
+    ax2.plot(val_metrics['epoch'], val_metrics['Class1_Recall'])
     ax2.set_title('Val')
 
     for ax in [ax1, ax2]:

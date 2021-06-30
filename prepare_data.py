@@ -181,9 +181,15 @@ def main_function(dataset, args, log_path):
             bad_tiles += 1
             continue
 
+
+
         with rio.open(mask_from_img(img)) as raster:
             tile['mask'] = raster.read()
-        assert tile['mask'].max() <= 1, "Mask can't contain values > 1"
+        if tile['mask'].max() > 1:
+            print(f"aleks, {tile['mask'].max()} labels found")
+        #assert tile['mask'].max() <= 1, "Mask can't contain values > 1"
+
+
 
         for other in channel_numbers:
             if other == 'planet':

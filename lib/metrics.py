@@ -43,7 +43,9 @@ class Metrics():
         if len(args) == 2:
             prediction = args[0]
             target = args[1]
-            yhat = (prediction > 0)
+            #yhat = (prediction > 0)
+            yhat = prediction.argmax(dim=1)
+
             y    = (target > 0.5)
             for agg in self.required_aggregators:
                 if agg not in self.state:

@@ -63,7 +63,7 @@ def showexample(data, preds, filename, data_sources, writer=None):
     fig, ax = plt.subplots(ROWS, N, figsize=(3 * N, 3 * ROWS), gridspec_kw=gridspec_kw)
     ax = ax.T.reshape(-1)
 
-    heatmap_args = dict(cmap=plt.cm.Greys_r, vmin=0, vmax=1)
+    heatmap_args = dict(cmap="tab10", vmin=0, vmax=10) # vmax= nbr of classes ToDo
 
     img, target = data
     img = img.to(torch.float)
@@ -107,8 +107,7 @@ def showexample(data, preds, filename, data_sources, writer=None):
     ax[5].set_title('Target')
 
     for i, pred in enumerate(preds):
-        p = torch.sigmoid(pred).cpu()
-        ax[i + ROWS].imshow(p, **heatmap_args)
+        ax[i + ROWS].imshow(pred, **heatmap_args)
         ax[i + ROWS].set_title(f'Epoch {i + 1} Prediction')
 
     filename.parent.mkdir(exist_ok=True)
@@ -125,8 +124,7 @@ def showexample(data, preds, filename, data_sources, writer=None):
         ax[1].imshow(target.cpu(), **heatmap_args)
         ax[1].set_title('Ground Truth')
 
-        pred = torch.sigmoid(preds[-1])
-        ax[2].imshow(pred, **heatmap_args)
+        ax[2].imshow(preds[-1], **heatmap_args)
         ax[2].set_title('Prediction')
         for axis in ax:
             axis.axis('off')

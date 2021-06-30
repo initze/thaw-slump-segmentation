@@ -59,7 +59,10 @@ class Engine:
             arch=m['architecture'],
             encoder_name=m['encoder'],
             encoder_weights=None if m['encoder_weights'] == 'random' else m['encoder_weights'],
-            classes=1,
+            #Aleks: Here adapt classes based on the ones found in the mask??
+            # Diff channels vs classes?
+            #classes=1,
+            classes=3, #Aleks edit
             in_channels=m['input_channels']
         )
 
@@ -182,7 +185,7 @@ class Engine:
             target = target.to(self.dev, torch.long, non_blocking=True)
 
             self.opt.zero_grad()
-            y_hat = self.model(img).squeeze(1)
+            y_hat = self.model(img)
             loss = self.loss_function(y_hat, target)
             loss.backward()
             self.opt.step()
@@ -253,7 +256,7 @@ class Engine:
         with torch.no_grad():
             preds = []
             for vis_imgs, vis_masks in self.vis_loader:
-                preds.append(self.model(vis_imgs.to(self.dev)).cpu().squeeze(1))
+                preds.append(self.model(vis_imgs.to(self.dev)).cpu().argmax(dim=1))
             preds = torch.cat(preds).unsqueeze(1)
             if self.vis_predictions is None:
                 self.vis_predictions = preds

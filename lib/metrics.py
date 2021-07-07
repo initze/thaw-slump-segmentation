@@ -22,8 +22,11 @@ class Metrics():
         self.running_confusion_matrix = self.running_confusion_matrix.to(prediction.device)
 
         prediction = prediction.argmax(dim=1)
+        assert target.max() < self.n_classes, f"Number of target classes is larger than specified, please change the config accordingly! ({target.max()} >= {self.n_classes})"
+        assert prediction.max() < self.n_classes, f"Number of predicted classes is larger than specified, this shouldn't happen! ({prediction.max()} >= {self.n_classes})"
         confusion_idx = target.flatten() + self.n_classes * prediction.flatten()
         batch_confusion_matrix = torch.bincount(confusion_idx, minlength=self.n_classes*self.n_classes)
+        assert batch_confusion_matrix.shape[0] == self.n_classes*self.n_classes, f"Pytorch is doing weird stuff here... this shouldn't happen! {batch_confusion_matrix.shape[0]} != {self.n_classes*self.n_classes}"
         batch_confusion_matrix = batch_confusion_matrix.reshape(self.n_classes, self.n_classes)
         self.running_confusion_matrix += batch_confusion_matrix
 

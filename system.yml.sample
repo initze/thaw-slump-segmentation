@@ -1,2 +1,2 @@
-gdal_path: /usr/bin
-gdal_bin: /usr/bin
+gdal_path: '$CONDA_PREFIX/bin' # must be single quote
+gdal_bin: '$CONDA_PREFIX/bin' # must be single quote

@@ -29,6 +29,10 @@ parser.add_argument("--nodata_threshold", default=50, type=float, help="Throw aw
 parser.add_argument("--tile_size", default='256x256', type=str, help="Tiling size in pixels e.g. '256x256'")
 parser.add_argument("--tile_overlap", default=25, type=int, help="Overlap of the tiles in pixels")
 
+#Label names ToDo: Move to config and use from there
+class_names = ["other", "slope", "lake", "island", "feature4", "feature5", "feature6", "feature7"]
+class_count = np.zeros(len(class_names))
+
 
 def read_and_assert_imagedata(image_path):
     with rio.open(image_path) as raster:
@@ -185,11 +189,14 @@ def main_function(dataset, args, log_path):
 
         with rio.open(mask_from_img(img)) as raster:
             tile['mask'] = raster.read()
-        if tile['mask'].max() > 1:
-            print(f"aleks, {tile['mask'].max()} labels found")
-        #assert tile['mask'].max() <= 1, "Mask can't contain values > 1"
 
-
+            #count labels
+            features_unique, features_counts = np.unique(tile['mask'], return_counts=True)
+            if features_unique is list:
+                for i in enumerate(len(features_unique)):
+                    class_count[features_unique[i]] += features_counts[i]
+            else:
+                class_count[features_unique] += features_counts
 
         for other in channel_numbers:
             if other == 'planet':
@@ -226,6 +233,13 @@ def main_function(dataset, args, log_path):
     for t in datasets:
         datasets[t].resize(i, axis=0)
 
+    class_count_percentage = (class_count/class_count.sum())*100
+    class_print = 'Found '
+    for i in range(1, len(class_names)):
+        if class_count_percentage[i] > 0:
+            class_print += f'{class_count_percentage[i]:0.2f} % of class {class_names[i]}, '
+    class_print += f'and {class_count_percentage[0]:0.2f} % of class {class_names[0]}.' #undefined class named 'other'.
+    thread_logger.info(class_print)
 
 if __name__ == "__main__":
     args = parser.parse_args()

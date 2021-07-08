@@ -59,9 +59,6 @@ class Engine:
             arch=m['architecture'],
             encoder_name=m['encoder'],
             encoder_weights=None if m['encoder_weights'] == 'random' else m['encoder_weights'],
-            #Aleks: Here adapt classes based on the ones found in the mask??
-            # Diff channels vs classes?
-            #classes=1,
             classes=m['output_classes'],
             in_channels=m['input_channels']
         )

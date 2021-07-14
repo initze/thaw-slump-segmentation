@@ -247,9 +247,9 @@ def main_function(dataset, args, log_path):
     feature_print = 'Found '
     for i in range(1, len(feature_name)):
         if feature_percentage[i] > 0:
-            feature_print += f'{feature_percentage[i]:0.2f} % of class {feature_name[i]}, '
+            feature_print += f'{feature_percentage[i]:0.2f} % of feature {feature_name[i]}, '
     # Undefined class (e.g. 'none'), usually background.
-    feature_print += f'and {feature_percentage[0]:0.2f} % of class {feature_name[0]}.'
+    feature_print += f'and {feature_percentage[0]:0.2f} % of feature {feature_name[0]}.'
     thread_logger.info(feature_print)
 
 if __name__ == "__main__":

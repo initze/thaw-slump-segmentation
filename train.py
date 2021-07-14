@@ -20,12 +20,9 @@ from lib.models import create_model, create_loss
 from lib.utils import showexample, plot_metrics, plot_precision_recall, init_logging, get_logger, yaml_custom
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-s', '--summary', action='store_true',
-        help='Only print model summary and return.')
-parser.add_argument('-n', '--name', default='',
-        help='Give this run a name, so that it will be logged into logs/<NAME>_<timestamp>.')
-parser.add_argument('-c', '--config', default='config.yml', type=Path,
-        help='Specify run config to use.')
+parser.add_argument('-s', '--summary', action='store_true', help='Only print model summary and return.')
+parser.add_argument('-n', '--name', default='', help='Give this run a name, so that it will be logged into logs/<NAME>_<timestamp>.')
+parser.add_argument('-c', '--config', default='config.yml', type=Path, help='Specify run config to use.')
 parser.add_argument('-r', '--resume', default='',
         help='Resume from the specified checkpoint.'
              'Can be either a run-id (e.g. "2020-06-29_18-12-03") to select the last'

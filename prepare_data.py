@@ -15,8 +15,11 @@ import rasterio as rio
 from joblib import Parallel, delayed
 from skimage.io import imsave
 
+import yaml
 from lib.data_pre_processing import gdal
-from lib.utils import init_logging, get_logger, log_run
+from lib.utils import init_logging, get_logger, log_run, yaml_custom
+
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--skip_gdal", action='store_true', help="Skip the Gdal conversion stage (if it has already been "
@@ -29,9 +32,9 @@ parser.add_argument("--nodata_threshold", default=50, type=float, help="Throw aw
 parser.add_argument("--tile_size", default='256x256', type=str, help="Tiling size in pixels e.g. '256x256'")
 parser.add_argument("--tile_overlap", default=25, type=int, help="Overlap of the tiles in pixels")
 
-#Label names ToDo: Move to config and use from there
-class_names = ["other", "slope", "lake", "island", "feature4", "feature5", "feature6", "feature7"]
-class_count = np.zeros(len(class_names))
+parser.add_argument('-c', '--config', default='config.yml', type=Path, help='Specify run config to use.')
+
+
 
 
 def read_and_assert_imagedata(image_path):
@@ -153,6 +156,9 @@ def main_function(dataset, args, log_path):
                    )
     channel_numbers = dict(planet=4, ndvi=1, tcvis=3, relative_elevation=1, slope=1)
 
+    feature_name = config['data_features']
+    feature_count = np.zeros(len(feature_name))
+
     datasets = dict()
     for dataset_name, nchannels in channel_numbers.items():
         ds = h5.create_dataset(dataset_name,
@@ -190,13 +196,16 @@ def main_function(dataset, args, log_path):
         with rio.open(mask_from_img(img)) as raster:
             tile['mask'] = raster.read()
 
-            #count labels
-            features_unique, features_counts = np.unique(tile['mask'], return_counts=True)
-            if features_unique is list:
-                for i in enumerate(len(features_unique)):
-                    class_count[features_unique[i]] += features_counts[i]
+            # Supervise amount of occuring features to give to the user in the end some information about the percentage
+            lbl_unique, lbl_counts = np.unique(tile['mask'], return_counts=True)
+            assert len(lbl_unique) <= len(feature_name), f"More labels were found in the dataset {dataset_name} than specified, please change the config file accordingly ('data_features')! (Found: {len(lbl_unique)}, config: {len(feature_name)})"
+            assert max(lbl_unique) < len(feature_name), f"The labels in data set {dataset_name} do not seem to follow to the numerical sequence (1,2,3,...). " \
+                                                         f"Change this in the dataset or add the missing indices to 'data_features' in the config file."
+            if lbl_unique is list:
+                for i in enumerate(len(lbl_unique)):
+                    feature_count[lbl_unique[i]] += lbl_counts[i]
             else:
-                class_count[features_unique] += features_counts
+                feature_count[lbl_unique] += lbl_counts
 
         for other in channel_numbers:
             if other == 'planet':
@@ -233,16 +242,20 @@ def main_function(dataset, args, log_path):
     for t in datasets:
         datasets[t].resize(i, axis=0)
 
-    class_count_percentage = (class_count/class_count.sum())*100
-    class_print = 'Found '
-    for i in range(1, len(class_names)):
-        if class_count_percentage[i] > 0:
-            class_print += f'{class_count_percentage[i]:0.2f} % of class {class_names[i]}, '
-    class_print += f'and {class_count_percentage[0]:0.2f} % of class {class_names[0]}.' #undefined class named 'other'.
-    thread_logger.info(class_print)
+    # Output the occurrence of the features for the user as a percentage.
+    feature_percentage = (feature_count/feature_count.sum())*100
+    feature_print = 'Found '
+    for i in range(1, len(feature_name)):
+        if feature_percentage[i] > 0:
+            feature_print += f'{feature_percentage[i]:0.2f} % of class {feature_name[i]}, '
+    # Undefined class (e.g. 'none'), usually background.
+    feature_print += f'and {feature_percentage[0]:0.2f} % of class {feature_name[0]}.'
+    thread_logger.info(feature_print)
 
 if __name__ == "__main__":
     args = parser.parse_args()
+    config = yaml.load(args.config.open(), Loader=yaml_custom.SaneYAMLLoader)
+
     # Tiling Settings
     XSIZE, YSIZE = map(int, args.tile_size.split('x'))
     OVERLAP = args.tile_overlap

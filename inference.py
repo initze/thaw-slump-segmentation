@@ -52,6 +52,15 @@ def predict(model, imagery, device='cpu'):
 
     PS = PATCHSIZE
 
+    margin_ramp = torch.cat([
+        torch.linspace(0, 1, MARGIN),
+        torch.ones(PS - 2 * MARGIN),
+        torch.linspace(1, 0, MARGIN),
+    ])
+
+    soft_margin = margin_ramp.reshape(1, 1, PS) * \
+                  margin_ramp.reshape(1, PS, 1)
+
     for y in np.arange(0, imagery.shape[2], (PS - MARGIN)):
         for x in np.arange(0, imagery.shape[3], (PS - MARGIN)):
             if y + PS > imagery.shape[2]:
@@ -59,17 +68,7 @@ def predict(model, imagery, device='cpu'):
             if x + PS > imagery.shape[3]:
                 x = imagery.shape[3] - PS
             patch_imagery = imagery[:, :, y:y + PS, x:x + PS]
-            if patch_imagery[0, 0].max() == 0:
-                continue
             patch_pred = torch.sigmoid(model(patch_imagery.to(device))[0].cpu())
-            margin_ramp = torch.cat([
-                torch.linspace(0, 1, MARGIN),
-                torch.ones(PS - 2 * MARGIN),
-                torch.linspace(1, 0, MARGIN),
-            ])
-
-            soft_margin = margin_ramp.reshape(1, 1, PS) * \
-                          margin_ramp.reshape(1, PS, 1)
 
             # Essentially premultiplied alpha blending
             prediction[:, y:y + PS, x:x + PS] += patch_pred * soft_margin

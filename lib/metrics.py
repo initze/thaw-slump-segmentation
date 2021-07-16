@@ -64,6 +64,13 @@ class Metrics():
 
         support = CM.sum(dim=0)  # Frequency of each class
 
+        # Kappa calculation following
+        # https://en.wikipedia.org/wiki/Cohen%27s_kappa#Definition
+        N = CM.sum()
+        p_o = CM.diag().sum() / N
+        p_e = (CM.sum(dim=1) * CM.sum(dim=0)).sum() / (N*N)
+        values['Kappa'] = (p_o - p_e) / (1 - p_e)
+
         # https://scikit-learn.org/stable/modules/generated/sklearn.metrics.f1_score.html
         # There are different implementations of F1/Precision/Recall score for multiclass:
         values['F1_macro'] = F1.mean()  # == sklearn's f1_score(average='macro')

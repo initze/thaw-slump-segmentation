@@ -156,8 +156,8 @@ def main_function(dataset, args, log_path):
                    )
     channel_numbers = dict(planet=4, ndvi=1, tcvis=3, relative_elevation=1, slope=1)
 
-    feature_name = config['data_features']
-    feature_count = np.zeros(len(feature_name))
+    classes = config['data_classes']
+    classes_count = dict()
 
     datasets = dict()
     for dataset_name, nchannels in channel_numbers.items():
@@ -196,16 +196,15 @@ def main_function(dataset, args, log_path):
         with rio.open(mask_from_img(img)) as raster:
             tile['mask'] = raster.read()
 
-            # Supervise amount of occuring features to give to the user in the end some information about the percentage
-            lbl_unique, lbl_counts = np.unique(tile['mask'], return_counts=True)
-            assert len(lbl_unique) <= len(feature_name), f"More labels were found in the dataset {dataset_name} than specified, please change the config file accordingly ('data_features')! (Found: {len(lbl_unique)}, config: {len(feature_name)})"
-            assert max(lbl_unique) < len(feature_name), f"The labels in data set {dataset_name} do not seem to follow to the numerical sequence (1,2,3,...). " \
-                                                         f"Change this in the dataset or add the missing indices to 'data_features' in the config file."
-            if lbl_unique is list:
-                for i in enumerate(len(lbl_unique)):
-                    feature_count[lbl_unique[i]] += lbl_counts[i]
+        # Supervise amount of occuring features to give to the user in the end some information about the percentage
+        cl_unique, cl_counts = np.unique(tile['mask'], return_counts=True)
+        #if cl_unique is list:
+        for i in range(len(cl_unique)):
+            if cl_unique[i] in classes_count:
+                classes_count[cl_unique[i]] += cl_counts[i]
             else:
-                feature_count[lbl_unique] += lbl_counts
+                classes_count[cl_unique[i]] = cl_counts[i]
+
 
         for other in channel_numbers:
             if other == 'planet':
@@ -243,14 +242,35 @@ def main_function(dataset, args, log_path):
         datasets[t].resize(i, axis=0)
 
     # Output the occurrence of the features for the user as a percentage.
-    feature_percentage = (feature_count/feature_count.sum())*100
-    feature_print = 'Found '
-    for i in range(1, len(feature_name)):
-        if feature_percentage[i] > 0:
-            feature_print += f'{feature_percentage[i]:0.2f} % of feature {feature_name[i]}, '
-    # Undefined class (e.g. 'none'), usually background.
-    feature_print += f'and {feature_percentage[0]:0.2f} % of feature {feature_name[0]}.'
-    thread_logger.info(feature_print)
+    import warnings
+    bclasses = True
+    if len(classes_count) > config['model']['output_classes']:
+        warnings.warn(
+            f"[WARNING] More classes were found than specified as output_classes in the config! The program will proceed with fewer classes than found! (Found: {len(classes_count)}, Set: {config['model']['output_classes']})")
+        bclasses = False
+    if len(classes_count) > len(classes):
+        warnings.warn(
+            f"[WARNING] More classes were found than specified as data_classes in the config! (Found: {len(classes_count)}, Set: {len(classes)})")
+        bclasses = False
+
+    cl_missing = []
+    for key in classes_count:
+        if key not in classes.keys():
+            cl_missing.append(key)
+    if cl_missing:
+        warnings.warn(f"[WARNING] Found classes which don't appear in the configs data_classes. (Unknown class_id(s): {cl_missing})")
+        bclasses = False
+
+    cl_sum = sum(classes_count.values())
+    cl_print = 'Found '
+    if bclasses:
+        for key in classes_count:
+            cl_print += f'{(classes_count[key] / cl_sum) * 100:0.2f} % of class {classes[key]}, '
+    else:
+        for key in classes_count:
+            cl_print += f'{(classes_count[key] / cl_sum) * 100:0.2f} % with class_id {key}, '
+    cl_print = cl_print[:-2] + "."
+    thread_logger.info(cl_print)
 
 if __name__ == "__main__":
     args = parser.parse_args()
@@ -264,9 +284,7 @@ if __name__ == "__main__":
     log_path = Path('logs') / f'prepare_data-{timestamp}.log'
     init_logging(log_path)
     logger = get_logger('prepare_data')
-    logger.info('#############################')
-    logger.info('# Starting Data Preparation #')
-    logger.info('#############################')
+    logger.info('[START] Data Preparation')
 
     # Paths setup
     RASTERFILTER = '*3B_AnalyticMS_SR*.tif'
@@ -306,3 +324,5 @@ if __name__ == "__main__":
             sys.exit(1)
 
     Parallel(n_jobs=args.n_jobs)(delayed(main_function)(dataset, args, log_path) for dataset in datasets)
+
+    logger.info("[END] Data Preparation")

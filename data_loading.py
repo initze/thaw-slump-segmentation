@@ -1,4 +1,5 @@
 import logging
+import numpy as np
 import torch
 from torch.utils.data import DataLoader, ConcatDataset, Subset
 from lib.utils import get_logger
@@ -107,6 +108,10 @@ def get_vis_loader(vis_config, batch_size, data_sources=None):
     for scene, indices in vis_config.items():
         dataset = get_dataset(scene, data_sources=data_sources)
         vis_names += [f'{scene}-{i}' for i in indices]
+        invalid_indices = list(filter(lambda x: x >= len(dataset), indices))
+        assert len(invalid_indices) == 0, \
+            f'Requested invalid visualization tiles {invalid_indices} ' \
+            f'for scene {scene}, which only has {len(dataset)} tiles!'
         filtered = Subset(dataset, indices)
         vis_datasets.append(filtered)
     vis_data = ConcatDataset(vis_datasets)

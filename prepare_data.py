@@ -20,7 +20,6 @@ from lib.data_pre_processing import gdal
 from lib.utils import init_logging, get_logger, log_run, yaml_custom
 
 
-
 parser = argparse.ArgumentParser()
 parser.add_argument("--skip_gdal", action='store_true', help="Skip the Gdal conversion stage (if it has already been "
                                                              "done)")
@@ -33,8 +32,6 @@ parser.add_argument("--tile_size", default='256x256', type=str, help="Tiling siz
 parser.add_argument("--tile_overlap", default=25, type=int, help="Overlap of the tiles in pixels")
 
 parser.add_argument('-c', '--config', default='config.yml', type=Path, help='Specify run config to use.')
-
-
 
 
 def read_and_assert_imagedata(image_path):
@@ -139,7 +136,6 @@ def main_function(dataset, args, log_path):
     else:
         thread_logger.info('Skipping GDAL Calls')
 
-
     tifs = list(sorted(dataset.glob('tiles/data/*.tif')))
     if len(tifs) == 0:
         logger.warning(f'No tiles found for {dataset}, skipping this directory.')
@@ -180,7 +176,7 @@ def main_function(dataset, args, log_path):
                                          )
 
     # Convert data to HDF5 storage for efficient data loading
-    i = 0
+    image_idx = 0
     bad_tiles = 0
     for img in tifs:
         tile = {}
@@ -190,8 +186,6 @@ def main_function(dataset, args, log_path):
         if (tile['planet'] == 0).all(axis=0).mean() > THRESHOLD:
             bad_tiles += 1
             continue
-
-
 
         with rio.open(mask_from_img(img)) as raster:
             tile['mask'] = raster.read()
@@ -204,7 +198,6 @@ def main_function(dataset, args, log_path):
                 classes_count[cl_unique[i]] += cl_counts[i]
             else:
                 classes_count[cl_unique[i]] = cl_counts[i]
-
 
         for other in channel_numbers:
             if other == 'planet':
@@ -227,19 +220,14 @@ def main_function(dataset, args, log_path):
             bad_tiles += 1
             continue
 
-        """
-        if(datasets['planet'].shape[0] <= i):
-            for ds in datasets.values():
-                ds.resize(ds.shape[0] + 2048, axis=0)
-        """
         for t in tile:
-            datasets[t][i] = tile[t]
+            datasets[t][image_idx] = tile[t]
 
-        make_info_picture(tile, info_dir / f'{i}.jpg')
-        i += 1
+        make_info_picture(tile, info_dir / f'{image_idx}.jpg')
+        image_idx += 1
 
     for t in datasets:
-        datasets[t].resize(i, axis=0)
+        datasets[t].resize(image_idx, axis=0)
 
     # Output the occurrence of the features for the user as a percentage.
     import warnings
@@ -271,6 +259,7 @@ def main_function(dataset, args, log_path):
             cl_print += f'{(classes_count[key] / cl_sum) * 100:0.2f} % with class_id {key}, '
     cl_print = cl_print[:-2] + "."
     thread_logger.info(cl_print)
+
 
 if __name__ == "__main__":
     args = parser.parse_args()

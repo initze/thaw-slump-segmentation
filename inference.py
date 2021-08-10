@@ -47,7 +47,7 @@ gdal.initialize(args)
 
 
 def predict(model, imagery, device='cpu'):
-    prediction = torch.zeros(1, *imagery.shape[2:])
+    prediction = None 
     weights = torch.zeros(1, *imagery.shape[2:])
 
     PS = PATCHSIZE
@@ -71,6 +71,8 @@ def predict(model, imagery, device='cpu'):
             soft_margin = margin_ramp.reshape(1, 1, PS) * \
                           margin_ramp.reshape(1, PS, 1)
 
+            if prediction is None:
+                prediction = torch.zeros(patch_pred.shape[0], *imagery.shape[2:])
             # Essentially premultiplied alpha blending
             prediction[:, y:y + PS, x:x + PS] += patch_pred * soft_margin
             weights[:, y:y + PS, x:x + PS] += soft_margin
@@ -78,6 +80,15 @@ def predict(model, imagery, device='cpu'):
     # Avoid division by zero
     weights = torch.where(weights == 0, torch.ones_like(weights), weights)
     return prediction / weights
+
+
+def flush_rio(filepath):
+    """For some reason, rasterio doesn't actually finish writing
+    a file after finishing a `with rio.open(...) as ...:` block
+    Trying to open the file for reading seems to force a flush"""
+
+    with rio.open(filepath) as f:
+        pass
 
 
 def do_inference(tilename, args=None, log_path=None):
@@ -143,46 +154,53 @@ def do_inference(tilename, args=None, log_path=None):
 
 
     full_data = np.concatenate(data, axis=0)
-    nodata = np.all(full_data == 0, axis=0, keepdims=True)
+    nodata = np.all(full_data == 0, axis=0)
     full_data = torch.from_numpy(full_data)
     full_data = full_data.unsqueeze(0)  # Pretend this is a batch of size 1
 
     res = predict(model, full_data, dev).numpy()
     del full_data
 
-    res[nodata] = np.nan
-    binarized = np.ones_like(res, dtype=np.uint8) * 255
-    binarized[~nodata] = (res[~nodata] > 0.5).astype(np.uint8)
+    binarized = np.argmax(res, axis=0).astype(np.uint8)
+    binarized[nodata] = 255
+    res[:, nodata] = np.nan
 
     # define output file paths
     out_path_proba = output_directory / 'pred_probability.tif'
     out_path_label = output_directory / 'pred_binarized.tif'
-    out_path_pre_poly = output_directory / 'pred_binarized_tmp.tif'
+    out_path_background_mask = output_directory / 'pred_background_mask.tif'
     out_path_shp = output_directory / 'pred_binarized.shp'
 
     with rio.open(planet_imagery_path) as input_raster:
         profile = input_raster.profile
         profile.update(
             dtype=rio.float32,
-            count=1,
+            count=res.shape[0],
             compress='lzw'
         )
-        with rio.open(out_path_proba, 'w', **profile) as output_raster:
-            output_raster.write(res.astype(np.float32))
+    with rio.open(out_path_proba, 'w', **profile) as output_raster:
+        output_raster.write(res.astype(np.float32))
+        for idx, bandname in enumerate(config['data_classes'].values(), 1):
+            output_raster.set_band_description(idx, bandname)
+    flush_rio(out_path_proba)
 
-        profile.update(
-            dtype=rio.uint8,
-            nodata=255
-        )
-        with rio.open(out_path_label, 'w', **profile) as output_raster:
-            output_raster.write(binarized)
+    profile.update(
+        dtype=rio.uint8,
+        count=1,
+        nodata=255
+    )
+    with rio.open(out_path_label, 'w', **profile) as output_raster:
+        output_raster.write(binarized, 1)
+    flush_rio(out_path_label)
 
-        with rio.open(out_path_pre_poly, 'w', **profile) as output_raster:
-            output_raster.write((binarized == 1).astype(np.uint8))
+    with rio.open(out_path_background_mask, 'w', **profile) as output_raster:
+        # 0 is background, 255 is invalid => all pixels that are neither are valid
+        output_raster.write((binarized != 0) & (binarized != 255), 1)
+    flush_rio(out_path_background_mask)
 
     # create vectors
-    log_run(f'python {gdal.polygonize} {out_path_pre_poly} -q -mask {out_path_pre_poly} -f "ESRI Shapefile" {out_path_shp}', tile_logger)
-    out_path_pre_poly.unlink()
+    log_run(f'python {gdal.polygonize} {out_path_label} -q -mask {out_path_background_mask} {out_path_shp}', tile_logger)
+    out_path_background_mask.unlink()
 
     h, w = res.shape[1:]
     if h > w:
@@ -198,13 +216,13 @@ def do_inference(tilename, args=None, log_path=None):
             kwargs = dict(colorbar=True, cmap=cmap_dem, vmin=0, vmax=1)
         elif src.name == 'slope':
             kwargs = dict(colorbar=True, cmap=cmap_slope, vmin=0, vmax=0.5)
-        make_img(f'{src.name}.jpg', src, mask=nodata[0],**kwargs)
+        make_img(f'{src.name}.jpg', src, mask=nodata,**kwargs)
 
     outpath = output_directory / 'pred_probability.jpg'
-    plot_results(np.ma.masked_where(nodata[0], res[0]), outpath)
+    plot_results(np.ma.masked_where(nodata, res[0]), outpath)
 
     outpath = output_directory / 'pred_binarized.jpg'
-    plot_results(np.ma.masked_where(nodata[0], binarized[0]), outpath)
+    plot_results(np.ma.masked_where(nodata, binarized), outpath)
 
 if __name__ == "__main__":
     timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
@@ -237,7 +255,7 @@ if __name__ == "__main__":
         arch=m['architecture'],
         encoder_name=m['encoder'],
         encoder_weights=None if m['encoder_weights'] == 'random' else m['encoder_weights'],
-        classes=1,
+        classes=len(config['data_classes'])
         in_channels=m['input_channels']
     )
 

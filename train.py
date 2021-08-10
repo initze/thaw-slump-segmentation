@@ -56,7 +56,7 @@ class Engine:
             arch=m['architecture'],
             encoder_name=m['encoder'],
             encoder_weights=None if m['encoder_weights'] == 'random' else m['encoder_weights'],
-            classes=m['output_classes'],
+            classes=len(self.config['data_classes']),
             in_channels=m['input_channels']
         )
 
@@ -83,7 +83,7 @@ class Engine:
 
         self.board_idx = 0
         self.epoch = 0
-        self.metrics = Metrics(self.config['model']['output_classes'])
+        self.metrics = Metrics(class_names=self.config['data_classes'].values())
 
         if cli_args.summary:
             from torchsummary import summary

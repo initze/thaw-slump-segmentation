@@ -72,12 +72,11 @@ model:
   # Check https://github.com/qubvel/segmentation_models.pytorch#encoders for the
   # full list of weights available for each encoder
   encoder_weights: random
-  # Number of Output Classes
-  output_classes: 2
 # Loss Function to use. Available:
 # JaccardLoss, DiceLoss, FocalLoss, LovaszLoss, SoftBCEWithLogitsLoss
 loss_function: FocalLoss
 # Data Configuration
+data_classes: {0 : "background", 1 : "slope", 2 : "lake", 3 : "class3", 7 : "class7", 8 : "class8"}
 data_threads: 4  # Number of threads for data loading, must be 0 on Windows
 data_sources:  # Enabled input features
   - planet

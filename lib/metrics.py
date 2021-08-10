@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+from typing import List
 
 
 def nan_to_zero(ary):
@@ -8,8 +9,19 @@ def nan_to_zero(ary):
 
 
 class Metrics():
-    def __init__(self, n_classes):
+    n_classes: int
+    class_names: List[str]
+    running_confusion_matrix: torch.Tensor
+
+    def __init__(self, n_classes=None, class_names=None):
+        self.class_names = class_names
         self.n_classes = n_classes
+
+        if self.n_classes is None:
+            self.n_classes = len(class_names)
+        if self.class_names is None:
+            self.class_names = [f'Class{i}' for i in range(self.n_classes)]
+
         self.reset()
 
     def reset(self):
@@ -41,6 +53,12 @@ class Metrics():
 
     def evaluate(self):
         CM = self.running_confusion_matrix
+
+        # Find out which classes are actually used
+        # i.e. those that appear in the labels
+        class_used = CM.sum(dim=0) > 0
+        CM = CM[class_used][:, class_used]
+        class_names = [c for c, u in zip(self.class_names, class_used) if u]
 
         values = {}
 
@@ -81,11 +99,11 @@ class Metrics():
         values['Recall_macro'] = Recall.mean()
         values['Recall_weighted'] = (Recall * support).sum() / support.sum()
 
-        for cls in range(self.n_classes):
-            values[f'Class{cls}_F1'] = F1[cls]
-            values[f'Class{cls}_Precision'] = Precision[cls]
-            values[f'Class{cls}_Recall'] = Precision[cls]
-            values[f'Class{cls}_IoU'] = IoU[cls]
+        for i, classname in enumerate(class_names):
+            values[f'{classname}_F1'] = F1[i]
+            values[f'{classname}_Precision'] = Precision[i]
+            values[f'{classname}_Recall'] = Precision[i]
+            values[f'{classname}_IoU'] = IoU[i]
 
         metrics = {}
 

@@ -175,21 +175,29 @@ def plot_precision_recall(train_metrics, val_metrics, outdir='.'):
     fig = plt.figure(figsize=(10, 3))
     ax1, ax2 = fig.subplots(1, 2)
 
-    ax1.plot(train_metrics['epoch'], train_metrics['Class1_Precision'])
-    ax1.plot(train_metrics['epoch'], train_metrics['Class1_Recall'])
-    ax1.set_title('Train')
-    ax2.plot(val_metrics['epoch'], val_metrics['Class1_Precision'])
-    ax2.plot(val_metrics['epoch'], val_metrics['Class1_Recall'])
-    ax2.set_title('Val')
+    metrics = set()
+    for metric in train_metrics:
+        if '_' in metric:
+            cls, metrictype = metric.split('_')
+            if metrictype == 'Precision' or metrictype == 'Recall':
+                metrics.add(cls)
 
-    for ax in [ax1, ax2]:
-        ax.set_xlabel('Epoch')
-        ax.get_xaxis().set_major_locator(MaxNLocator(integer=True))
-        ax.legend(['Precision', 'Recall'])
-        ax.grid()
+    for metric in metrics:
+        ax1.plot(train_metrics['epoch'], train_metrics[f'{metric}_Precision'])
+        ax1.plot(train_metrics['epoch'], train_metrics[f'{metric}_Recall'])
+        ax1.set_title('Train')
+        ax2.plot(val_metrics['epoch'], val_metrics[f'{metric}_Precision'])
+        ax2.plot(val_metrics['epoch'], val_metrics[f'{metric}_Recall'])
+        ax2.set_title('Val')
 
-    fig.tight_layout()
+        for ax in [ax1, ax2]:
+            ax.set_xlabel('Epoch')
+            ax.get_xaxis().set_major_locator(MaxNLocator(integer=True))
+            ax.legend(['Precision', 'Recall'])
+            ax.grid()
 
-    outfile = os.path.join(outdir, f'precision_recall.png')
-    fig.savefig(outfile)
-    fig.clear()
+        fig.tight_layout()
+
+        outfile = os.path.join(outdir, f'{metric}_precision_recall.png')
+        fig.savefig(outfile)
+        fig.clear()

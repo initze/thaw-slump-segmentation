@@ -79,6 +79,15 @@ def predict(model, imagery, device='cpu'):
     return prediction / weights
 
 
+def flush_rio(filepath):
+    """For some reason, rasterio doesn't actually finish writing
+    a file after finishing a `with rio.open(...) as ...:` block
+    Trying to open the file for reading seems to force a flush"""
+
+    with rio.open(filepath) as f:
+        pass
+
+
 def do_inference(tilename, args=None, log_path=None):
     tile_logger = get_logger(f'inference.{tilename}')
     # ===== PREPARE THE DATA =====
@@ -159,6 +168,7 @@ def do_inference(tilename, args=None, log_path=None):
     out_path_pre_poly = output_directory / 'pred_binarized_tmp.tif'
     out_path_shp = output_directory / 'pred_binarized.shp'
 
+    # Get the input profile
     with rio.open(planet_imagery_path) as input_raster:
         profile = input_raster.profile
         profile.update(
@@ -166,18 +176,22 @@ def do_inference(tilename, args=None, log_path=None):
             count=1,
             compress='lzw'
         )
-        with rio.open(out_path_proba, 'w', **profile) as output_raster:
-            output_raster.write(res.astype(np.float32))
 
-        profile.update(
-            dtype=rio.uint8,
-            nodata=255
-        )
-        with rio.open(out_path_label, 'w', **profile) as output_raster:
-            output_raster.write(binarized)
+    with rio.open(out_path_proba, 'w', **profile) as output_raster:
+        output_raster.write(res.astype(np.float32))
+    flush_rio(out_path_proba)
 
-        with rio.open(out_path_pre_poly, 'w', **profile) as output_raster:
-            output_raster.write((binarized == 1).astype(np.uint8))
+    profile.update(
+        dtype=rio.uint8,
+        nodata=255
+    )
+    with rio.open(out_path_label, 'w', **profile) as output_raster:
+        output_raster.write(binarized)
+    flush_rio(out_path_label)
+
+    with rio.open(out_path_pre_poly, 'w', **profile) as output_raster:
+        output_raster.write((binarized == 1).astype(np.uint8))
+    flush_rio(out_path_pre_poly)
 
     # create vectors
     log_run(f'python {gdal.polygonize} {out_path_pre_poly} -q -mask {out_path_pre_poly} -f "ESRI Shapefile" {out_path_shp}', tile_logger)

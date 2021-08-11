@@ -115,6 +115,10 @@ def do_inference(tilename, args=None, log_path=None):
 
         data_part = rio.open(tif_path).read().astype(np.float32)
 
+        if source.name == 'tcvis':
+            data_part = data_part[:3]
+        data_part = np.nan_to_num(data_part, nan=0.0)
+
         data_part = data_part / np.array(source.normalization_factors, dtype=np.float32).reshape(-1, 1, 1)
         data.append(data_part)
 

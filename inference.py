@@ -37,10 +37,9 @@ parser.add_argument("--gdal_bin", default='', help="Path to gdal binaries")
 parser.add_argument("--gdal_path", default='', help="Path to gdal scripts")
 parser.add_argument("--n_jobs", default=-1, type=int, help="number of parallel joblib jobs")
 parser.add_argument("--ckpt", default='latest', type=str, help="Checkpoint to use")
-
-parser.add_argument("--margin_size", default=256, type=int, help="Size of patch overlap")
-parser.add_argument("--patch_size", default=1024, type=int, help="Size of patches")
-
+parser.add_argument("-n", "--name", default=None, type=str, help="Name of inference run, data will be stored in subdirectory")
+parser.add_argument("-m", "--margin_size", default=256, type=int, help="Size of patch overlap")
+parser.add_argument("-p", "--patch_size", default=1024, type=int, help="Size of patches")
 parser.add_argument("model_path", type=str, help="path to model")
 parser.add_argument("tile_to_predict", type=str, help="path to model", nargs='+')
 
@@ -104,9 +103,12 @@ def do_inference(tilename, args=None, log_path=None):
         preprocess_directory(raw_directory, args, log_path, label_required=False)
         # After this, data_directory should contain all the stuff that we need.
     
-    # introduce naming of dirs
-    output_directory = Path('inference') / tilename
-    output_directory.mkdir(exist_ok=True)
+    if args.name:
+        output_directory = Path('inference') / args.name / tilename
+    else:
+        output_directory = Path('inference') / tilename
+    
+    output_directory.mkdir(exist_ok=True, parents=True)
 
     planet_imagery_path = next(data_directory.glob('*_AnalyticMS_SR.tif'))
 

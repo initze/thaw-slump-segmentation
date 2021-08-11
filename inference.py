@@ -31,14 +31,16 @@ cmap_slope = flatui_cmap('Clouds', 'Midnight Blue')
 cmap_ndvi = 'RdYlGn'
 
 FIGSIZE_MAX = 20
-PATCHSIZE = 1024
-MARGIN = 256  # Margin
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--gdal_bin", default='', help="Path to gdal binaries")
 parser.add_argument("--gdal_path", default='', help="Path to gdal scripts")
 parser.add_argument("--n_jobs", default=-1, type=int, help="number of parallel joblib jobs")
 parser.add_argument("--ckpt", default='latest', type=str, help="Checkpoint to use")
+
+parser.add_argument("--margin_size", default=256, type=int, help="Size of patch overlap")
+parser.add_argument("--patch_size", default=1024, type=int, help="Size of patches")
+
 parser.add_argument("model_path", type=str, help="path to model")
 parser.add_argument("tile_to_predict", type=str, help="path to model", nargs='+')
 
@@ -50,7 +52,8 @@ def predict(model, imagery, device='cpu'):
     prediction = torch.zeros(1, *imagery.shape[2:])
     weights = torch.zeros(1, *imagery.shape[2:])
 
-    PS = PATCHSIZE
+    PS = args.patch_size
+    MARGIN = args.margin_size
 
     margin_ramp = torch.cat([
         torch.linspace(0, 1, MARGIN),
@@ -100,6 +103,8 @@ def do_inference(tilename, args=None, log_path=None):
             return
         preprocess_directory(raw_directory, args, log_path, label_required=False)
         # After this, data_directory should contain all the stuff that we need.
+    
+    # introduce naming of dirs
     output_directory = Path('inference') / tilename
     output_directory.mkdir(exist_ok=True)
 

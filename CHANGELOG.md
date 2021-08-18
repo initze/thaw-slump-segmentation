@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.5.2] - 2021-08-18
+### Changed
+- fixed inference masking bug
+
 ## [0.5.1] - 2021-06-10
 ### Changed
 - bugs from 0.5.0 fixed

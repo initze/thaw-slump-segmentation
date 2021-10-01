@@ -21,6 +21,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--gdal_bin", default='', help="Path to gdal binaries (ignored if --skip_gdal is passed)")
 parser.add_argument("--gdal_path", default='', help="Path to gdal scripts (ignored if --skip_gdal is passed)")
 parser.add_argument("--n_jobs", default=-1, type=int, help="number of parallel joblib jobs")
+parser.add_argument("--nolabel", action='store_false', help="Set flag to do preprocessing without label file")
 
 is_ee_initialized = False  # Module-global flag to avoid calling ee.Initialize multiple times
 
@@ -106,6 +107,6 @@ if __name__ == "__main__":
 
     dir_list = check_input_data(INPUT_DATA_DIR)
     if len(dir_list) > 0:
-        Parallel(n_jobs=args.n_jobs)(delayed(preprocess_directory)(image_dir, args, log_path) for image_dir in dir_list)
+        Parallel(n_jobs=args.n_jobs)(delayed(preprocess_directory)(image_dir, args, log_path, args.nolabel) for image_dir in dir_list)
     else:
         logger.error("Empty Input Data Directory! No Data available to process!")

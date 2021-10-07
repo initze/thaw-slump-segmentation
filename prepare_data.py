@@ -168,7 +168,7 @@ def main_function(dataset, args, log_path):
 
     datasets['mask'] = h5.create_dataset("mask",
                                          dtype=np.uint8,
-                                         shape=(min(1024, len(tifs)), 1, 256, 256),
+                                         shape=(len(tifs), 1, 256, 256),
                                          maxshape=(len(tifs), 1, 256, 256),
                                          chunks=(1, 1, 256, 256),
                                          compression='lzf',
@@ -211,11 +211,6 @@ def main_function(dataset, args, log_path):
             bad_tiles += 1
             continue
 
-        """
-        if(datasets['planet'].shape[0] <= i):
-            for ds in datasets.values():
-                ds.resize(ds.shape[0] + 2048, axis=0)
-        """
         for t in tile:
             datasets[t][i] = tile[t]
 

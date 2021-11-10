@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.5.3] - 2021-11-10
+### Changed
+- added support for PSOrthotile input (flexible input data resolution)
+
 ## [0.5.2] - 2021-08-18
 ### Changed
 - fixed inference masking bug

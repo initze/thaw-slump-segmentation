@@ -12,7 +12,7 @@ import rasterio as rio
 import requests
 from pyproj import Transformer
 from ..utils import get_logger, log_run
-from . import gdal
+from . import gdal, utils
 
 _logger = get_logger('preprocessing.ee')
 
@@ -51,7 +51,7 @@ def get_tcvis_from_gee(image_directory, ee_image, out_filename, buffer=200, reso
         return 2
     else:
         _logger.info("Starting download Dataset from Google Earthengine")
-    image_list = glob.glob(os.path.join(image_directory, r'*3B_AnalyticMS_SR.tif'))
+    image_list = glob.glob(os.path.join(image_directory, r'*_SR.tif'))
     impath = image_list[0]
     basepath = os.path.basename(image_directory)
     basename_tmpimage = basepath + '_ee_tmp'
@@ -77,7 +77,8 @@ def get_tcvis_from_gee(image_directory, ee_image, out_filename, buffer=200, reso
     infile = os.path.join(image_directory, basename_tmpimage + '.tif')
 
     xmin, xmax, ymin, ymax = coords
-    s_warp = f'{gdal.warp} -t_srs {epsg} -tr {resolution} {resolution} \
+    xres, yres = utils.resolution_from_image(impath)
+    s_warp = f'{gdal.warp} -t_srs {epsg} -tr {xres} {yres} \
                -srcnodata None -te {xmin} {ymin} {xmax} {ymax} {infile} {outfile_path}'
     log_run(s_warp, _logger)
 

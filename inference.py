@@ -115,7 +115,7 @@ def do_inference(tilename, args=None, log_path=None):
     
     output_directory.mkdir(exist_ok=True, parents=True)
 
-    planet_imagery_path = next(data_directory.glob('*_AnalyticMS_SR.tif'))
+    planet_imagery_path = next(data_directory.glob('*_SR.tif'))
 
     data = []
     for source in sources:

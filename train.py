@@ -16,6 +16,7 @@ from datetime import datetime
 from pathlib import Path
 
 import torch
+import torch.nn as nn
 import yaml
 from tqdm import tqdm
 
@@ -85,6 +86,9 @@ class Engine:
 
         self.dev = torch.device("cpu") if not torch.cuda.is_available() else torch.device("cuda")
         self.logger.info(f'Training on {self.dev} device')
+
+        # make parallel
+        self.model = nn.DataParallel(self.model)
         self.model = self.model.to(self.dev)
 
         self.opt = torch.optim.AdamW(self.model.parameters(), lr=self.config['learning_rate'])

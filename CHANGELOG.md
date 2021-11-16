@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.5.4] - 2021-11-16
+### Changed
+- added Multi-GPU support for Training
+
 ## [0.5.3] - 2021-11-10
 ### Changed
 - added support for PSOrthotile input (flexible input data resolution)

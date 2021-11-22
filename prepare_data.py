@@ -158,9 +158,9 @@ def main_function(dataset, args, log_path):
     for dataset_name, nchannels in channel_numbers.items():
         ds = h5.create_dataset(dataset_name,
                                dtype=np.float32,
-                               shape=(len(tifs), nchannels, 256, 256),
-                               maxshape=(len(tifs), nchannels, 256, 256),
-                               chunks=(1, nchannels, 256, 256),
+                               shape=(len(tifs), nchannels, XSIZE, YSIZE),
+                               maxshape=(len(tifs), nchannels, XSIZE, YSIZE),
+                               chunks=(1, nchannels, XSIZE, YSIZE),
                                compression='lzf',
                                scaleoffset=3,
                                )
@@ -168,9 +168,9 @@ def main_function(dataset, args, log_path):
 
     datasets['mask'] = h5.create_dataset("mask",
                                          dtype=np.uint8,
-                                         shape=(len(tifs), 1, 256, 256),
-                                         maxshape=(len(tifs), 1, 256, 256),
-                                         chunks=(1, 1, 256, 256),
+                                         shape=(len(tifs), 1, XSIZE, YSIZE),
+                                         maxshape=(len(tifs), 1, XSIZE, YSIZE),
+                                         chunks=(1, 1, XSIZE, YSIZE),
                                          compression='lzf',
                                          )
 
@@ -204,7 +204,7 @@ def main_function(dataset, args, log_path):
         # which are filtered out here:
         is_narrow = False
         for tensor in tile.values():
-            if tensor.shape[-2:] != (256, 256):
+            if tensor.shape[-2:] != (XSIZE, YSIZE):
                 is_narrow = True
                 break
         if is_narrow:

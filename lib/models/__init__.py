@@ -69,6 +69,6 @@ def create_loss(
         return losses_dict[name](mode=losses.BINARY_MODE)
     elif name in builtin_losses_dict:
         return builtin_losses_dict[name]()
-    raise KeyError("Wrong loss type `{}`. Availbale options are: {}".format(
+    raise KeyError("Wrong loss type `{}`. Available options are: {}".format(
         name, list(builtin_losses_dict.keys()) + list(losses_dict.keys()),
     ))

@@ -3,6 +3,7 @@ from typing import Optional
 import torch
 import torch.nn.functional as F
 from torch import nn, Tensor
+from .constants import BINARY_MODE
 
 __all__ = ["SoftBCEWithLogitsLoss"]
 
@@ -13,6 +14,7 @@ class SoftBCEWithLogitsLoss(nn.Module):
 
     def __init__(
         self,
+        mode: str,
         weight: Optional[torch.Tensor] = None,
         ignore_index: Optional[int] = -100,
         reduction: str = "mean",
@@ -34,6 +36,7 @@ class SoftBCEWithLogitsLoss(nn.Module):
 
         """
         super().__init__()
+        assert mode == BINARY_MODE
         self.ignore_index = ignore_index
         self.reduction = reduction
         self.smooth_factor = smooth_factor

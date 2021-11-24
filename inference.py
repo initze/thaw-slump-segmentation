@@ -17,6 +17,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 import torch
+import torch.nn as nn
 from tqdm import tqdm
 from datetime import datetime
 
@@ -262,6 +263,7 @@ if __name__ == "__main__":
     config = yaml.load((model_dir / 'config.yml').open(), Loader=yaml.SafeLoader)
 
     m = config['model']
+    #print(m['architecture'],m['encoder'], m['input_channels'])
     model = create_model(
         arch=m['architecture'],
         encoder_name=m['encoder'],
@@ -277,7 +279,14 @@ if __name__ == "__main__":
         last_ckpt = int(args.ckpt)
     ckpt = model_dir / 'checkpoints' / f'{last_ckpt:02d}.pt'
     logger.info(f"Loading checkpoint {ckpt}")
-    model.load_state_dict(torch.load(ckpt, map_location=dev))
+    
+    # Parallelized Model needs to be declared before loading
+    try:
+        model.load_state_dict(torch.load(ckpt, map_location=dev))
+    except:
+        model = nn.DataParallel(model)
+        model.load_state_dict(torch.load(ckpt, map_location=dev))
+    
     model = model.to(dev)
 
     sources = DataSources(config['data_sources'])

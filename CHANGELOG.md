@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.5.5] - 2021-11-25
+### Changed
+- added support for Multi- and single-GPU trained models
+
 ## [0.5.4] - 2021-11-16
 ### Changed
 - added Multi-GPU support for Training

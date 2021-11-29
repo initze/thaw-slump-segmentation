@@ -18,7 +18,7 @@ class SoftBCEWithLogitsLoss(nn.Module):
         weight: Optional[torch.Tensor] = None,
         ignore_index: Optional[int] = -100,
         reduction: str = "mean",
-        smooth_factor: Optional[float] = None,
+        smooth_factor: Optional[float] = 0.1,
         pos_weight: Optional[torch.Tensor] = None,
     ):
         """Drop-in replacement for torch.nn.BCEWithLogitsLoss with few additions: ignore_index and label_smoothing
@@ -53,6 +53,7 @@ class SoftBCEWithLogitsLoss(nn.Module):
             loss: torch.Tensor
         """
 
+        y_true = y_true.float()
         if self.smooth_factor is not None:
             soft_targets = (1 - y_true) * self.smooth_factor + y_true * (1 - self.smooth_factor)
         else:

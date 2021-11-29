@@ -13,6 +13,7 @@ import shutil
 import sys
 from datetime import datetime
 from pathlib import Path
+import yaml
 
 import h5py
 import numpy as np
@@ -21,9 +22,10 @@ from joblib import Parallel, delayed
 from skimage.io import imsave
 
 from lib.data_pre_processing import gdal
-from lib.utils import init_logging, get_logger, log_run
+from lib.utils import init_logging, get_logger, log_run, yaml_custom
 
 parser = argparse.ArgumentParser()
+parser.add_argument('-c', '--config', default='config.yml', type=Path, help='Specify run config to use.')
 parser.add_argument("--skip_gdal", action='store_true', help="Skip the Gdal conversion stage (if it has already been "
                                                              "done)")
 parser.add_argument("--gdal_bin", default='', help="Path to gdal binaries (ignored if --skip_gdal is passed)")
@@ -33,6 +35,7 @@ parser.add_argument("--nodata_threshold", default=50, type=float, help="Throw aw
                                                                        "nodata pixels")
 parser.add_argument("--tile_size", default='256x256', type=str, help="Tiling size in pixels e.g. '256x256'")
 parser.add_argument("--tile_overlap", default=25, type=int, help="Overlap of the tiles in pixels")
+
 
 
 def read_and_assert_imagedata(image_path):
@@ -223,6 +226,7 @@ def main_function(dataset, args, log_path):
 
 if __name__ == "__main__":
     args = parser.parse_args()
+    config = yaml.load(args.config.open(), Loader=yaml_custom.SaneYAMLLoader)
     # Tiling Settings
     XSIZE, YSIZE = map(int, args.tile_size.split('x'))
     OVERLAP = args.tile_overlap
@@ -243,8 +247,9 @@ if __name__ == "__main__":
     if not args.skip_gdal:
         gdal.initialize(args)
 
-    DATA = Path('data')
-    DEST = Path('data_h5')
+    DATA_ROOT = Path(config['data_root'])
+    DATA = DATA_ROOT / 'data'
+    DEST = DATA_ROOT / 'h5'
     DEST.mkdir(exist_ok=True)
 
     # All folders that contain the big raster (...AnalyticsML_SR.tif) are assumed to be a dataset

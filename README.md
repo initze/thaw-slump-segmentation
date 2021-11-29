@@ -9,8 +9,8 @@ conda env create -n aicore -f environment.yml
 
 ### Data Preparation
 
-1. copy/move data into data_input
-2. copy/move data into data_aux (e.g. prepared ArcticDEM data)
+1. copy/move data into data/input
+2. copy/move data into data/aux (e.g. prepared ArcticDEM data)
 
 ### Set gdal paths in system.yml file
 #### Linux

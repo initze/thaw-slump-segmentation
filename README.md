@@ -76,6 +76,7 @@ model:
 # JaccardLoss, DiceLoss, FocalLoss, LovaszLoss, SoftBCEWithLogitsLoss
 loss_function: FocalLoss
 # Data Configuration
+data_root: "data"  # Location of the data folder
 data_threads: 4  # Number of threads for data loading, must be 0 on Windows
 data_sources:  # Enabled input features
   - planet

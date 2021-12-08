@@ -19,11 +19,12 @@ from lib.data_pre_processing import *
 from lib.utils import init_logging, get_logger, yaml_custom
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-c', '--config', default='config.yml', type=Path, help='Specify run config to use.')
+parser.add_argument('--config', default=None, type=Path, help='Specify run config to use.')
 parser.add_argument("--gdal_bin", default='', help="Path to gdal binaries (ignored if --skip_gdal is passed)")
 parser.add_argument("--gdal_path", default='', help="Path to gdal scripts (ignored if --skip_gdal is passed)")
 parser.add_argument("--n_jobs", default=-1, type=int, help="number of parallel joblib jobs")
 parser.add_argument("--nolabel", action='store_false', help="Set flag to do preprocessing without label file")
+parser.add_argument("--data_dir", default='data', type=Path, help="Set flag to do preprocessing without label file")
 
 is_ee_initialized = False  # Module-global flag to avoid calling ee.Initialize multiple times
 
@@ -94,13 +95,16 @@ def preprocess_directory(image_dir, args, log_path, label_required=True):
 
 if __name__ == "__main__":
     args = parser.parse_args()
-    config = yaml.load(args.config.open(), Loader=yaml_custom.SaneYAMLLoader)
-
+    
     global BASEDIR, INPUT_DATA_DIR, BACKUP_DIR, DATA_DIR, AUX_DIR
-    BASEDIR        = Path(config['data_root'])
+    if args.config:
+        config = yaml.load(args.config.open(), Loader=yaml_custom.SaneYAMLLoader)
+        BASEDIR = Path(config['data_root'])
+    else:
+        BASEDIR = Path(args.data_dir)
     INPUT_DATA_DIR = BASEDIR / 'input'
     BACKUP_DIR     = BASEDIR / 'backup'
-    DATA_DIR       = BASEDIR / 'data'
+    DATA_DIR       = BASEDIR / 'tiles'
     AUX_DIR        = BASEDIR / 'aux'
 
     timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')

@@ -10,6 +10,7 @@ from lib.utils import get_logger
 from lib.utils.data import H5Dataset, Augment, Transformed, Scaling
 from collections import namedtuple
 from tqdm import tqdm
+from pathlib import Path
 
 
 class DataSources:
@@ -63,13 +64,13 @@ def make_scaling(data_sources=None):
     return Scaling(normalize)
 
 
-def get_dataset(dataset, data_sources=None, augment=False, transform=None, augment_types=None):
+def get_dataset(dataset, data_sources=None, data_root=None, augment=False, transform=None, augment_types=None):
     if data_sources is None:
         # Use all data sources by default
         data_sources = DataSources.all()
     data_sources = DataSources(data_sources)
 
-    ds_path = 'data_h5/' + str(dataset) + '.h5'
+    ds_path = Path(data_root) / 'h5' / (str(dataset) + '.h5')
     dataset = H5Dataset(ds_path, data_sources=data_sources)
     if augment:
         dataset = Augment(dataset, augment_types=augment_types)
@@ -78,15 +79,15 @@ def get_dataset(dataset, data_sources=None, augment=False, transform=None, augme
     return dataset
 
 
-def get_loader(scenes, batch_size, augment=False, augment_types=None, shuffle=False, num_workers=0, data_sources=None, transform=None):
+def get_loader(scenes, batch_size, augment=False, augment_types=None, shuffle=False, num_workers=0, data_sources=None, data_root=None, transform=None):
     if transform is None:
         transform = make_scaling(data_sources)
-    scenes = [get_dataset(ds, data_sources=data_sources, augment=augment, augment_types=None, transform=transform) for ds in scenes]
+    scenes = [get_dataset(ds, data_sources=data_sources, data_root=data_root, augment=augment, augment_types=None, transform=transform) for ds in scenes]
     concatenated = ConcatDataset(scenes)
     return DataLoader(concatenated, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, pin_memory=True)
 
 
-def get_slump_loader(scenes, batch_size, augment=False, augment_types=None, shuffle=False, num_workers=0, data_sources=None, transform=None):
+def get_slump_loader(scenes, batch_size, augment=False, augment_types=None, shuffle=False, num_workers=0, data_sources=None, data_root=None, transform=None):
     logger = get_logger('data_loading')
 
     if transform is None:
@@ -94,7 +95,7 @@ def get_slump_loader(scenes, batch_size, augment=False, augment_types=None, shuf
     filtered_sets = []
     logger.info("Start calculating slump only dataset.")
     for scene in tqdm(scenes):
-        data = get_dataset(scene, data_sources=data_sources)
+        data = get_dataset(scene, data_sources=data_sources, data_root=data_root)
         subset = [i for i in range(len(data)) if data[i][1].max() > 0]
         filtered_sets.append(Subset(data, subset))
 
@@ -106,11 +107,11 @@ def get_slump_loader(scenes, batch_size, augment=False, augment_types=None, shuf
     return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, pin_memory=True)
 
 
-def get_vis_loader(vis_config, batch_size, data_sources=None):
+def get_vis_loader(vis_config, batch_size, data_sources=None, data_root=None):
     vis_names = []
     vis_datasets = []
     for scene, indices in vis_config.items():
-        dataset = get_dataset(scene, data_sources=data_sources)
+        dataset = get_dataset(scene, data_sources=data_sources, data_root=data_root)
         vis_names += [f'{scene}-{i}' for i in indices]
         filtered = Subset(dataset, indices)
         vis_datasets.append(filtered)

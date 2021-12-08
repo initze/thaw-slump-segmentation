@@ -8,6 +8,7 @@
 Usecase 2 Data Preprocessing Script
 """
 import argparse
+import yaml
 from datetime import datetime
 from pathlib import Path
 
@@ -15,9 +16,10 @@ from joblib import Parallel, delayed
 
 from lib import data_pre_processing
 from lib.data_pre_processing import *
-from lib.utils import init_logging, get_logger
+from lib.utils import init_logging, get_logger, yaml_custom
 
 parser = argparse.ArgumentParser()
+parser.add_argument('-c', '--config', default='config.yml', type=Path, help='Specify run config to use.')
 parser.add_argument("--gdal_bin", default='', help="Path to gdal binaries (ignored if --skip_gdal is passed)")
 parser.add_argument("--gdal_path", default='', help="Path to gdal scripts (ignored if --skip_gdal is passed)")
 parser.add_argument("--n_jobs", default=-1, type=int, help="number of parallel joblib jobs")
@@ -25,10 +27,6 @@ parser.add_argument("--nolabel", action='store_false', help="Set flag to do prep
 
 is_ee_initialized = False  # Module-global flag to avoid calling ee.Initialize multiple times
 
-BASEDIR = os.path.abspath('.')
-INPUT_DATA_DIR = os.path.join(BASEDIR, 'data_input')
-BACKUP_DIR = os.path.join(BASEDIR, 'data_backup')
-DATA_DIR = os.path.join(BASEDIR, 'data')
 
 STATUS = {0: 'failed', 1: 'success', 2: 'skipped'}
 SUCCESS_STATES = ['rename', 'label', 'ndvi', 'tcvis', 'rel_dem', 'slope', 'mask', 'move']
@@ -77,11 +75,11 @@ def preprocess_directory(image_dir, args, log_path, label_required=True):
                                                 resolution=3)
 
     success_state['rel_dem'] = aux_data_to_tiles(image_dir,
-                                                 'data_aux/ArcticDEM/elevation.vrt',
+                                                 AUX_DIR / 'ArcticDEM' / 'elevation.vrt',
                                                  'relative_elevation.tif')
 
     success_state['slope'] = aux_data_to_tiles(image_dir,
-                                               'data_aux/ArcticDEM/slope.vrt',
+                                               AUX_DIR / 'ArcticDEM' / 'slope.vrt',
                                                'slope.tif')
 
     success_state['mask'] = mask_input_data(image_dir, DATA_DIR)
@@ -96,6 +94,14 @@ def preprocess_directory(image_dir, args, log_path, label_required=True):
 
 if __name__ == "__main__":
     args = parser.parse_args()
+    config = yaml.load(args.config.open(), Loader=yaml_custom.SaneYAMLLoader)
+
+    global BASEDIR, INPUT_DATA_DIR, BACKUP_DIR, DATA_DIR, AUX_DIR
+    BASEDIR        = Path(config['data_root'])
+    INPUT_DATA_DIR = BASEDIR / 'input'
+    BACKUP_DIR     = BASEDIR / 'backup'
+    DATA_DIR       = BASEDIR / 'data'
+    AUX_DIR        = BASEDIR / 'aux'
 
     timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
     log_path = Path('logs') / f'setup_raw_data-{timestamp}.log'

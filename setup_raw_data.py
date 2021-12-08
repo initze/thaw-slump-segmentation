@@ -19,7 +19,7 @@ from lib.data_pre_processing import *
 from lib.utils import init_logging, get_logger, yaml_custom
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--config', default=None, type=Path, help='Specify run config to use.')
+parser.add_argument("--config", default=None, type=Path, help='Specify run config to use.')
 parser.add_argument("--gdal_bin", default='', help="Path to gdal binaries (ignored if --skip_gdal is passed)")
 parser.add_argument("--gdal_path", default='', help="Path to gdal scripts (ignored if --skip_gdal is passed)")
 parser.add_argument("--n_jobs", default=-1, type=int, help="number of parallel joblib jobs")
@@ -96,16 +96,16 @@ def preprocess_directory(image_dir, args, log_path, label_required=True):
 if __name__ == "__main__":
     args = parser.parse_args()
     
-    global BASEDIR, INPUT_DATA_DIR, BACKUP_DIR, DATA_DIR, AUX_DIR
+    global DATA_ROOT, INPUT_DATA_DIR, BACKUP_DIR, DATA_DIR, AUX_DIR
     if args.config:
         config = yaml.load(args.config.open(), Loader=yaml_custom.SaneYAMLLoader)
-        BASEDIR = Path(config['data_root'])
+        DATA_ROOT = Path(config['data_root'])
     else:
-        BASEDIR = Path(args.data_dir)
-    INPUT_DATA_DIR = BASEDIR / 'input'
-    BACKUP_DIR     = BASEDIR / 'backup'
-    DATA_DIR       = BASEDIR / 'tiles'
-    AUX_DIR        = BASEDIR / 'aux'
+        DATA_ROOT = Path(args.data_dir)
+    INPUT_DATA_DIR = DATA_ROOT / 'input'
+    BACKUP_DIR     = DATA_ROOT / 'backup'
+    DATA_DIR       = DATA_ROOT / 'tiles'
+    AUX_DIR        = DATA_ROOT / 'aux'
 
     timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
     log_path = Path('logs') / f'setup_raw_data-{timestamp}.log'

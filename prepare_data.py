@@ -25,7 +25,8 @@ from lib.data_pre_processing import gdal
 from lib.utils import init_logging, get_logger, log_run, yaml_custom
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-c', '--config', default='config.yml', type=Path, help='Specify run config to use.')
+parser.add_argument("--config", default=None, type=Path, help='Specify run config to use.')
+parser.add_argument("--data_dir", default='data', type=Path, help="Set flag to do preprocessing without label file")
 parser.add_argument("--skip_gdal", action='store_true', help="Skip the Gdal conversion stage (if it has already been "
                                                              "done)")
 parser.add_argument("--gdal_bin", default='', help="Path to gdal binaries (ignored if --skip_gdal is passed)")
@@ -146,8 +147,8 @@ def main_function(dataset, args, log_path):
         logger.warning(f'No tiles found for {dataset}, skipping this directory.')
         return
 
-    h5_path = DEST / f'{dataset.name}.h5'
-    info_dir = DEST / dataset.name
+    h5_path = H5_DIR / f'{dataset.name}.h5'
+    info_dir = H5_DIR / dataset.name
     info_dir.mkdir(parents=True)
 
     thread_logger.info(f'Creating H5File at {h5_path}')
@@ -226,7 +227,6 @@ def main_function(dataset, args, log_path):
 
 if __name__ == "__main__":
     args = parser.parse_args()
-    config = yaml.load(args.config.open(), Loader=yaml_custom.SaneYAMLLoader)
     # Tiling Settings
     XSIZE, YSIZE = map(int, args.tile_size.split('x'))
     OVERLAP = args.tile_overlap
@@ -247,17 +247,22 @@ if __name__ == "__main__":
     if not args.skip_gdal:
         gdal.initialize(args)
 
-    DATA_ROOT = Path(config['data_root'])
-    DATA = DATA_ROOT / 'data'
-    DEST = DATA_ROOT / 'h5'
-    DEST.mkdir(exist_ok=True)
+    if args.config:
+        config = yaml.load(args.config.open(), Loader=yaml_custom.SaneYAMLLoader)
+        DATA_ROOT = Path(config['data_root'])
+    else:
+        DATA_ROOT = Path(args.data_dir)
+    
+    DATA_DIR = DATA_ROOT / 'tiles'
+    H5_DIR = DATA_ROOT / 'h5'
+    H5_DIR.mkdir(exist_ok=True)
 
     # All folders that contain the big raster (...AnalyticsML_SR.tif) are assumed to be a dataset
-    datasets = [raster.parent for raster in DATA.glob('*/' + RASTERFILTER)]
+    datasets = [raster.parent for raster in DATA_DIR.glob('*/' + RASTERFILTER)]
 
     overwrite_conflicts = []
     for dataset in datasets:
-        check_dir = DEST / dataset.name
+        check_dir = H5_DIR / dataset.name
         if check_dir.exists():
             overwrite_conflicts.append(check_dir)
 

@@ -25,7 +25,6 @@ from lib.data_pre_processing import gdal
 from lib.utils import init_logging, get_logger, log_run, yaml_custom
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--config", default=None, type=Path, help='Specify run config to use.')
 parser.add_argument("--data_dir", default='data', type=Path, help="Set flag to do preprocessing without label file")
 parser.add_argument("--skip_gdal", action='store_true', help="Skip the Gdal conversion stage (if it has already been "
                                                              "done)")
@@ -50,15 +49,34 @@ def read_and_assert_imagedata(image_path):
         return data
 
 
+def get_planet_product_type(img_path):
+    """
+    return if file is scene or OrthoTile"""
+    if len(img_path.stem.split('_')) == 8:
+        pl_type = 'OrthoTile'
+    else:
+        pl_type = 'Scene'
+    
+    return pl_type
+
+
 def mask_from_img(img_path):
     """
     Given an image path, return path for the mask
     """
-    date, time, *block, platform, _, sr, row, col = img_path.stem.split('_')
-    block = '_'.join(block)
-    base = img_path.parent.parent
-
-    mask_path = base / 'mask' / f'{date}_{time}_{block}_mask_{row}_{col}.tif'
+    # change for 
+    if get_planet_product_type(img_path) == 'Scene':
+        date, time, *block, platform, _, sr, row, col = img_path.stem.split('_')
+        block = '_'.join(block)
+        base = img_path.parent.parent
+        mask_path = base / 'mask' / f'{date}_{time}_{block}_mask_{row}_{col}.tif'
+    
+    else:
+        block, tile, date, sensor, bgrn, sr, row, col = img_path.stem.split('_')
+        #block = '_'.join(block)
+        base = img_path.parent.parent
+        mask_path = base / 'mask' / f'{block}_{tile}_{date}_{sensor}_mask_{row}_{col}.tif'
+    
     assert mask_path.exists()
 
     return mask_path
@@ -68,8 +86,12 @@ def other_from_img(img_path, other):
     """
     Given an image path, return paths for mask and tcvis
     """
-    date, time, *block, platform, _, sr, row, col = img_path.stem.split('_')
-    block = '_'.join(block)
+    if get_planet_product_type(img_path) == 'Scene':
+        date, time, *block, platform, _, sr, row, col = img_path.stem.split('_')
+        block = '_'.join(block)
+    else:
+        block, tile, date, sensor, bgrn, sr, row, col = img_path.stem.split('_')
+    
     base = img_path.parent.parent
 
     path = base / other / f'{other}_{row}_{col}.tif'
@@ -240,19 +262,14 @@ if __name__ == "__main__":
     logger.info('#############################')
 
     # Paths setup
-    RASTERFILTER = '*3B_AnalyticMS_SR*.tif'
+    RASTERFILTER = '*_SR*.tif'
     VECTORFILTER = '*.shp'
     THRESHOLD = args.nodata_threshold / 100
 
     if not args.skip_gdal:
         gdal.initialize(args)
 
-    if args.config:
-        config = yaml.load(args.config.open(), Loader=yaml_custom.SaneYAMLLoader)
-        DATA_ROOT = Path(config['data_root'])
-    else:
-        DATA_ROOT = Path(args.data_dir)
-    
+    DATA_ROOT = Path(args.data_dir)
     DATA_DIR = DATA_ROOT / 'tiles'
     H5_DIR = DATA_ROOT / 'h5'
     H5_DIR.mkdir(exist_ok=True)

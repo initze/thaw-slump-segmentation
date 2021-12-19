@@ -43,6 +43,8 @@ parser.add_argument("--gdal_bin", default='', help="Path to gdal binaries")
 parser.add_argument("--gdal_path", default='', help="Path to gdal scripts")
 parser.add_argument("--n_jobs", default=-1, type=int, help="number of parallel joblib jobs")
 parser.add_argument("--ckpt", default='latest', type=str, help="Checkpoint to use")
+parser.add_argument("--data_dir", default='data', type=Path, help="Base data directory")
+parser.add_argument("--inference_dir", default='inference', type=Path, help="Main inference directory")
 parser.add_argument("-n", "--name", default=None, type=str, help="Name of inference run, data will be stored in subdirectory")
 parser.add_argument("-m", "--margin_size", default=256, type=int, help="Size of patch overlap")
 parser.add_argument("-p", "--patch_size", default=1024, type=int, help="Size of patches")
@@ -99,20 +101,22 @@ def flush_rio(filepath):
 def do_inference(tilename, args=None, log_path=None):
     tile_logger = get_logger(f'inference.{tilename}')
     # ===== PREPARE THE DATA =====
-    data_directory = Path('data') / tilename
+    DATA_ROOT = args.data_dir
+    INFERENCE_ROOT = args.inference_dir
+    data_directory = DATA_ROOT / 'tiles' / tilename
     if not data_directory.exists():
         logger.info(f'Preprocessing directory {tilename}')
-        raw_directory = Path('data_input') / tilename
+        raw_directory = DATA_ROOT / 'input' / tilename
         if not raw_directory.exists():
-            logger.error(f"Couldn't find tile '{tilename}' in data/ or data_input/. Skipping this tile")
+            logger.error(f"Couldn't find tile '{tilename}' in {DIR_ROOT}/tiles or {DIR_ROOT}/input. Skipping this tile")
             return
         preprocess_directory(raw_directory, args, log_path, label_required=False)
         # After this, data_directory should contain all the stuff that we need.
     
     if args.name:
-        output_directory = Path('inference') / args.name / tilename
+        output_directory = INFERENCE_ROOT / args.name / tilename
     else:
-        output_directory = Path('inference') / tilename
+        output_directory = INFERENCE_ROOT / tilename
     
     output_directory.mkdir(exist_ok=True, parents=True)
 

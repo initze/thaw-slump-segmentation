@@ -13,6 +13,7 @@ import shutil
 import sys
 from datetime import datetime
 from pathlib import Path
+import yaml
 
 import h5py
 import numpy as np
@@ -21,9 +22,10 @@ from joblib import Parallel, delayed
 from skimage.io import imsave
 
 from lib.data_pre_processing import gdal
-from lib.utils import init_logging, get_logger, log_run
+from lib.utils import init_logging, get_logger, log_run, yaml_custom
 
 parser = argparse.ArgumentParser()
+parser.add_argument("--data_dir", default='data', type=Path, help="Set flag to do preprocessing without label file")
 parser.add_argument("--skip_gdal", action='store_true', help="Skip the Gdal conversion stage (if it has already been "
                                                              "done)")
 parser.add_argument("--gdal_bin", default='', help="Path to gdal binaries (ignored if --skip_gdal is passed)")
@@ -33,6 +35,7 @@ parser.add_argument("--nodata_threshold", default=50, type=float, help="Throw aw
                                                                        "nodata pixels")
 parser.add_argument("--tile_size", default='256x256', type=str, help="Tiling size in pixels e.g. '256x256'")
 parser.add_argument("--tile_overlap", default=25, type=int, help="Overlap of the tiles in pixels")
+
 
 
 def read_and_assert_imagedata(image_path):
@@ -46,15 +49,34 @@ def read_and_assert_imagedata(image_path):
         return data
 
 
+def get_planet_product_type(img_path):
+    """
+    return if file is scene or OrthoTile"""
+    if len(img_path.stem.split('_')) == 8:
+        pl_type = 'OrthoTile'
+    else:
+        pl_type = 'Scene'
+    
+    return pl_type
+
+
 def mask_from_img(img_path):
     """
     Given an image path, return path for the mask
     """
-    date, time, *block, platform, _, sr, row, col = img_path.stem.split('_')
-    block = '_'.join(block)
-    base = img_path.parent.parent
-
-    mask_path = base / 'mask' / f'{date}_{time}_{block}_mask_{row}_{col}.tif'
+    # change for 
+    if get_planet_product_type(img_path) == 'Scene':
+        date, time, *block, platform, _, sr, row, col = img_path.stem.split('_')
+        block = '_'.join(block)
+        base = img_path.parent.parent
+        mask_path = base / 'mask' / f'{date}_{time}_{block}_mask_{row}_{col}.tif'
+    
+    else:
+        block, tile, date, sensor, bgrn, sr, row, col = img_path.stem.split('_')
+        #block = '_'.join(block)
+        base = img_path.parent.parent
+        mask_path = base / 'mask' / f'{block}_{tile}_{date}_{sensor}_mask_{row}_{col}.tif'
+    
     assert mask_path.exists()
 
     return mask_path
@@ -64,8 +86,12 @@ def other_from_img(img_path, other):
     """
     Given an image path, return paths for mask and tcvis
     """
-    date, time, *block, platform, _, sr, row, col = img_path.stem.split('_')
-    block = '_'.join(block)
+    if get_planet_product_type(img_path) == 'Scene':
+        date, time, *block, platform, _, sr, row, col = img_path.stem.split('_')
+        block = '_'.join(block)
+    else:
+        block, tile, date, sensor, bgrn, sr, row, col = img_path.stem.split('_')
+    
     base = img_path.parent.parent
 
     path = base / other / f'{other}_{row}_{col}.tif'
@@ -143,8 +169,8 @@ def main_function(dataset, args, log_path):
         logger.warning(f'No tiles found for {dataset}, skipping this directory.')
         return
 
-    h5_path = DEST / f'{dataset.name}.h5'
-    info_dir = DEST / dataset.name
+    h5_path = H5_DIR / f'{dataset.name}.h5'
+    info_dir = H5_DIR / dataset.name
     info_dir.mkdir(parents=True)
 
     thread_logger.info(f'Creating H5File at {h5_path}')
@@ -236,23 +262,24 @@ if __name__ == "__main__":
     logger.info('#############################')
 
     # Paths setup
-    RASTERFILTER = '*3B_AnalyticMS_SR*.tif'
+    RASTERFILTER = '*_SR*.tif'
     VECTORFILTER = '*.shp'
     THRESHOLD = args.nodata_threshold / 100
 
     if not args.skip_gdal:
         gdal.initialize(args)
 
-    DATA = Path('data')
-    DEST = Path('data_h5')
-    DEST.mkdir(exist_ok=True)
+    DATA_ROOT = Path(args.data_dir)
+    DATA_DIR = DATA_ROOT / 'tiles'
+    H5_DIR = DATA_ROOT / 'h5'
+    H5_DIR.mkdir(exist_ok=True)
 
     # All folders that contain the big raster (...AnalyticsML_SR.tif) are assumed to be a dataset
-    datasets = [raster.parent for raster in DATA.glob('*/' + RASTERFILTER)]
+    datasets = [raster.parent for raster in DATA_DIR.glob('*/' + RASTERFILTER)]
 
     overwrite_conflicts = []
     for dataset in datasets:
-        check_dir = DEST / dataset.name
+        check_dir = H5_DIR / dataset.name
         if check_dir.exists():
             overwrite_conflicts.append(check_dir)
 

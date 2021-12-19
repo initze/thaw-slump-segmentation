@@ -9,8 +9,8 @@ conda env create -n aicore -f environment.yml
 
 ### Data Preparation
 
-1. copy/move data into data_input
-2. copy/move data into data_aux (e.g. prepared ArcticDEM data)
+1. copy/move data into data/input
+2. copy/move data into data/aux (e.g. prepared ArcticDEM data)
 
 ### Set gdal paths in system.yml file
 #### Linux
@@ -76,6 +76,7 @@ model:
 # JaccardLoss, DiceLoss, FocalLoss, LovaszLoss, SoftBCEWithLogitsLoss
 loss_function: FocalLoss
 # Data Configuration
+data_root: "data"  # Location of the data folder - overrides --data_dir if passed as argument
 data_threads: 4  # Number of threads for data loading, must be 0 on Windows
 data_sources:  # Enabled input features
   - planet

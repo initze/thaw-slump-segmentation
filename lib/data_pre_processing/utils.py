@@ -17,7 +17,7 @@ _logger = get_logger('preprocessing.data')
 
 
 def check_input_data(input_directory):
-    directory_list = [f for f in glob.glob(os.path.join(input_directory, '*')) if os.path.isdir(f)]
+    directory_list = [f for f in input_directory.glob('*') if f.is_dir()]
     return directory_list
 
 

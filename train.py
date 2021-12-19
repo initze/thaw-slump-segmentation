@@ -28,6 +28,7 @@ from lib.utils import showexample, plot_metrics, plot_precision_recall, init_log
 parser = argparse.ArgumentParser()
 parser.add_argument('-s', '--summary', action='store_true',
         help='Only print model summary and return.')
+parser.add_argument("--data_dir", default='data', type=Path, help="Set flag to do preprocessing without label file")
 parser.add_argument('-n', '--name', default='',
         help='Give this run a name, so that it will be logged into logs/<NAME>_<timestamp>.')
 parser.add_argument('-c', '--config', default='config.yml', type=Path,
@@ -44,7 +45,7 @@ class Engine:
     def __init__(self):
         cli_args = parser.parse_args()
         self.config = yaml.load(cli_args.config.open(), Loader=yaml_custom.SaneYAMLLoader)
-
+        self.DATA_ROOT = cli_args.data_dir
         # Logging setup
         timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
         if cli_args.name:
@@ -107,7 +108,8 @@ class Engine:
         self.vis_predictions = None
         self.vis_loader, self.vis_names = get_vis_loader(self.config['visualization_tiles'],
                                                          batch_size=self.config['batch_size'],
-                                                         data_sources=self.data_sources)
+                                                         data_sources=self.data_sources,
+                                                         data_root=self.DATA_ROOT)
 
         # Write the config YML to the run-folder
         self.config['run_info'] = dict(
@@ -162,7 +164,9 @@ class Engine:
                 ds_config['batch_size'] = self.config['batch_size']
             ds_config['num_workers'] = self.config['data_threads']
             ds_config['augment_types'] = self.config['datasets']
-            self.dataset_cache[name] = get_loader(data_sources=self.data_sources, **ds_config)
+            ds_config['data_sources'] = self.data_sources
+            ds_config['data_root'] = self.DATA_ROOT
+            self.dataset_cache[name] = get_loader(**ds_config)
         else:
             func, arg = re.search(r'(\w+)\((\w+)\)', name).groups()
             if func == 'slump_tiles':
@@ -170,7 +174,9 @@ class Engine:
                 if 'batch_size' not in ds_config:
                     ds_config['batch_size'] = self.config['batch_size']
                 ds_config['num_workers'] = self.config['data_threads']
-                self.dataset_cache[name] = get_slump_loader(data_sources=self.data_sources, **ds_config)
+                ds_config['data_sources'] = self.data_sources
+                ds_config['data_root'] = self.DATA_ROOT
+                self.dataset_cache[name] = get_slump_loader(**ds_config)
 
         return self.dataset_cache[name]
 

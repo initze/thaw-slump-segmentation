@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.0] - 2021-12-21
+### Added
+- data path selection for all scripts
+- inference path selection for inference.py
+### Changed
+- overhauled data structure: disentangled from processing/code directory
+- fixed masking bug (did not recognize udm values > 1) for PSOrthoTile data
+
 ## [0.5.5] - 2021-11-25
 ### Changed
 - added support for Multi- and single-GPU trained models

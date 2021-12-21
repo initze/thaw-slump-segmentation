@@ -41,13 +41,14 @@ python prepare_data.py --data_dir <DATA_DIR>
 ### Training a model
 
 ```bash
-python train.py --data_dir <DATA_DIR>
+python train.py --data_dir <DATA_DIR> -n <MODEL_NAME>
 ```
 
 ### Running Inference
 
 ```bash
-python inference.py --data_dir <DATA_DIR> --model_dir <TrainedModel> 20190727_160426_104e 20190709_042959_08_1057
+python setup_raw_data.py --data_dir <DATA_DIR> --nolabel
+python inference.py --data_dir <DATA_DIR> --model_dir <MODEL_NAME> 20190727_160426_104e 20190709_042959_08_1057
 ```
 
 ## Configuration

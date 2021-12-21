@@ -1,4 +1,4 @@
-# AICore - Usecase 2
+# AICore - 
 
 ## System and Data Setup
 ### Environment setup
@@ -9,8 +9,8 @@ conda env create -n aicore -f environment.yml
 
 ### Data Preparation
 
-1. copy/move data into data/input
-2. copy/move data into data/aux (e.g. prepared ArcticDEM data)
+1. copy/move data into <DATA_DIR>/input
+2. copy/move data into <DATA_DIR>/auxiliary (e.g. prepared ArcticDEM data)
 
 ### Set gdal paths in system.yml file
 #### Linux
@@ -32,22 +32,22 @@ gdal_bin: '%CONDA_PREFIX%\Library\bin' # must be single quote
 ### Data Preprocessing
 
 ```bash
-python setup_raw_data.py
+python setup_raw_data.py --data_dir <DATA_DIR>
 ```
 ```bash
-python prepare_data.py
+python prepare_data.py --data_dir <DATA_DIR>
 ```
 
 ### Training a model
 
 ```bash
-python train.py
+python train.py --data_dir <DATA_DIR>
 ```
 
 ### Running Inference
 
 ```bash
-python inference.py logs/<TrainedModel> 20190727_160426_104e 20190709_042959_08_1057
+python inference.py --data_dir <DATA_DIR> --model_dir <TrainedModel> 20190727_160426_104e 20190709_042959_08_1057
 ```
 
 ## Configuration
@@ -76,7 +76,6 @@ model:
 # JaccardLoss, DiceLoss, FocalLoss, LovaszLoss, SoftBCEWithLogitsLoss
 loss_function: FocalLoss
 # Data Configuration
-data_root: "data"  # Location of the data folder - overrides --data_dir if passed as argument
 data_threads: 4  # Number of threads for data loading, must be 0 on Windows
 data_sources:  # Enabled input features
   - planet

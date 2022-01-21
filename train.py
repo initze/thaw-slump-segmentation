@@ -70,6 +70,9 @@ class Engine:
             in_channels=m['input_channels']
         )
 
+		# make parallel
+        self.model = nn.DataParallel(self.model)
+
         if cli_args.resume:
             self.config['resume'] = cli_args.resume
 
@@ -88,8 +91,6 @@ class Engine:
         self.dev = torch.device("cpu") if not torch.cuda.is_available() else torch.device("cuda")
         self.logger.info(f'Training on {self.dev} device')
 
-        # make parallel
-        self.model = nn.DataParallel(self.model)
         self.model = self.model.to(self.dev)
 
         self.opt = torch.optim.AdamW(self.model.parameters(), lr=self.config['learning_rate'])

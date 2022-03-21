@@ -52,7 +52,9 @@ def read_and_assert_imagedata(image_path):
 def get_planet_product_type(img_path):
     """
     return if file is scene or OrthoTile"""
-    if len(img_path.stem.split('_')) == 8:
+    split = img_path.stem.split('_')
+    # check if 4th last imagename segment is BGRN
+    if split[-4] == 'BGRN':
         pl_type = 'OrthoTile'
     else:
         pl_type = 'Scene'
@@ -66,12 +68,14 @@ def mask_from_img(img_path):
     """
     # change for 
     if get_planet_product_type(img_path) == 'Scene':
+        print('Scene')
         date, time, *block, platform, _, sr, row, col = img_path.stem.split('_')
         block = '_'.join(block)
         base = img_path.parent.parent
         mask_path = base / 'mask' / f'{date}_{time}_{block}_mask_{row}_{col}.tif'
     
     else:
+        print('OrthoTile')
         block, tile, date, sensor, bgrn, sr, row, col = img_path.stem.split('_')
         #block = '_'.join(block)
         base = img_path.parent.parent

@@ -68,16 +68,13 @@ def mask_from_img(img_path):
     """
     # change for 
     if get_planet_product_type(img_path) == 'Scene':
-        print('Scene')
         date, time, *block, platform, _, sr, row, col = img_path.stem.split('_')
         block = '_'.join(block)
         base = img_path.parent.parent
         mask_path = base / 'mask' / f'{date}_{time}_{block}_mask_{row}_{col}.tif'
     
     else:
-        print('OrthoTile')
         block, tile, date, sensor, bgrn, sr, row, col = img_path.stem.split('_')
-        #block = '_'.join(block)
         base = img_path.parent.parent
         mask_path = base / 'mask' / f'{block}_{tile}_{date}_{sensor}_mask_{row}_{col}.tif'
     

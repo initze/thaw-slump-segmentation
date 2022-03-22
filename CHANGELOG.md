@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.6.1] - 2022-03-22
+### Changed
+- fixed bug (crashed prepare_data.py for Planet Scenes)
+
 ## [0.6.0] - 2021-12-21
 ### Added
 - data path selection for all scripts

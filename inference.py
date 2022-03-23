@@ -43,7 +43,8 @@ parser.add_argument("--gdal_bin", default='', help="Path to gdal binaries")
 parser.add_argument("--gdal_path", default='', help="Path to gdal scripts")
 parser.add_argument("--n_jobs", default=-1, type=int, help="number of parallel joblib jobs")
 parser.add_argument("--ckpt", default='latest', type=str, help="Checkpoint to use")
-parser.add_argument("--data_dir", default='data', type=Path, help="Base data directory")
+parser.add_argument("--data_dir", default='data', type=Path, help="Path to data processing dir")
+parser.add_argument("--log_dir", default='logs', type=Path, help="Path to log dir")
 parser.add_argument("--inference_dir", default='inference', type=Path, help="Main inference directory")
 parser.add_argument("-n", "--name", default=None, type=str, help="Name of inference run, data will be stored in subdirectory")
 parser.add_argument("-m", "--margin_size", default=256, type=int, help="Size of patch overlap")
@@ -242,7 +243,9 @@ def do_inference(tilename, args=None, log_path=None):
 
 if __name__ == "__main__":
     timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-    log_path = Path('logs') / f'inference-{timestamp}.log'
+    log_path = Path(args.log_dir) / f'inference-{timestamp}.log'
+    if not Path(args.log_dir).exists():
+	    os.mkdir(Path(args.log_dir))
     init_logging(log_path)
     logger = get_logger('inference')
 
@@ -255,7 +258,7 @@ if __name__ == "__main__":
         last_modified = 0
         last_modeldir = None
 
-        for config_file in Path('logs').glob('*/config.yml'):
+        for config_file in Path(args.log_dir).glob('*/config.yml'):
             modified = config_file.stat().st_mtime
             if modified > last_modified:
                 last_modified = modified

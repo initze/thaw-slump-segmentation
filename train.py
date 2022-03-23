@@ -28,7 +28,8 @@ from lib.utils import showexample, plot_metrics, plot_precision_recall, init_log
 parser = argparse.ArgumentParser()
 parser.add_argument('-s', '--summary', action='store_true',
         help='Only print model summary and return.')
-parser.add_argument("--data_dir", default='data', type=Path, help="Set flag to do preprocessing without label file")
+parser.add_argument("--data_dir", default='data', type=Path, help="Path to data processing dir")
+parser.add_argument("--log_dir", default='logs', type=Path, help="Path to log dir")
 parser.add_argument('-n', '--name', default='',
         help='Give this run a name, so that it will be logged into logs/<NAME>_<timestamp>.')
 parser.add_argument('-c', '--config', default='config.yml', type=Path,
@@ -52,7 +53,7 @@ class Engine:
             log_dir_name = f'{cli_args.name}_{timestamp}'
         else:
             log_dir_name = timestamp
-        self.log_dir = Path('logs') / log_dir_name
+        self.log_dir = Path(args.log_dir) / log_dir_name
         self.log_dir.mkdir(exist_ok=False)
 
         init_logging(self.log_dir / 'train.log')

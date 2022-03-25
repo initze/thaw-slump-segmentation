@@ -14,6 +14,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 import yaml
+import os
 
 import h5py
 import numpy as np
@@ -25,7 +26,8 @@ from lib.data_pre_processing import gdal
 from lib.utils import init_logging, get_logger, log_run, yaml_custom
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--data_dir", default='data', type=Path, help="Set flag to do preprocessing without label file")
+parser.add_argument("--data_dir", default='data', type=Path, help="Path to data processing dir")
+parser.add_argument("--log_dir", default='logs', type=Path, help="Path to log dir")
 parser.add_argument("--skip_gdal", action='store_true', help="Skip the Gdal conversion stage (if it has already been "
                                                              "done)")
 parser.add_argument("--gdal_bin", default='', help="Path to gdal binaries (ignored if --skip_gdal is passed)")
@@ -255,7 +257,9 @@ if __name__ == "__main__":
     OVERLAP = args.tile_overlap
 
     timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-    log_path = Path('logs') / f'prepare_data-{timestamp}.log'
+    log_path = Path(args.log_dir) / f'prepare_data-{timestamp}.log'
+    if not Path(args.log_dir).exists():
+	    os.mkdir(Path(args.log_dir))
     init_logging(log_path)
     logger = get_logger('prepare_data')
     logger.info('#############################')

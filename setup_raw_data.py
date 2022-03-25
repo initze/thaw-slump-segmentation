@@ -11,6 +11,7 @@ import argparse
 import yaml
 from datetime import datetime
 from pathlib import Path
+import os
 
 from joblib import Parallel, delayed
 
@@ -23,7 +24,8 @@ parser.add_argument("--gdal_bin", default='', help="Path to gdal binaries (ignor
 parser.add_argument("--gdal_path", default='', help="Path to gdal scripts (ignored if --skip_gdal is passed)")
 parser.add_argument("--n_jobs", default=-1, type=int, help="number of parallel joblib jobs")
 parser.add_argument("--nolabel", action='store_false', help="Set flag to do preprocessing without label file")
-parser.add_argument("--data_dir", default='data', type=Path, help="Set flag to do preprocessing without label file")
+parser.add_argument("--data_dir", default='data', type=Path, help="Path to data processing dir")
+parser.add_argument("--log_dir", default='logs', type=Path, help="Path to log dir")
 
 is_ee_initialized = False  # Module-global flag to avoid calling ee.Initialize multiple times
 
@@ -104,7 +106,9 @@ if __name__ == "__main__":
     AUX_DIR        = DATA_ROOT / 'auxiliary'
 
     timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-    log_path = Path('logs') / f'setup_raw_data-{timestamp}.log'
+    log_path = Path(args.log_dir) / f'setup_raw_data-{timestamp}.log'
+    if not Path(args.log_dir).exists():
+	    os.mkdir(Path(args.log_dir))
     init_logging(log_path)
     logger = get_logger('setup_raw_data')
     logger.info('###########################')

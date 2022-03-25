@@ -119,7 +119,8 @@ def vector_to_raster_mask(image_directory, delete_intermediate_files=True):
     maskfile2 = os.path.join(image_directory, f'{basename}_mask.tif')
 
     try:
-        s_merge = f'python {gdal.merge} -createonly -init 0 -o {maskfile} -ot Byte -co COMPRESS=DEFLATE {rasterfile}'
+        #s_merge = f'python {gdal.merge} -createonly -init 0 -o {maskfile} -ot Byte -co COMPRESS=DEFLATE {rasterfile}'
+        s_merge = f'{gdal.merge} -createonly -init 0 -o {maskfile} -ot Byte -co COMPRESS=DEFLATE {rasterfile}'
         log_run(s_merge, _logger)
         # Add empty band to mask
         s_translate = f'{gdal.translate} -of GTiff -ot Byte -co COMPRESS=DEFLATE -b 1 {maskfile} {maskfile2}'

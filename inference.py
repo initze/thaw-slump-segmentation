@@ -216,7 +216,8 @@ def do_inference(tilename, args=None, log_path=None):
     flush_rio(out_path_pre_poly)
 
     # create vectors
-    log_run(f'python {gdal.polygonize} {out_path_pre_poly} -q -mask {out_path_pre_poly} -f "ESRI Shapefile" {out_path_shp}', tile_logger)
+    log_run(f'{gdal.polygonize} {out_path_pre_poly} -q -mask {out_path_pre_poly} -f "ESRI Shapefile" {out_path_shp}', tile_logger)
+    #log_run(f'python {gdal.polygonize} {out_path_pre_poly} -q -mask {out_path_pre_poly} -f "ESRI Shapefile" {out_path_shp}', tile_logger)
     out_path_pre_poly.unlink()
 
     h, w = res.shape[1:]

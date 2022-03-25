@@ -30,8 +30,8 @@ parser.add_argument("--data_dir", default='data', type=Path, help="Path to data 
 parser.add_argument("--log_dir", default='logs', type=Path, help="Path to log dir")
 parser.add_argument("--skip_gdal", action='store_true', help="Skip the Gdal conversion stage (if it has already been "
                                                              "done)")
-parser.add_argument("--gdal_bin", default='', help="Path to gdal binaries (ignored if --skip_gdal is passed)")
-parser.add_argument("--gdal_path", default='', help="Path to gdal scripts (ignored if --skip_gdal is passed)")
+parser.add_argument("--gdal_bin", default=None, help="Path to gdal binaries (ignored if --skip_gdal is passed)")
+parser.add_argument("--gdal_path", default=None, help="Path to gdal scripts (ignored if --skip_gdal is passed)")
 parser.add_argument("--n_jobs", default=-1, type=int, help="number of parallel joblib jobs")
 parser.add_argument("--nodata_threshold", default=50, type=float, help="Throw away data with at least this % of "
                                                                        "nodata pixels")

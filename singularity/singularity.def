@@ -1,0 +1,59 @@
+BootStrap: docker
+From: nvidia/cuda:11.2.0-cudnn8-devel-ubuntu20.04
+%help
+   This Singularity definition contains a GPU-Nvidia, Gpu with PyTorch installation
+
+%setup
+   export PACKAGES_TMP=/tmp/aicore
+   rm -fr $PACKAGES_TMP
+   mkdir -p $PACKAGES_TMP
+
+%post
+
+   apt-get update -y
+   DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+		python3.7 \
+		python3-tk \
+		python3-pip \
+		python3-distutils \
+		python3-setuptools \
+		git \
+		python3-opencv \
+		nano
+   
+   #install gdal	
+   apt-get update -y
+   DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+		gdal-bin \
+		python3-gdal \
+		libgdal-dev
+   
+   # all th python packages you need:
+   python3 -m pip install --upgrade pip
+   pip3 install torch==1.7.0+cu110 torchvision==0.8.1+cu110 -f https://download.pytorch.org/whl/torch_stable.html
+   pip3 install torchvision efficientnet-pytorch==0.7 ipython numpy matplotlib\
+   earthengine-api==0.1.227 joblib==1.0.1 scikit-image h5py\
+   iPython cython tqdm PyYAML pathlib docopt pandas rtree pretrainedmodels\
+   rasterio==1.1.5 yacs timm tqdm requests albumentations gdal==3.0.4 jupyter notebook
+   
+   pip3 install opencv-python
+   pip3 install pyproj==2.6.1.post1
+
+   #pip3 install streamlit
+   git clone --branch https://github.com/initze/thaw-slump-segmentation $PACKAGES_TMP
+
+
+%environment
+   #export LC_ALL=C
+   #export AIC_PATH=/ai-core/
+   alias python=python3
+
+%runscript
+   #cd /thaw-slump-segmentation
+   #exec python3 <your script to execute when running the container> $@ ($@ is a veriable to use with yout python script, e.g. path to folder of input data)
+   #example of my implementation:
+   #exec python3 inference.py $@
+   #exec python3 post-processing.py $@
+
+%labels
+   Author cbaum, initze

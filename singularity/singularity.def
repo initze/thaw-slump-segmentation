@@ -40,7 +40,7 @@ From: nvidia/cuda:11.2.0-cudnn8-devel-ubuntu20.04
    pip3 install pyproj==2.6.1.post1
 
    #pip3 install streamlit
-   git clone --branch https://github.com/initze/thaw-slump-segmentation $PACKAGES_TMP
+   git clone https://github.com/initze/thaw-slump-segmentation $PACKAGES_TMP
 
 
 %environment

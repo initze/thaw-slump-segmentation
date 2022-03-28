@@ -44,13 +44,13 @@ parser.add_argument('-r', '--resume', default='',
 
 class Engine:
     def __init__(self):
-        cli_args = parser.parse_args()
-        self.config = yaml.load(cli_args.config.open(), Loader=yaml_custom.SaneYAMLLoader)
-        self.DATA_ROOT = cli_args.data_dir
+        args = parser.parse_args()
+        self.config = yaml.load(args.config.open(), Loader=yaml_custom.SaneYAMLLoader)
+        self.DATA_ROOT = args.data_dir
         # Logging setup
         timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-        if cli_args.name:
-            log_dir_name = f'{cli_args.name}_{timestamp}'
+        if args.name:
+            log_dir_name = f'{args.name}_{timestamp}'
         else:
             log_dir_name = timestamp
         self.log_dir = Path(args.log_dir) / log_dir_name
@@ -74,8 +74,8 @@ class Engine:
 		# make parallel
         self.model = nn.DataParallel(self.model)
 
-        if cli_args.resume:
-            self.config['resume'] = cli_args.resume
+        if args.resume:
+            self.config['resume'] = args.resume
 
         if 'resume' in self.config and self.config['resume']:
             checkpoint = Path(self.config['resume'])
@@ -100,7 +100,7 @@ class Engine:
         self.epoch = 0
         self.metrics = Metrics(Accuracy, Precision, Recall, F1, IoU)
 
-        if cli_args.summary:
+        if args.summary:
             from torchsummary import summary
             summary(self.model, [(self.config['model']['input_channels'], 256, 256)])
             sys.exit(0)
@@ -305,5 +305,5 @@ def safe_append(dictionary, key, value):
 
 
 if __name__ == "__main__":
-    cli_args = parser.parse_args()
+    args = parser.parse_args()
     Engine().run()

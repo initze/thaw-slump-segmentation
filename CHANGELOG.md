@@ -1,4 +1,7 @@
 # Changelog
+## [0.7.0] - 2022-03-29
+### Added
+- added singularity container definition
 
 ## [0.6.1] - 2022-03-22
 ### Changed

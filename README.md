@@ -1,6 +1,17 @@
 # AICore - 
 
 ## System and Data Setup
+
+### Option 1 - Singularity container
+https://cloud.sylabs.io/library/initze/aicore/thaw_slump_segmentation
+
+The container contains all requirements to run the processing code, singularity must be installed
+
+```
+singularity pull library://initze/aicore/thaw_slump_segmentation
+singularity shell --nv --bind <your bind path> thaw_slump_segmentation.sif
+```
+### Option 2 - anaconda
 ### Environment setup
 We recommend using a new conda environment from the provided environment.yml file
 ```bash

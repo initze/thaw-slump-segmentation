@@ -94,7 +94,8 @@ class Engine:
 
         self.model = self.model.to(self.dev)
 
-        self.opt = torch.optim.AdamW(self.model.parameters(), lr=self.config['learning_rate'])
+        self.opt = torch.optim.AdamW(self.model.parameters(), lr=0.1)#, lr=self.config['learning_rate'])
+        self.scheduler = torch.optim.lr_scheduler.StepLR(self.opt, step_size=1, gamma=0.1)
 
         self.board_idx = 0
         self.epoch = 0
@@ -155,6 +156,9 @@ class Engine:
                         self.val_epoch(data_loader)
                     elif command == 'log_images':
                         self.log_images()
+                print("before step:", self.scheduler.get_last_lr())
+                self.scheduler.step()
+                print("after step:", self.scheduler.get_last_lr())
 
     def get_dataloader(self, name):
         if name in self.dataset_cache:

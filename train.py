@@ -94,12 +94,32 @@ class Engine:
 
         self.model = self.model.to(self.dev)
 
-
-        self.opt = torch.optim.AdamW(self.model.parameters(), lr=self.config['learning_rate'])
+        self.learning_rate = self.config['learning_rate']
+        """
+        if isinstance(learning_rate, float):
+            self.lr_scheduling = False
+        if not self.lr_scheduling:
+        self.lr_scheduling
+        """
         # Scheduler
-        #self.scheduler = torch.optim.lr_scheduler.StepLR(self.opt, step_size=1, gamma=0.1)
+        self.opt = torch.optim.AdamW(self.model.parameters(), lr=self.learning_rate)
+        if 'learning_rate_scheduler' not in self.config.keys():
+            print("running without learning rate scheduler")
+            self.scheduler = None
+        elif self.config['learning_rate_scheduler'] == 'StepLR':
+            if 'lr_step_size' not in self.config.keys():
+                step_size = 10
+            else:
+                step_size = self.config['lr_step_size']
+
+            if 'lr_gamma' not in self.config.keys():
+                gamma = 0.1
+            else:
+                gamma = self.config['lr_gamma']
+            self.scheduler = torch.optim.lr_scheduler.StepLR(self.opt, step_size=step_size, gamma=gamma)
+            print(f"running with 'StepLR' learning rate scheduler with step_size = {step_size} and gamma = {gamma}")
         # not working properly yet
-        self.scheduler = torch.optim.lr_scheduler.ExponentialLR(self.opt, gamma=0.9, verbose=True)
+        #self.scheduler = torch.optim.lr_scheduler.ExponentialLR(self.opt, gamma=0.9, verbose=True)
         #self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.opt, 'max', factor=0.1, patience=5, verbose=True)
 
         self.board_idx = 0
@@ -161,12 +181,13 @@ class Engine:
                         self.val_epoch(data_loader)
                     elif command == 'log_images':
                         self.log_images()
-                print("before step:", self.scheduler.get_last_lr())
-                #print("before step:", self.scheduler.print_lr())
-                self.scheduler.step()
-                #self.scheduler.step(self.metrics_vals_val['F1'])
-                print("after step:", self.scheduler.get_last_lr())
-                #print("before step:", self.scheduler.print_lr())
+                if self.scheduler:
+                    print("before step:", self.scheduler.get_last_lr())
+                    #print("before step:", self.scheduler.print_lr())
+                    self.scheduler.step()
+                    #self.scheduler.step(self.metrics_vals_val['F1'])
+                    print("after step:", self.scheduler.get_last_lr())
+                    #print("before step:", self.scheduler.print_lr())
 
     def get_dataloader(self, name):
         if name in self.dataset_cache:

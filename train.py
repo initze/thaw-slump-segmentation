@@ -27,19 +27,19 @@ from lib.utils import showexample, plot_metrics, plot_precision_recall, init_log
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-s', '--summary', action='store_true',
-        help='Only print model summary and return.')
+                    help='Only print model summary and return.')
 parser.add_argument("--data_dir", default='data', type=Path, help="Path to data processing dir")
 parser.add_argument("--log_dir", default='logs', type=Path, help="Path to log dir")
 parser.add_argument('-n', '--name', default='',
-        help='Give this run a name, so that it will be logged into logs/<NAME>_<timestamp>.')
+                    help='Give this run a name, so that it will be logged into logs/<NAME>_<timestamp>.')
 parser.add_argument('-c', '--config', default='config.yml', type=Path,
-        help='Specify run config to use.')
+                    help='Specify run config to use.')
 parser.add_argument('-r', '--resume', default='',
-        help='Resume from the specified checkpoint.'
-             'Can be either a run-id (e.g. "2020-06-29_18-12-03") to select the last'
-             'checkpoint of that run, or a direct path to a checkpoint to be loaded.'
-             'Overrides the resume option in the config file if given.'
-)
+                    help='Resume from the specified checkpoint.'
+                         'Can be either a run-id (e.g. "2020-06-29_18-12-03") to select the last'
+                         'checkpoint of that run, or a direct path to a checkpoint to be loaded.'
+                         'Overrides the resume option in the config file if given.'
+                    )
 
 
 class Engine:
@@ -71,7 +71,7 @@ class Engine:
             in_channels=m['input_channels']
         )
 
-		# make parallel
+        # make parallel
         self.model = nn.DataParallel(self.model)
 
         if args.resume:
@@ -96,7 +96,6 @@ class Engine:
 
         self.learning_rate = self.config['learning_rate']
         self.opt = torch.optim.AdamW(self.model.parameters(), lr=self.learning_rate)
-        
         self.setup_lr_scheduler()
 
         self.board_idx = 0
@@ -160,11 +159,8 @@ class Engine:
                         self.log_images()
                 if self.scheduler:
                     print("before step:", self.scheduler.get_last_lr())
-                    #print("before step:", self.scheduler.print_lr())
                     self.scheduler.step()
-                    #self.scheduler.step(self.metrics_vals_val['F1'])
                     print("after step:", self.scheduler.get_last_lr())
-                    #print("before step:", self.scheduler.print_lr())
 
     def get_dataloader(self, name):
         if name in self.dataset_cache:
@@ -199,11 +195,6 @@ class Engine:
         self.model.train(True)
         for iteration, (img, target) in enumerate(progress):
             self.board_idx += img.shape[0]
-            # TBD: Should we use learning rate decay?
-            # lr_factor = min(board_idx / 50000, 1, 2 ** ((50000 - board_idx) / 50000))
-            # for i in range(len(opt.param_groups)):
-            #     lr = self.config['learning_rate'] * lr_factor
-            #     opt.param_groups[i]['lr'] = lr
 
             img = img.to(self.dev, torch.float)
             target = target.to(self.dev, torch.long, non_blocking=True)
@@ -323,7 +314,6 @@ class Engine:
                 gamma = self.config['lr_gamma']
             self.scheduler = torch.optim.lr_scheduler.ExponentialLR(self.opt, gamma=gamma)
             print(f"running with 'ExponentialLR' learning rate scheduler with gamma = {gamma}")
-
 
 
 def scoped_get(key, *scopestack):

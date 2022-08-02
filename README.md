@@ -83,7 +83,7 @@ model:
   # `random` initializes the weights randomly
   # Check https://github.com/qubvel/segmentation_models.pytorch#encoders for the
   # full list of weights available for each encoder
-  encoder_weights: random
+  encoder_weights: imagenet
 # Loss Function to use. Available:
 # JaccardLoss, DiceLoss, FocalLoss, LovaszLoss, SoftBCEWithLogitsLoss
 loss_function: FocalLoss
@@ -99,10 +99,12 @@ datasets:
   train:
     augment: true
     augment_types:
-      - "HorizontalFlip"
-      - "VerticalFlip"
-      - "Blur"
-      - "RandomRotate90"
+    - HorizontalFlip
+    - VerticalFlip
+    - Blur
+    - RandomRotate90
+    - RandomBrightnessContrast
+    - MultiplicativeNoise
     shuffle: true
     scenes:
       - "20190618_201847_1035"
@@ -120,13 +122,20 @@ datasets:
       - "20190709_042959_08_1057"
 # Training Parameters
 batch_size: 4
-learning_rate: 0.001
+learning_rate: 0.01
+# Learning rate scheduler. Available:
+# ExponentialLR, StepLR (https://pytorch.org/docs/stable/optim.html)
+# if no lr_step_size given then lr_step_size=10, gamma=0.1 for StepLR and gamma=0.9 for ExponentialLR
+learning_rate_scheduler: StepLR
+lr_step_size: 10
+lr_gamma: 0.1
+
 # Training Schedule
 schedule:
   - phase: Training
     epochs: 30
     steps:
-      - train_on: slump_tiles(train)
+      - train_on: train
       - validate_on: val
       - log_images
 # Visualization Configuration

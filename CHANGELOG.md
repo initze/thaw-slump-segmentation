@@ -1,4 +1,9 @@
 # Changelog
+## [0.7.1] - 2022-08-02
+### Added
+- added learning rate scheduler (StepLR, ExponentialLR)
+- added example configuration file
+
 ## [0.7.0] - 2022-03-29
 ### Added
 - added singularity container definition

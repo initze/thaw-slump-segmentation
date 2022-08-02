@@ -27,19 +27,19 @@ from lib.utils import showexample, plot_metrics, plot_precision_recall, init_log
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-s', '--summary', action='store_true',
-        help='Only print model summary and return.')
+                    help='Only print model summary and return.')
 parser.add_argument("--data_dir", default='data', type=Path, help="Path to data processing dir")
 parser.add_argument("--log_dir", default='logs', type=Path, help="Path to log dir")
 parser.add_argument('-n', '--name', default='',
-        help='Give this run a name, so that it will be logged into logs/<NAME>_<timestamp>.')
+                    help='Give this run a name, so that it will be logged into logs/<NAME>_<timestamp>.')
 parser.add_argument('-c', '--config', default='config.yml', type=Path,
-        help='Specify run config to use.')
+                    help='Specify run config to use.')
 parser.add_argument('-r', '--resume', default='',
-        help='Resume from the specified checkpoint.'
-             'Can be either a run-id (e.g. "2020-06-29_18-12-03") to select the last'
-             'checkpoint of that run, or a direct path to a checkpoint to be loaded.'
-             'Overrides the resume option in the config file if given.'
-)
+                    help='Resume from the specified checkpoint.'
+                         'Can be either a run-id (e.g. "2020-06-29_18-12-03") to select the last'
+                         'checkpoint of that run, or a direct path to a checkpoint to be loaded.'
+                         'Overrides the resume option in the config file if given.'
+                    )
 
 
 class Engine:
@@ -71,7 +71,7 @@ class Engine:
             in_channels=m['input_channels']
         )
 
-		# make parallel
+        # make parallel
         self.model = nn.DataParallel(self.model)
 
         if args.resume:
@@ -94,7 +94,9 @@ class Engine:
 
         self.model = self.model.to(self.dev)
 
-        self.opt = torch.optim.AdamW(self.model.parameters(), lr=self.config['learning_rate'])
+        self.learning_rate = self.config['learning_rate']
+        self.opt = torch.optim.AdamW(self.model.parameters(), lr=self.learning_rate)
+        self.setup_lr_scheduler()
 
         self.board_idx = 0
         self.epoch = 0
@@ -155,6 +157,10 @@ class Engine:
                         self.val_epoch(data_loader)
                     elif command == 'log_images':
                         self.log_images()
+                if self.scheduler:
+                    print("before step:", self.scheduler.get_last_lr())
+                    self.scheduler.step()
+                    print("after step:", self.scheduler.get_last_lr())
 
     def get_dataloader(self, name):
         if name in self.dataset_cache:
@@ -189,11 +195,6 @@ class Engine:
         self.model.train(True)
         for iteration, (img, target) in enumerate(progress):
             self.board_idx += img.shape[0]
-            # TBD: Should we use learning rate decay?
-            # lr_factor = min(board_idx / 50000, 1, 2 ** ((50000 - board_idx) / 50000))
-            # for i in range(len(opt.param_groups)):
-            #     lr = self.config['learning_rate'] * lr_factor
-            #     opt.param_groups[i]['lr'] = lr
 
             img = img.to(self.dev, torch.float)
             target = target.to(self.dev, torch.long, non_blocking=True)
@@ -209,6 +210,7 @@ class Engine:
 
         metrics_vals = self.metrics.evaluate()
         progress.set_postfix(metrics_vals)
+        self.metrics_vals_train = metrics_vals
         logstr = f'{self.epoch},' + ','.join(f'{val}' for key, val in metrics_vals.items())
         logfile = self.log_dir / 'train.csv'
         self.logger.info(f'Epoch {self.epoch} - Training Metrics: {metrics_vals}')
@@ -246,6 +248,7 @@ class Engine:
                 self.metrics.step(y_hat, target, Loss=loss.detach())
 
             m = self.metrics.evaluate()
+            self.metrics_vals_val = m
             logstr = f'{self.epoch},' + ','.join(f'{val}' for key, val in m.items())
             logfile = self.log_dir / 'val.csv'
             self.logger.info(f'Epoch {self.epoch} - Validation Metrics: {m}')
@@ -287,6 +290,30 @@ class Engine:
         plot_metrics(self.trn_metrics, self.val_metrics, outdir=outdir)
         plot_precision_recall(self.trn_metrics, self.val_metrics, outdir=outdir)
         self.val_writer.flush()
+
+    def setup_lr_scheduler(self):
+        # Scheduler
+        if 'learning_rate_scheduler' not in self.config.keys():
+            print("running without learning rate scheduler")
+            self.scheduler = None
+        elif self.config['learning_rate_scheduler'] == 'StepLR':
+            if 'lr_step_size' not in self.config.keys():
+                step_size = 10
+            else:
+                step_size = self.config['lr_step_size']
+            if 'lr_gamma' not in self.config.keys():
+                gamma = 0.1
+            else:
+                gamma = self.config['lr_gamma']
+            self.scheduler = torch.optim.lr_scheduler.StepLR(self.opt, step_size=step_size, gamma=gamma)
+            print(f"running with 'StepLR' learning rate scheduler with step_size = {step_size} and gamma = {gamma}")
+        elif self.config['learning_rate_scheduler'] == 'ExponentialLR':
+            if 'lr_gamma' not in self.config.keys():
+                gamma = 0.9
+            else:
+                gamma = self.config['lr_gamma']
+            self.scheduler = torch.optim.lr_scheduler.ExponentialLR(self.opt, gamma=gamma)
+            print(f"running with 'ExponentialLR' learning rate scheduler with gamma = {gamma}")
 
 
 def scoped_get(key, *scopestack):

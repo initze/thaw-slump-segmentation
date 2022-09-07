@@ -7,6 +7,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from .layers import unetConv2
 from .init_weights import init_weights
+from ..encoders import get_encoder
 
 
 class UNet3Plus(nn.Module):
@@ -20,24 +21,15 @@ class UNet3Plus(nn.Module):
         self.is_batchnorm = is_batchnorm
         self.feature_scale = feature_scale
 
-        filters = [64, 128, 256, 512, 1024]
+        filters = [64, 64, 128, 256, 512]
 
         # -------------Encoder--------------
-        # TODO: Load encoder from smp
-        # self.encoder = ...
-        self.conv1 = unetConv2(self.in_channels, filters[0], self.is_batchnorm)
-        self.maxpool1 = nn.MaxPool2d(kernel_size=2)
-
-        self.conv2 = unetConv2(filters[0], filters[1], self.is_batchnorm)
-        self.maxpool2 = nn.MaxPool2d(kernel_size=2)
-
-        self.conv3 = unetConv2(filters[1], filters[2], self.is_batchnorm)
-        self.maxpool3 = nn.MaxPool2d(kernel_size=2)
-
-        self.conv4 = unetConv2(filters[2], filters[3], self.is_batchnorm)
-        self.maxpool4 = nn.MaxPool2d(kernel_size=2)
-
-        self.conv5 = unetConv2(filters[3], filters[4], self.is_batchnorm)
+        self.encoder = get_encoder(
+            encoder_name,
+            in_channels=in_channels,
+            depth=5,
+            weights=encoder_weights,
+        )
 
         # -------------Decoder--------------
         self.CatChannels = filters[0]
@@ -185,11 +177,12 @@ class UNet3Plus(nn.Module):
         self.relu1d_1 = nn.ReLU(inplace=True)
 
         # -------------Bilinear Upsampling--------------
-        self.upscore6 = nn.Upsample(scale_factor=32, mode='bilinear')
-        self.upscore5 = nn.Upsample(scale_factor=16, mode='bilinear')
-        self.upscore4 = nn.Upsample(scale_factor=8, mode='bilinear')
-        self.upscore3 = nn.Upsample(scale_factor=4, mode='bilinear')
-        self.upscore2 = nn.Upsample(scale_factor=2, mode='bilinear')
+        self.upscore6 = nn.Upsample(scale_factor=64, mode='bilinear')
+        self.upscore5 = nn.Upsample(scale_factor=32, mode='bilinear')
+        self.upscore4 = nn.Upsample(scale_factor=16, mode='bilinear')
+        self.upscore3 = nn.Upsample(scale_factor=8, mode='bilinear')
+        self.upscore2 = nn.Upsample(scale_factor=4, mode='bilinear')
+        self.upscore1 = nn.Upsample(scale_factor=2, mode='bilinear')
 
         # DeepSup
         self.outconv1 = nn.Conv2d(self.UpChannels, classes, 3, padding=1)
@@ -207,19 +200,8 @@ class UNet3Plus(nn.Module):
 
     def forward(self, inputs):
         # -------------Encoder-------------
-        h1 = self.conv1(inputs)  # h1->320*320*64
-
-        h2 = self.maxpool1(h1)
-        h2 = self.conv2(h2)  # h2->160*160*128
-
-        h3 = self.maxpool2(h2)
-        h3 = self.conv3(h3)  # h3->80*80*256
-
-        h4 = self.maxpool3(h3)
-        h4 = self.conv4(h4)  # h4->40*40*512
-
-        h5 = self.maxpool4(h4)
-        hd5 = self.conv5(h5)  # h5->20*20*1024
+        features = self.encoder(inputs)
+        _, h1, h2, h3, h4, hd5 = features
 
         # -------------Decoder-------------
         h1_PT_hd4 = self.h1_PT_hd4_relu(self.h1_PT_hd4_bn(self.h1_PT_hd4_conv(self.h1_PT_hd4(h1))))
@@ -268,8 +250,10 @@ class UNet3Plus(nn.Module):
             d2 = self.upscore2(d2)  # 128->256
 
             d1 = self.outconv1(hd1)  # 256
+            d1 = self.upscore1(d1)  # 256
 
             return d1, d2, d3, d4, d5
         else:
             d1 = self.outconv1(hd1)  # 256
+            d1 = self.upscore1(d1)  # 256
             return d1

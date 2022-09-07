@@ -1,7 +1,7 @@
 # Model Specification
 model:
   # Model Architecture. Available:
-  # Unet, UnetPlusPlus, MAnet, Linknet, FPN, PSPNet, DeepLabV3, DeepLabV3Plus, PAN]
+  # Unet, UnetPlusPlus, Unet3Plus, MAnet, Linknet, FPN, PSPNet, DeepLabV3, DeepLabV3Plus, PAN]
   architecture: Unet
   # Model Encoder. Examples:
   # resnet18, resnet34, resnet50, resnet101, resnet152

@@ -10,7 +10,7 @@ from .init_weights import init_weights
 from ..encoders import get_encoder
 
 
-class UNet3Plus(nn.Module):
+class Unet3Plus(nn.Module):
     '''
         UNet 3+ with deep supervision
     '''

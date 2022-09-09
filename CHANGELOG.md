@@ -1,4 +1,9 @@
 # Changelog
+## [0.8.0] - 2022-09-09
+### Added
+- added Unet3+ model
+- added deep supervision loss plot
+
 ## [0.7.1] - 2022-08-02
 ### Added
 - added learning rate scheduler (StepLR, ExponentialLR)

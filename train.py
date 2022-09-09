@@ -200,13 +200,25 @@ class Engine:
             target = target.to(self.dev, torch.long, non_blocking=True)
 
             self.opt.zero_grad()
-            y_hat = self.model(img).squeeze(1)
-            loss = self.loss_function(y_hat, target)
+            y_hat = self.model(img)
+
+            metrics_terms = {}
+            if isinstance(y_hat, (tuple, list)):
+              # Deep Supervision
+              deep_super_losses = [self.loss_function(pred.squeeze(1), target) for pred in y_hat]
+              y_hat = y_hat[0].squeeze(1)
+              loss = sum(deep_super_losses)
+              metrics_terms['Loss'] = deep_super_losses[0].detach()
+              metrics_terms['Deep Supervision Loss'] = loss.detach()
+            else:
+              loss = self.loss_function(y_hat, target)
+              metrics_terms['Loss'] = loss.detach()
+
             loss.backward()
             self.opt.step()
 
             with torch.no_grad():
-                self.metrics.step(y_hat, target, Loss=loss.detach())
+                self.metrics.step(y_hat, target, **metrics_terms)
 
         metrics_vals = self.metrics.evaluate()
         progress.set_postfix(metrics_vals)

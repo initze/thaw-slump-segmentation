@@ -21,7 +21,6 @@ class Unet3Plus(nn.Module):
         self.is_batchnorm = is_batchnorm
         self.feature_scale = feature_scale
 
-        filters = [64, 64, 128, 256, 512]
 
         # -------------Encoder--------------
         self.encoder = get_encoder(
@@ -30,6 +29,8 @@ class Unet3Plus(nn.Module):
             depth=5,
             weights=encoder_weights,
         )
+        filters = self.encoder.out_channels[1:]
+
 
         # -------------Decoder--------------
         self.CatChannels = filters[0]

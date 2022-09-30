@@ -26,4 +26,4 @@ dependencies:
   - torchvision=0.13.1
   - timm=0.4.12
   - pip:
-    - torchsummary=1.5.1
+    - torchsummary==1.5.1

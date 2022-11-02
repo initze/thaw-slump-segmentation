@@ -7,6 +7,7 @@ from .fpn import FPN
 from .pspnet import PSPNet
 from .deeplabv3 import DeepLabV3, DeepLabV3Plus
 from .pan import PAN
+from .plain_unet import PlainUNet
 import torch.nn as nn
 
 from . import encoders
@@ -66,7 +67,7 @@ def create_loss(
     builtin_losses_dict = {l.__name__.lower(): l for l in builtin_losses}
     name = name.lower()
     if name in losses_dict:
-        return losses_dict[name](mode=losses.BINARY_MODE)
+        return losses_dict[name](mode=losses.BINARY_MODE, ignore_index=255)
     elif name in builtin_losses_dict:
         return builtin_losses_dict[name]()
     raise KeyError("Wrong loss type `{}`. Available options are: {}".format(

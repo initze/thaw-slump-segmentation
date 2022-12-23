@@ -8,7 +8,7 @@ https://cloud.sylabs.io/library/initze/aicore/thaw_slump_segmentation
 The container contains all requirements to run the processing code, singularity must be installed
 
 ```
-singularity pull library://initze/aicore/thaw_slump_segmentation
+singularity pull --arch amd64 library://initze/aicore/thaw_slump_segmentation:0.8.0
 singularity shell --nv --bind <your bind path> thaw_slump_segmentation.sif
 ```
 ### Option 2 - anaconda

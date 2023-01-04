@@ -31,7 +31,8 @@ parser.add_argument("--n_jobs", default=-1, type=int, help="number of parallel j
 parser.add_argument("--data_dir", default='data', type=Path, help="Path to data processing dir")
 parser.add_argument("--log_dir", default='logs', type=Path, help="Path to log dir")
 parser.add_argument("--mode", default='planet',
-                    choices=['planet', 's2', 's2_timeseries', 's2_unlabelled', 'qinghai'],
+                    choices=['planet', 's1', 's2', 's2_4w', 's2_timeseries',
+                             's2_unlabelled', 's2_unlabelled_ts', 'qinghai', 's2_ts_inference'],
         help="The type of data cubes to build.")
 
 
@@ -55,6 +56,28 @@ def build_planet_cube(planet_file: Path, out_dir: Path):
     scene.save(out_dir / f'{scene.id}.nc')
 
 
+def build_sentinel1_cubes(site_poly, image_id, image_date, tiles, targets, out_dir: Path):
+    if any(out_dir.glob(f'{image_id}*')):
+      print(f'Skipping {image_id} as it has already been built')
+      return
+    data.init_data_paths(out_dir.parent)
+
+    start_date = image_date - pd.to_timedelta('14 days')
+    end_date = image_date + pd.to_timedelta('14 days')
+    scene = data.Sentinel1.build_scene(
+        bounds=site_poly, crs='EPSG:3995',
+        start_date=start_date, end_date=end_date,
+        prefix=image_id,
+    )
+    if scene is None:
+      print(f'No valid image found for {image_id}')
+      return
+    # TODO: Re-add this for git push
+    # complete_scene(scene)
+    scene.add_layer(data.Mask(targets.geometry, tiles.geometry))
+    scene.save(out_dir / f'{scene.id}.nc')
+
+
 def build_sentinel2_cubes(site_poly, image_id, image_date, tiles, targets, out_dir: Path):
     if any(out_dir.glob(f'{image_id}*')):
       print(f'Skipping {image_id} as it has already been built')
@@ -71,9 +94,32 @@ def build_sentinel2_cubes(site_poly, image_id, image_date, tiles, targets, out_d
     if scene is None:
       print(f'No valid image found for {image_id}')
       return
-    complete_scene(scene)
+    # TODO: Re-add this for git push
+    # complete_scene(scene)
     scene.add_layer(data.Mask(targets.geometry, tiles.geometry))
     scene.save(out_dir / f'{scene.id}.nc')
+
+
+def build_sentinel2_4w(site_poly, image_id, image_date, tiles, targets, out_dir: Path):
+    if any(out_dir.glob(f'{image_id}*')):
+      print(f'Skipping {image_id} as it has already been built')
+      return
+    data.init_data_paths(out_dir.parent)
+
+    start_date = image_date - pd.to_timedelta('14 days')
+    end_date = image_date + pd.to_timedelta('14 days')
+    scenes = data.Sentinel2.build_scenes(
+        bounds=site_poly, crs='EPSG:3995',
+        start_date=start_date, end_date=end_date,
+        prefix=image_id,
+    )
+    print(f'Found {len(scenes)} valid image found for {image_id}')
+    if not scenes:
+      return
+
+    for scene in scenes:
+      scene.add_layer(data.Mask(targets.geometry, tiles.geometry))
+      scene.save(out_dir / f'{scene.id}.nc')
 
 
 def build_sentinel2_timeseries(site_poly, image_id, tiles, targets, out_dir: Path):
@@ -90,8 +136,8 @@ def build_sentinel2_timeseries(site_poly, image_id, tiles, targets, out_dir: Pat
 
     # Build S2 Scenes
     # start_date = pd.to_datetime('2015-01-01')
-    start_date = pd.to_datetime(targets.image_date).min() - pd.to_timedelta(365, unit='days')
-    end_date   = pd.to_datetime(targets.image_date).max() + pd.to_timedelta(2*365, unit='days')
+    start_date = pd.to_datetime('2015-06-24')
+    end_date   = pd.to_datetime('2022-10-01')
 
     scenes = data.Sentinel2.build_scenes(
         bounds=site_poly, crs='EPSG:3995', 
@@ -130,6 +176,46 @@ def build_sentinel2_timeseries(site_poly, image_id, tiles, targets, out_dir: Pat
     print(f'Done with build for scene {image_id}')
 
 
+def build_unlabelled_sentinel2_timeseries(site_poly, site_name, out_dir: Path):
+    if any(out_dir.glob(f'{site_name}*')):
+      print(f'Skipping {site_name} as it has already been built')
+      return
+    data.init_data_paths(out_dir.parent)
+
+    # Build S2 Scenes
+    # start_date = pd.to_datetime('2015-06-24')
+    # end_date   = pd.to_datetime('2022-10-01')
+    start_date = pd.to_datetime('2015-06-01')
+    end_date   = pd.to_datetime('2022-10-01')
+
+    scenes = data.Sentinel2.build_scenes(
+        bounds=site_poly, crs='EPSG:3995', 
+        start_date=start_date, end_date=end_date,
+        prefix=site_name,
+        max_cloudy_pixels=20
+    )
+
+    print(f'Downloaded all the data...')
+
+    x_scenes = defaultdict(list)
+    for scene in tqdm(scenes):
+        xarr = scene.to_xarray()
+        date = pd.to_datetime(xarr.Sentinel2.date)
+        xarr = xarr.expand_dims({'time': [date]}, axis=0)
+        x_scenes[scene.crs].append((scene, xarr))
+
+    for crs in x_scenes:
+      xarrs = [xarr for scene, xarr in x_scenes[crs]]
+      combined = xarray.combine_by_coords(xarrs, combine_attrs='drop_conflicts')
+
+      opts = dict(zlib=True, shuffle=True, complevel=1)
+      for var in combined.data_vars:
+        combined[var].encoding.update(opts)
+      combined.to_netcdf(out_dir / f'{site_name}_{crs}.nc', engine='h5netcdf')
+
+    print(f'Done with build for scene {site_name}')
+
+
 def build_sentinel2_unlabelled(tile_id, out_dir: Path):
     if any(out_dir.glob(f'{tile_id}*')):
       print(f'Skipping {tile_id} as it has already been built')
@@ -144,6 +230,34 @@ def build_sentinel2_unlabelled(tile_id, out_dir: Path):
       start_date=start_date, end_date=end_date,
     )
     scene.save(out_dir / f'{scene.id}.nc')
+
+
+def build_s2_unlabelled_multi(tile_id, out_dir: Path):
+    if any(out_dir.glob(f'{tile_id}*')):
+      print(f'Skipping {tile_id} as it has already been built')
+      return
+    data.init_data_paths(out_dir.parent)
+
+    random.seed(tile_id)
+    year = random.choice([2017, 2018, 2019, 2020, 2021])
+    start_date = f'{year}-07-01'
+    end_date = f'{year}-10-01'
+    scenes = data.Sentinel2.scenes_for_tile(tile_id,
+      start_date=start_date, end_date=end_date,
+    )
+
+    xarrs = []
+    for scene in scenes:
+        xarr = scene.to_xarray()
+        date = pd.to_datetime(xarr.Sentinel2.date)
+        xarr = xarr.expand_dims({'time': [date]}, axis=0)
+        xarrs.append(xarr)
+    combined = xarray.combine_by_coords(xarrs, combine_attrs='drop_conflicts')
+
+    # opts = dict(zlib=True, shuffle=True, complevel=1)
+    # for var in combined.data_vars:
+    #   combined[var].encoding.update(opts)
+    combined.to_netcdf(out_dir / f'{tile_id}_{year}.nc', engine='h5netcdf')
 
 
 def load_annotations(shapefile_root):
@@ -225,6 +339,19 @@ if __name__ == "__main__":
 
         run_jobs(build_planet_cube, args.n_jobs, out_dir,
                  [(f, ) for f in planet_files])
+    elif args.mode == 's1':
+        shapefile_root = DATA_ROOT / 'ML_training_labels' / 'retrogressive_thaw_slumps'
+        out_dir = DATA_ROOT / 's1_cubes'
+        out_dir.mkdir(exist_ok=True)
+        targets, scenes, sites = load_annotations(shapefile_root)
+
+        scene_infos = []
+        for _, row in scenes.iterrows():
+          scene_infos.append((row.geometry, row.image_id, row.image_date,
+            scenes[scenes.image_id == row.image_id], # scenes
+            targets[targets.image_id == row.image_id], # targets
+          ))
+        run_jobs(build_sentinel1_cubes, args.n_jobs, out_dir, scene_infos)
     elif args.mode == 's2':
         shapefile_root = DATA_ROOT / 'ML_training_labels' / 'retrogressive_thaw_slumps'
         out_dir = DATA_ROOT / 's2_cubes'
@@ -238,6 +365,19 @@ if __name__ == "__main__":
             targets[targets.image_id == row.image_id], # targets
           ))
         run_jobs(build_sentinel2_cubes, args.n_jobs, out_dir, scene_infos)
+    elif args.mode == 's2_4w':
+        shapefile_root = DATA_ROOT / 'ML_training_labels' / 'retrogressive_thaw_slumps'
+        out_dir = DATA_ROOT / 's2_cubes_4w'
+        out_dir.mkdir(exist_ok=True)
+        targets, scenes, sites = load_annotations(shapefile_root)
+
+        scene_infos = []
+        for _, row in scenes.iterrows():
+          scene_infos.append((row.geometry, row.image_id, row.image_date,
+            scenes[scenes.image_id == row.image_id], # scenes
+            targets[targets.image_id == row.image_id], # targets
+          ))
+        run_jobs(build_sentinel2_4w, args.n_jobs, out_dir, scene_infos)
     elif args.mode == 's2_timeseries':
         shapefile_root = DATA_ROOT / 'ML_training_labels' / 'retrogressive_thaw_slumps'
         out_dir = DATA_ROOT / 's2_timeseries_cloudfree'
@@ -251,6 +391,20 @@ if __name__ == "__main__":
             site_info.append((
               site_poly, site_id, tiles, targets[targets.image_id.isin(tiles.image_id)].copy()))
         run_jobs(build_sentinel2_timeseries, args.n_jobs, out_dir, site_info)
+    elif args.mode == 's2_ts_inference':
+        out_dir = DATA_ROOT / 's2_timeseries'
+        out_dir.mkdir(exist_ok=True)
+        sites = gpd.read_file(DATA_ROOT / 'active_sites.geojson')
+        sites = sites.to_crs('EPSG:3995')
+
+        RADIUS = 5
+        sites['geometry'] = sites.buffer(1000 * RADIUS)
+
+        site_info = []
+        for _, site in sites.iterrows():
+            site_tag = site.site.replace(' ', '_') + f'_{RADIUS}km'
+            site_info.append((site.geometry, site_tag))
+        run_jobs(build_unlabelled_sentinel2_timeseries, args.n_jobs, out_dir, site_info)
     elif args.mode == 'qinghai':
       out_dir = DATA_ROOT / 's2_cubes'
       out_dir.mkdir(exist_ok=True)
@@ -261,6 +415,13 @@ if __name__ == "__main__":
       out_dir = DATA_ROOT / 's2_unlabelled'
       out_dir.mkdir(exist_ok=True)
 
-      tiles = gpd.read_file(DATA_ROOT / 's2_unlabelled/index.geojson')
+      tiles = gpd.read_file(DATA_ROOT / 's2_unlabelled/index_v2.geojson')
       site_info = [(x,) for x in tiles.Name]
       run_jobs(build_sentinel2_unlabelled, args.n_jobs, out_dir, site_info)
+    elif args.mode == 's2_unlabelled_ts':
+      out_dir = DATA_ROOT / 's2_unlabelled_ts_nocomp'
+      out_dir.mkdir(exist_ok=True)
+
+      tiles = gpd.read_file(DATA_ROOT / 'active_tiles.geojson')
+      site_info = [(x,) for x in tiles.Name]
+      run_jobs(build_s2_unlabelled_multi, args.n_jobs, out_dir, site_info)

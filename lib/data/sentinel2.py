@@ -3,6 +3,7 @@ import rioxarray
 import ee
 import geedim as gd
 import pandas as pd
+from tqdm import tqdm
 
 from .base import TileSource, Scene, cache_path, safe_download
 
@@ -29,13 +30,14 @@ class Sentinel2(TileSource):
         return data
 
     @staticmethod
-    def download_tile(out_path, s2sceneid, bounds=None, crs=None):
+    def download_tile(out_path, s2sceneid, bounds=None):
         if not out_path.exists():
             gd.Initialize()
             img = ee.Image(s2sceneid)
             img = img.select(['B1','B2','B3','B4','B5','B6','B7','B8','B8A','B9','B10','B11','B12'])
             img = gd.MaskedImage(img)
             safe_download(img, out_path,
+                region=bounds,
                 scale=10,
                 dtype='uint16',
                 max_tile_size=2,
@@ -83,6 +85,46 @@ class Sentinel2(TileSource):
         return scene
 
     @staticmethod
+    def build_scenes(bounds, crs, start_date, end_date, prefix, min_coverage=90, max_cloudy_pixels=20):
+        gd.Initialize()
+        s2 = ee.ImageCollection("COPERNICUS/S2_HARMONIZED")
+        s2 = gd.MaskedCollection(s2)
+
+        bounds = ee.Geometry.Polygon(
+            list(bounds.exterior.coords),
+            proj=None if crs is None else str(crs),
+            evenOdd=False)
+
+        imgs = s2.search(
+          start_date=start_date,
+          end_date=end_date,
+          region=bounds,
+          fill_portion=min_coverage,
+          custom_filter=f'CLOUDY_PIXEL_PERCENTAGE < {max_cloudy_pixels}'
+        )
+
+        scenes = []
+
+        props = imgs.properties
+        print(f'Building timeseries from {len(props)} scenes...')
+
+        for img in tqdm(imgs.properties):
+            s2_id = img.split('/')[-1]
+            scene_id = f'{prefix}_{s2_id}'
+            _cache_path = cache_path('Sentinel2', f'{scene_id}.tif')
+            Sentinel2.download_tile(_cache_path, img, bounds)
+            ds = rioxarray.open_rasterio(_cache_path)
+
+            scene = Scene(
+                id=scene_id,
+                crs=ds.rio.crs,
+                transform=ds.rio.transform(),
+                size=ds.shape[-2:],
+                layers=[Sentinel2(s2_id)])
+            scenes.append(scene)
+        return scenes
+
+    @staticmethod
     def scene_for_tile(tile_id, start_date, end_date,
                        max_cloudy_pixels=20):
         gd.Initialize()
@@ -115,21 +157,41 @@ class Sentinel2(TileSource):
             layers=[Sentinel2(s2_id)])
         return scene
 
+
+    @staticmethod
+    def scenes_for_tile(tile_id, start_date, end_date, max_cloudy_pixels=20):
+        gd.Initialize()
+        s2 = ee.ImageCollection("COPERNICUS/S2_HARMONIZED")
+        s2 = s2.filterMetadata('MGRS_TILE', 'equals', tile_id)
+        s2 = gd.MaskedCollection(s2)
+
+        imgs = s2.search(
+          start_date=start_date,
+          end_date=end_date,
+        )
+
+        metadata = metadata_all = imgs.properties
+        scenes = []
+
+        while len(metadata) > 10:
+          metadata = {k: metadata[k] for k in list(metadata.keys())[::2]}
+
+        print(f'Found {len(metadata_all)} scenes, proceeding with {len(metadata)} scenes...')
+
+        for img in tqdm(metadata):
+            s2_id = img.split('/')[-1]
+            _cache_path = cache_path('Sentinel2', f'{s2_id}.tif')
+            Sentinel2.download_tile(_cache_path, img)
+            ds = rioxarray.open_rasterio(_cache_path)
+
+            scene = Scene(
+                id=s2_id,
+                crs=ds.rio.crs,
+                transform=ds.rio.transform(),
+                size=ds.shape[-2:],
+                layers=[Sentinel2(s2_id)])
+            scenes.append(scene)
+        return scenes
+
     def __repr__(self):
         return f'Sentinel2({self.s2sceneid})'
-
-# Determine the S2-Tile's projection
-# cf. https://forum.step.esa.int/t/epsg-code-of-sentinel-2-images/17787
-# utm_zone = props['MGRS_TILE'][2]
-# utm_strip = props['MGRS_TILE'][:2]
-# if utm_zone in 'CDEFGHIJKLM':5000
-#     # UTM South
-#     crs = f'EPSG:327{utm_strip}'
-# elif utm_zone in 'NOPQRSTUVWX':
-#     # UTM North
-#     crs = f'EPSG:326{utm_strip}'
-# else:
-#     raise ValueError(
-#         f'Getting CRS from MGRS Tile {props["MGRS_TILE"]} not yet implemented.'
-#         ' It is probably UPS North/South.'
-#     )

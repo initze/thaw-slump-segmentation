@@ -102,7 +102,11 @@ class Scene:
         raise NotImplementedError()
 
     def save(self, path: Union[str, Path]):
-        self.to_xarray().to_netcdf(path, engine='h5netcdf')
+        xarray = self.to_xarray()
+        opts = dict(zlib=True, shuffle=True, complevel=1)
+        for var in xarray.data_vars:
+          xarray[var].encoding.update(opts)
+        xarray.to_netcdf(path, engine='h5netcdf')
 
     @classmethod
     def load(cls: type['Scene'], path: Union[str, Path]) -> 'Scene':
@@ -162,7 +166,4 @@ def safe_download(img, out_path, **kwargs):
         # TODO: Debug Log Message
     img.download(tmp_path, **kwargs)
     tmp_path.rename(out_path)
-
-
-
 

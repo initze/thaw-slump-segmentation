@@ -32,7 +32,7 @@ parser.add_argument("--data_dir", default='data', type=Path, help="Path to data 
 parser.add_argument("--log_dir", default='logs', type=Path, help="Path to log dir")
 parser.add_argument("--mode", default='planet',
                     choices=['planet', 's1', 's2', 's2_4w', 's2_timeseries',
-                             's2_unlabelled', 's2_unlabelled_ts', 'qinghai', 's2_ts_inference'],
+                             's2_unlabelled', 's2_unlabelled_4w', 'qinghai', 's2_ts_inference'],
         help="The type of data cubes to build.")
 
 
@@ -106,8 +106,8 @@ def build_sentinel2_4w(site_poly, image_id, image_date, tiles, targets, out_dir:
       return
     data.init_data_paths(out_dir.parent)
 
-    start_date = image_date - pd.to_timedelta('14 days')
-    end_date = image_date + pd.to_timedelta('14 days')
+    start_date = image_date - pd.to_timedelta('30 days')
+    end_date = image_date + pd.to_timedelta('30 days')
     scenes = data.Sentinel2.build_scenes(
         bounds=site_poly, crs='EPSG:3995',
         start_date=start_date, end_date=end_date,
@@ -117,9 +117,24 @@ def build_sentinel2_4w(site_poly, image_id, image_date, tiles, targets, out_dir:
     if not scenes:
       return
 
-    for scene in scenes:
-      scene.add_layer(data.Mask(targets.geometry, tiles.geometry))
-      scene.save(out_dir / f'{scene.id}.nc')
+    mask = data.Mask(targets.geometry, tiles.geometry)
+
+    xarrs = []
+    print('Starting extracting Scenes')
+    for scene in tqdm(scenes):
+        xarr = scene.to_xarray()
+        date = pd.to_datetime(xarr.Sentinel2.date)
+        xarr = xarr.expand_dims({'time': [date]}, axis=0)
+        xarrs.append(xarr)
+    print('Rastering Mask...')
+    mask = mask.get_raster_data(scenes[0])
+    xarrs.append(xarray.Dataset({'Mask': mask}))
+    print('Combining...')
+    combined = xarray.combine_by_coords(xarrs, combine_attrs='drop_conflicts')
+
+    print('Writing...')
+    combined.to_netcdf(out_dir / f'{image_id}.nc', engine='h5netcdf')
+    print('Done')
 
 
 def build_sentinel2_timeseries(site_poly, image_id, tiles, targets, out_dir: Path):
@@ -208,9 +223,10 @@ def build_unlabelled_sentinel2_timeseries(site_poly, site_name, out_dir: Path):
       xarrs = [xarr for scene, xarr in x_scenes[crs]]
       combined = xarray.combine_by_coords(xarrs, combine_attrs='drop_conflicts')
 
-      opts = dict(zlib=True, shuffle=True, complevel=1)
-      for var in combined.data_vars:
-        combined[var].encoding.update(opts)
+      raise NotImplementedError('Saving unscaled!')
+      # opts = dict(zlib=True, shuffle=True, complevel=1)
+      # for var in combined.data_vars:
+      #   combined[var].encoding.update(opts)
       combined.to_netcdf(out_dir / f'{site_name}_{crs}.nc', engine='h5netcdf')
 
     print(f'Done with build for scene {site_name}')
@@ -254,9 +270,6 @@ def build_s2_unlabelled_multi(tile_id, out_dir: Path):
         xarrs.append(xarr)
     combined = xarray.combine_by_coords(xarrs, combine_attrs='drop_conflicts')
 
-    # opts = dict(zlib=True, shuffle=True, complevel=1)
-    # for var in combined.data_vars:
-    #   combined[var].encoding.update(opts)
     combined.to_netcdf(out_dir / f'{tile_id}_{year}.nc', engine='h5netcdf')
 
 
@@ -367,7 +380,7 @@ if __name__ == "__main__":
         run_jobs(build_sentinel2_cubes, args.n_jobs, out_dir, scene_infos)
     elif args.mode == 's2_4w':
         shapefile_root = DATA_ROOT / 'ML_training_labels' / 'retrogressive_thaw_slumps'
-        out_dir = DATA_ROOT / 's2_cubes_4w'
+        out_dir = DATA_ROOT / 's2_4w'
         out_dir.mkdir(exist_ok=True)
         targets, scenes, sites = load_annotations(shapefile_root)
 
@@ -377,7 +390,7 @@ if __name__ == "__main__":
             scenes[scenes.image_id == row.image_id], # scenes
             targets[targets.image_id == row.image_id], # targets
           ))
-        run_jobs(build_sentinel2_4w, args.n_jobs, out_dir, scene_infos)
+        run_jobs(build_sentinel2_4w, args.n_jobs, out_dir, scene_infos[:1])
     elif args.mode == 's2_timeseries':
         shapefile_root = DATA_ROOT / 'ML_training_labels' / 'retrogressive_thaw_slumps'
         out_dir = DATA_ROOT / 's2_timeseries_cloudfree'
@@ -418,8 +431,8 @@ if __name__ == "__main__":
       tiles = gpd.read_file(DATA_ROOT / 's2_unlabelled/index_v2.geojson')
       site_info = [(x,) for x in tiles.Name]
       run_jobs(build_sentinel2_unlabelled, args.n_jobs, out_dir, site_info)
-    elif args.mode == 's2_unlabelled_ts':
-      out_dir = DATA_ROOT / 's2_unlabelled_ts_nocomp'
+    elif args.mode == 's2_unlabelled_4w':
+      out_dir = DATA_ROOT / 's2_unlabelled_4w'
       out_dir.mkdir(exist_ok=True)
 
       tiles = gpd.read_file(DATA_ROOT / 'active_tiles.geojson')

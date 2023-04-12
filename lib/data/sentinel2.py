@@ -25,7 +25,14 @@ class Sentinel2(TileSource):
         # We could transfer the band names as coordinate labels here
         # But other tools don't seem to be compatible with that (i.e. QGIS)
         # data = data.assign_coords({'band': list(data.long_name[:13])})
-        data = data.rename(band='Sentinel2_band')
+
+        data = data / 255
+        data.encoding.update({
+          'chunk_size': (13, 128, 128),
+          'scale_factor': 1/255,
+          'offset': 0,
+          'dtype': 'uint8',
+        })
         data.attrs['date'] = str(pd.to_datetime(scene.id.split('_')[-3]))
         return data
 
@@ -35,11 +42,12 @@ class Sentinel2(TileSource):
             gd.Initialize()
             img = ee.Image(s2sceneid)
             img = img.select(['B1','B2','B3','B4','B5','B6','B7','B8','B8A','B9','B10','B11','B12'])
+            img = img.multiply(255 / 3000)
             img = gd.MaskedImage(img)
             safe_download(img, out_path,
                 region=bounds,
                 scale=10,
-                dtype='uint16',
+                dtype='uint8',
                 max_tile_size=2,
                 max_tile_dim=2000,
             )
@@ -108,7 +116,7 @@ class Sentinel2(TileSource):
         props = imgs.properties
         print(f'Building timeseries from {len(props)} scenes...')
 
-        for img in tqdm(imgs.properties):
+        for img in tqdm(props):
             s2_id = img.split('/')[-1]
             scene_id = f'{prefix}_{s2_id}'
             _cache_path = cache_path('Sentinel2', f'{scene_id}.tif')
@@ -130,18 +138,14 @@ class Sentinel2(TileSource):
         gd.Initialize()
         s2 = ee.ImageCollection("COPERNICUS/S2_HARMONIZED")
         s2 = s2.filterMetadata('MGRS_TILE', 'equals', tile_id)
-        s2 = gd.MaskedCollection(s2)
+        s2 = s2.filterDate(start_date, end_date)
 
-        imgs = s2.search(
-          start_date=start_date,
-          end_date=end_date,
-        )
-
-        metadata = imgs.properties
-        if len(metadata) == 0:
+        n_found = s2.size().getInfo()
+        if n_found == 0:
           return None
-        best = max(metadata, key=lambda x: metadata[x]['CLOUDLESS_PORTION'])
-        assert metadata[best]['FILL_PORTION'] > 90
+
+        best = s2.sort('CLOUDY_PIXEL_PERCENTAGE').first()
+        best = best.get('system:id').getInfo()
 
         s2_id = best.split('/')[-1]
         scene_id = f'{s2_id}'

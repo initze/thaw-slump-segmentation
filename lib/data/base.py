@@ -103,9 +103,6 @@ class Scene:
 
     def save(self, path: Union[str, Path]):
         xarray = self.to_xarray()
-        opts = dict(zlib=True, shuffle=True, complevel=1)
-        for var in xarray.data_vars:
-          xarray[var].encoding.update(opts)
         xarray.to_netcdf(path, engine='h5netcdf')
 
     @classmethod

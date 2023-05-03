@@ -1,4 +1,7 @@
 # Changelog
+## latest
+* Switched to NetCDF-based dataloading
+
 ## [0.8.0] - 2022-09-09
 ### Added
 - added Unet3+ model

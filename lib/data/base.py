@@ -1,4 +1,4 @@
-from abc import ABC, abstractmethod
+from abc import ABC, abstractmethod, abstractstaticmethod
 from pathlib import Path
 from typing import Union
 import numpy as np
@@ -12,15 +12,25 @@ from pyproj import Transformer
 
 _root_path: Path = Path('data/')
 
+_LAYER_REGISTRY = {}
+
+def get_source(source_name):
+  return _LAYER_REGISTRY[source_name]
+
+
 def init_data_paths(root_path: Union[str, Path]):
     global _root_path
     _root_path = Path(root_path)
 
 
 class TileSource(ABC):
-    @abstractmethod
-    def get_raster_data(self, scene: 'Scene') -> xr.Dataset:
-        ...
+  @abstractmethod
+  def get_raster_data(self, scene: 'Scene') -> xr.Dataset:
+    ...
+
+  @abstractstaticmethod
+  def normalize(tile):
+    ...
 
 
 class EETileSource(TileSource):
@@ -71,15 +81,7 @@ class Scene:
             ...
         scene.save('scene.nc')
 
-    (2) Load scenes from disk:
-
-        scene = Scene.load('scene.nc')
-
-    (3) Using a scene as a pytorch DataSet:
-
-        dataloader = DataLoader(scene.as_torch_dataset(tilesize=256))
-
-    (4) More to come :)
+    (2) More to come :)
 
     """
     def __init__(self, id, crs, transform, size, layers=[]):
@@ -93,21 +95,17 @@ class Scene:
         self.layers.append(source)
 
     def to_xarray(self):
-        return xr.Dataset({
+        ds = xr.Dataset({
             type(ly).__name__: ly.get_raster_data(self)
             for ly in self.layers
         })
-
-    def as_torch_dataset(self, tilesize):
-        raise NotImplementedError()
+        ds.attrs['id'] = self.id
+        ds.attrs['size'] = self.size
+        return ds
 
     def save(self, path: Union[str, Path]):
         xarray = self.to_xarray()
         xarray.to_netcdf(path, engine='h5netcdf')
-
-    @classmethod
-    def load(cls: type['Scene'], path: Union[str, Path]) -> 'Scene':
-        raise NotImplementedError()
 
     def bounds(self, crs=None) -> Polygon:
         if crs is None:

@@ -348,13 +348,13 @@ if __name__ == "__main__":
 
     if args.mode == 'planet':
         planet_files = list((DATA_ROOT / 'input').glob('*/*_SR*.tif'))
-        out_dir = DATA_ROOT / 'planet_cubes'
+        out_dir = DATA_ROOT / 'planet'
 
         run_jobs(build_planet_cube, args.n_jobs, out_dir,
                  [(f, ) for f in planet_files])
     elif args.mode == 's1':
         shapefile_root = DATA_ROOT / 'ML_training_labels' / 'retrogressive_thaw_slumps'
-        out_dir = DATA_ROOT / 's1_cubes'
+        out_dir = DATA_ROOT / 's1'
         out_dir.mkdir(exist_ok=True)
         targets, scenes, sites = load_annotations(shapefile_root)
 
@@ -367,7 +367,7 @@ if __name__ == "__main__":
         run_jobs(build_sentinel1_cubes, args.n_jobs, out_dir, scene_infos)
     elif args.mode == 's2':
         shapefile_root = DATA_ROOT / 'ML_training_labels' / 'retrogressive_thaw_slumps'
-        out_dir = DATA_ROOT / 's2_cubes'
+        out_dir = DATA_ROOT / 's2'
         out_dir.mkdir(exist_ok=True)
         targets, scenes, sites = load_annotations(shapefile_root)
 
@@ -419,7 +419,7 @@ if __name__ == "__main__":
             site_info.append((site.geometry, site_tag))
         run_jobs(build_unlabelled_sentinel2_timeseries, args.n_jobs, out_dir, site_info)
     elif args.mode == 'qinghai':
-      out_dir = DATA_ROOT / 's2_cubes'
+      out_dir = DATA_ROOT / 's2'
       out_dir.mkdir(exist_ok=True)
       targets, tile_ids = load_qinghai_annotations(DATA_ROOT)
       site_info = [(tile_id, targets) for tile_id in tile_ids]

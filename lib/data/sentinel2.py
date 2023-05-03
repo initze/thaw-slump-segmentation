@@ -28,7 +28,7 @@ class Sentinel2(TileSource):
 
         data = data / 255
         data.encoding.update({
-          'chunk_size': (13, 128, 128),
+          'chunksizes': (13, 128, 128),
           'scale_factor': 1/255,
           'offset': 0,
           'dtype': 'uint8',

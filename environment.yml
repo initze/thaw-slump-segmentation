@@ -7,6 +7,7 @@ dependencies:
   - earthengine-api=0.1.227
   - efficientnet-pytorch=0.6.3
   - geedim=1.7.0
+  - geopandas
   - h5netcdf=1.1.0
   - joblib=1.0.1
   - matplotlib=3.2.2

@@ -28,7 +28,7 @@ dependencies:
   - rasterio=1.1.5
   - requests=2.24.0
   - rioxarray=0.9.1
-  - scikit-image=0.17.2 
+  - scikit-image=0.19.3
   - tensorboard=2.2.1
   - tqdm=4.65.0
   - torchvision=0.14.1 #

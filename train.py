@@ -180,8 +180,8 @@ class Engine:
           ds_config['num_workers'] = self.config['data_threads']
           ds_config['data_sources'] = self.data_sources
           ds_config['data_root'] = self.DATA_ROOT
-          ds_config['sampling_mode'] = 'deterministic'
-          ds_config['tile_size'] = 512
+          ds_config['sampling_mode'] = self.config['sampling_mode']#'deterministic'
+          ds_config['tile_size'] = self.config['tile_size']
           self.dataset_cache[name] = get_loader(ds_config)
 
       return self.dataset_cache[name]

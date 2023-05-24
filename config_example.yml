@@ -18,6 +18,10 @@ model:
 loss_function: FocalLoss
 # Data Configuration
 data_threads: 4  # Number of threads for data loading, must be 0 on Windows
+tile_size: 512 # tile size in pixels
+# Sampling mode to Use. Available:
+# deterministic, random, targets_only
+sampling_mode: deterministic
 data_sources:  # Enabled input features
   - PlanetScope
   - TCVIS

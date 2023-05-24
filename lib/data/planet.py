@@ -38,9 +38,11 @@ class PlanetScope(TileSource):
   @staticmethod
   def build_scene(tile_path):
     tile_path = Path(tile_path)
+    tile_id = tile_path.parent.name
     ds = rioxarray.open_rasterio(tile_path, decode_coords='all')
     scene = Scene(
-      id=tile_path.stem,
+      #id=tile_path.stem,
+      id=tile_id,
       crs=ds.rio.crs,
       transform=ds.rio.transform(),
       size=ds.shape[-2:],

@@ -26,6 +26,7 @@ data_sources:  # Enabled input features
   - PlanetScope
   - TCVIS
   #- RelativeElevation
+  - AbsoluteElevation
   - Slope
 datasets:
   train:
@@ -39,17 +40,17 @@ datasets:
     - MultiplicativeNoise
     shuffle: true
     scenes:
-      - 4694518_0870514_2021-07-15_1064_BGRN_SR
+      - 4694518_0870514_2021-07-15_1064
   val:
     augment: false
     shuffle: false
     scenes:
-      - 20200722_081437_1032_3B_AnalyticMS_SR_clip
+      - 20200722_081437_1032
   test:
     augment: false
     shuffle: false
     scenes:
-      - 20200722_081438_1032_3B_AnalyticMS_SR_clip
+      - 20200722_081438_1032
 # Training Parameters
 batch_size: 4
 learning_rate: 0.01

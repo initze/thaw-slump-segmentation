@@ -2,6 +2,7 @@ name: aicore
 channels:
   - pytorch
   - conda-forge
+  - nvidia
   - defaults
 dependencies:
   - earthengine-api=0.1.227
@@ -16,21 +17,23 @@ dependencies:
   - numpy=1.18.5
   - numpy-base=1.18.5
   - pandas=1.0.5
+  - pillow=9.4
   - pip=20.1.1
   - pretrainedmodels=0.7.4 
   - pyproj=2.6.1.post1
-  - python=3.7.7
-  - pytorch=1.5.1
+  - python=3.7
+  - pytorch=1.13.1 #
+  - pytorch-cuda=11.7
   - pyyaml=5.3.1
   - rasterio=1.1.5
   - requests=2.24.0
-  - rioxarray
+  - rioxarray=0.9.1
   - scikit-image=0.17.2 
   - tensorboard=2.2.1
   - tqdm=4.65.0
-  - torchvision=0.8.2
-  - timm=0.3.2
-  - wandb
+  - torchvision=0.14.1 #
+  - timm=0.4.12
+  - wandb=0.15.3
   - xarray=2023.4.2
   - pip:
     - torchsummary=1.5.1

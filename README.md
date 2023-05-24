@@ -20,47 +20,27 @@ conda env create -n aicore -f environment.yml
 
 ### Data Preparation
 
-1. copy/move data into <DATA_DIR>/input
-2. copy/move data into <DATA_DIR>/auxiliary (e.g. prepared ArcticDEM data)
-
-### Set gdal paths in system.yml file
-#### Linux
-
-```yaml
-gdal_path: '$CONDA_PREFIX/bin' # must be single quote
-gdal_bin: '$CONDA_PREFIX/bin' # must be single quote
-```
-
-#### Windows version
-
-```yaml
-gdal_path: '%CONDA_PREFIX%\Scripts' # must be single quote
-gdal_bin: '%CONDA_PREFIX%\Library\bin' # must be single quote
-```
+* copy/move data into <DATA_DIR>/input
 
 ## Data Processing
 
 ### Data Preprocessing
 
+Supported modes: `planet`, `s2`
+
 ```bash
-python setup_raw_data.py --data_dir <DATA_DIR>
-```
-```bash
-python prepare_data.py --data_dir <DATA_DIR>
+python build_datacubes.py --mode=<MODE> --n_jobs=<N_THREADS> --data_dir <DATA_DIR>
 ```
 
 ### Training a model
 
 ```bash
-python train.py --data_dir <DATA_DIR> -n <MODEL_NAME>
+python train.py --data_dir <DATA_DIR>/<MODE> -n <MODEL_NAME>
 ```
 
 ### Running Inference
 
-```bash
-python setup_raw_data.py --data_dir <DATA_DIR> --nolabel
-python inference.py --data_dir <DATA_DIR> --model_dir <MODEL_NAME> 20190727_160426_104e 20190709_042959_08_1057
-```
+TODO
 
 ## Configuration
 
@@ -90,11 +70,10 @@ loss_function: FocalLoss
 # Data Configuration
 data_threads: 4  # Number of threads for data loading, must be 0 on Windows
 data_sources:  # Enabled input features
-  - planet
-  - ndvi
-  - tcvis
-  - relative_elevation
-  - slope
+  - PlanetScope
+  - TCVIS
+  - RelativeElevation
+  - Slope
 datasets:
   train:
     augment: true
@@ -107,19 +86,23 @@ datasets:
     - MultiplicativeNoise
     shuffle: true
     scenes:
-      - "20190618_201847_1035"
-      - "20190618_201848_1035"
-      - "20190623_200555_0e19"
+      - 20180702_025400_0f31_3B_AnalyticMS_SR
+      - 20180702_025401_0f31_3B_AnalyticMS_SR
+      - 20180703_192559_1006_3B_AnalyticMS_SR
+      - 20180704_075857_1044_3B_AnalyticMS_SR
+      - 20180708_075756_1011_3B_AnalyticMS_SR
   val:
     augment: false
     shuffle: false
     scenes:
-      - "20190727_160426_104e"
+      - 20180921_203252_101f_3B_AnalyticMS_SR
+      - 20190607_204203_1044_3B_AnalyticMS_SR
   test:
     augment: false
     shuffle: false
     scenes:
-      - "20190709_042959_08_1057"
+      - 20190607_204204_1044_3B_AnalyticMS_SR
+      - 20190607_204205_1044_3B_AnalyticMS_SR
 # Training Parameters
 batch_size: 4
 learning_rate: 0.01
@@ -137,9 +120,4 @@ schedule:
     steps:
       - train_on: train
       - validate_on: val
-      - log_images
-# Visualization Configuration
-visualization_tiles:
-  20190727_160426_104e: [5, 52, 75, 87, 113, 139, 239, 270, 277, 291, 305]
-
 ```

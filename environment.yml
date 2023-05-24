@@ -5,9 +5,12 @@ channels:
   - defaults
 dependencies:
   - earthengine-api=0.1.227
+  - einops
   - efficientnet-pytorch=0.6.3
-  - gdal=3.0.4
-  - h5py=2.10.0
+  - fsspec
+  - geedim=1.7.0
+  - geopandas
+  - h5netcdf=1.1.0
   - joblib=1.0.1
   - matplotlib=3.2.2
   - numpy=1.18.5
@@ -21,10 +24,13 @@ dependencies:
   - pyyaml=5.3.1
   - rasterio=1.1.5
   - requests=2.24.0
+  - rioxarray
   - scikit-image=0.17.2 
   - tensorboard=2.2.1
-  - tqdm=4.48.0
+  - tqdm=4.65.0
   - torchvision=0.8.2
   - timm=0.3.2
+  - wandb
+  - xarray=2023.4.2
   - pip:
     - torchsummary=1.5.1

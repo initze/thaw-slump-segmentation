@@ -111,9 +111,11 @@ class Scene:
 
         # writes mask but bloats up data
         for key in list(xarray.keys()):
-            xarray[key].data = xarray[key].where(self.data_mask).data
+            #xarray[key].data = xarray[key].where(self.data_mask).data
+            # to 0
+            xarray[key].data = xarray[key].data * self.data_mask
 
-        xarray.to_netcdf(path, engine='h5netcdf')
+        xarray.to_netcdf(path, engine='h5netcdf', encoding={})#, encoding ={"compression": "gzip", "compression_opts": 9})
 
     def bounds(self, crs=None) -> Polygon:
         if crs is None:

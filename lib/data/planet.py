@@ -39,6 +39,7 @@ class PlanetScope(TileSource):
   def build_scene(tile_path):
     tile_path = Path(tile_path)
     tile_id = tile_path.parent.name
+    print(tile_id)
     ds = rioxarray.open_rasterio(tile_path, decode_coords='all')
     udm_file = [f for f in list(tile_path.parent.glob('*udm*.tif')) if 'udm2' not in f.name][0]
     data_mask = udm.get_mask_from_udm(udm_file)

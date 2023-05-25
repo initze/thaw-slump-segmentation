@@ -108,7 +108,10 @@ class Scene:
         xarray = self.to_xarray()
         # mask here
         # metadata are being lost
-        xarray = xarray.where(self.data_mask)
+
+        # writes mask but bloats up data
+        for key in list(xarray.keys()):
+            xarray[key].data = xarray[key].where(self.data_mask).data
 
         xarray.to_netcdf(path, engine='h5netcdf')
 

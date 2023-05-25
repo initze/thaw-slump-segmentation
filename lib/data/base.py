@@ -84,12 +84,13 @@ class Scene:
     (2) More to come :)
 
     """
-    def __init__(self, id, crs, transform, size, layers=[]):
+    def __init__(self, id, crs, transform, size, layers=[], data_mask=None):
         self.id = id
         self.crs = crs
         self.transform = transform
         self.size = size
         self.layers = layers
+        self.data_mask = data_mask
 
     def add_layer(self, source: TileSource):
         self.layers.append(source)
@@ -105,6 +106,10 @@ class Scene:
 
     def save(self, path: Union[str, Path]):
         xarray = self.to_xarray()
+        # mask here
+        # metadata are being lost
+        xarray = xarray.where(self.data_mask)
+
         xarray.to_netcdf(path, engine='h5netcdf')
 
     def bounds(self, crs=None) -> Polygon:

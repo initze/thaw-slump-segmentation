@@ -36,7 +36,7 @@ parser.add_argument("--mode", default='planet',
         help="The type of data cubes to build.")
 
 
-def complete_scene(scene):
+def complete_scene(scene, mask_data=False):
     # scene.add_layer(data.RelativeElevation())
     scene.add_layer(data.AbsoluteElevation())
     scene.add_layer(data.Slope())
@@ -52,8 +52,15 @@ def build_planet_cube(planet_file: Path, out_dir: Path):
     labels = gpd.read_file(next(planet_file.parent.glob('*.shp')))
     scene.add_layer(data.Mask(labels.geometry))
     complete_scene(scene)
+    # Create some masking here
+    # mask_scene(scene)
     out_dir.mkdir(exist_ok=True, parents=True)
     scene.save(out_dir / f'{scene.id}.nc')
+
+
+def mask_scene(scene):
+
+    pass
 
 
 def build_sentinel1_cubes(site_poly, image_id, image_date, tiles, targets, out_dir: Path):

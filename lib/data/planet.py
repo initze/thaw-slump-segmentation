@@ -6,6 +6,7 @@ import rioxarray
 from pyproj import Proj
 
 from .base import TileSource, Scene, cache_path
+from lib.data_pre_processing import udm
 
 
 class PlanetScope(TileSource):
@@ -14,7 +15,6 @@ class PlanetScope(TileSource):
 
   def get_raster_data(self, scene: Scene) -> xr.DataArray:
     data = rioxarray.open_rasterio(self.tile_path)
-
     # Usually, PlanetScope will be the master imagery.
     # But if not, we'll need to reproject it to match whatever master we're using.
     same_size = scene.size == data.shape[-2:]
@@ -40,13 +40,15 @@ class PlanetScope(TileSource):
     tile_path = Path(tile_path)
     tile_id = tile_path.parent.name
     ds = rioxarray.open_rasterio(tile_path, decode_coords='all')
+    udm_file = [f for f in list(tile_path.parent.glob('*udm*.tif')) if 'udm2' not in f.name][0]
+    data_mask = udm.get_mask_from_udm(udm_file)
     scene = Scene(
-      #id=tile_path.stem,
       id=tile_id,
       crs=ds.rio.crs,
       transform=ds.rio.transform(),
       size=ds.shape[-2:],
-      layers=[PlanetScope(tile_path)])
+      layers=[PlanetScope(tile_path)],
+      data_mask=data_mask)
     return scene
 
   def __repr__(self):

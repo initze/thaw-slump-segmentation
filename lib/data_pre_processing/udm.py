@@ -16,9 +16,11 @@ def get_mask_from_udm2(infile, bands=[1,2,4,5]):
     return mask
 
 
-def get_mask_from_udm(infile, nodata=1):
+def get_mask_from_udm(infile, nodata=1, valid=1):
     with rio.open(infile) as src:
         mask = src.read()[0] >= nodata
+    if valid == 1:
+        mask = ~mask
     return np.array(mask, dtype=np.uint8)
 
 

@@ -1,58 +1,7 @@
-# AICore - 
-
-## System and Data Setup
-
-### Option 1 - Singularity container
-https://cloud.sylabs.io/library/initze/aicore/thaw_slump_segmentation
-
-The container contains all requirements to run the processing code, singularity must be installed
-
-```
-singularity pull --arch amd64 library://initze/aicore/thaw_slump_segmentation:0.8.0
-singularity shell --nv --bind <your bind path> thaw_slump_segmentation.sif
-```
-### Option 2 - anaconda
-### Environment setup
-We recommend using a new conda environment from the provided environment.yml file
-```bash
-conda env create -n aicore -f environment.yml
-```
-
-### Data Preparation
-
-* copy/move data into <DATA_DIR>/input
-
-## Data Processing
-
-### Data Preprocessing
-
-Supported modes: `planet`, `s2`
-
-```bash
-python build_datacubes.py --mode=<MODE> --n_jobs=<N_THREADS> --data_dir <DATA_DIR>
-```
-
-### Training a model
-
-```bash
-python train.py --data_dir <DATA_DIR>/<MODE> -n <MODEL_NAME>
-```
-
-### Running Inference
-
-TODO
-
-## Configuration
-
-### Run Configuration
-
-Configuration is done via the `config.yml` file. Example config:
-
-```yaml
 # Model Specification
 model:
   # Model Architecture. Available:
-  # Unet, UnetPlusPlus, MAnet, Linknet, FPN, PSPNet, DeepLabV3, DeepLabV3Plus, PAN]
+  # Unet, UnetPlusPlus, Unet3Plus, MAnet, Linknet, FPN, PSPNet, DeepLabV3, DeepLabV3Plus, PAN]
   architecture: Unet
   # Model Encoder. Examples:
   # resnet18, resnet34, resnet50, resnet101, resnet152
@@ -120,4 +69,3 @@ schedule:
     steps:
       - train_on: train
       - validate_on: val
-```

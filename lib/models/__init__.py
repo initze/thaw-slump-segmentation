@@ -1,11 +1,13 @@
 from .unet import Unet
 from .unetplusplus import UnetPlusPlus
+from .unet3p.unet3p import Unet3Plus
 from .manet import MAnet
 from .linknet import Linknet
 from .fpn import FPN
 from .pspnet import PSPNet
 from .deeplabv3 import DeepLabV3, DeepLabV3Plus
 from .pan import PAN
+from .plain_unet import PlainUNet
 import torch.nn as nn
 
 from . import encoders
@@ -21,16 +23,15 @@ import torch
 def create_model(
     arch: str,
     encoder_name: str = "resnet34",
-    encoder_weights: Optional[str] = "imagenet",
+    encoder_weights: Optional[str] = "random",
     in_channels: int = 3,
     classes: int = 1,
     **kwargs,
 ) -> torch.nn.Module:
-    """Models wrapper. Allows to create any model just with parametes
-
+    """Models wrapper. Allows to create any model just with parameters
     """
 
-    archs = [Unet, UnetPlusPlus, MAnet, Linknet, FPN, PSPNet, DeepLabV3, DeepLabV3Plus, PAN]
+    archs = [Unet, UnetPlusPlus, MAnet, Linknet, FPN, PSPNet, DeepLabV3, DeepLabV3Plus, PAN, Unet3Plus]
     archs_dict = {a.__name__.lower(): a for a in archs}
     try:
         model_class = archs_dict[arch.lower()]
@@ -50,7 +51,7 @@ def create_model(
 def create_loss(
     name: str,
 ) -> torch.nn.Module:
-    """LossFn wrapper. Allows to create any loss_fn just with parametes"""
+    """LossFn wrapper. Allows to create any loss_fn just with parameters"""
 
     losses_list = [
         losses.JaccardLoss,
@@ -66,7 +67,7 @@ def create_loss(
     builtin_losses_dict = {l.__name__.lower(): l for l in builtin_losses}
     name = name.lower()
     if name in losses_dict:
-        return losses_dict[name](mode=losses.BINARY_MODE)
+        return losses_dict[name](mode=losses.BINARY_MODE, ignore_index=255)
     elif name in builtin_losses_dict:
         return builtin_losses_dict[name]()
     raise KeyError("Wrong loss type `{}`. Available options are: {}".format(

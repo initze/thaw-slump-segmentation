@@ -1,4 +1,4 @@
-from typing import Union, List
+from typing import Union, List, Optional
 from pathlib import Path
 import os
 import geopandas as gpd
@@ -6,6 +6,8 @@ import pandas as pd
 import shutil
 import numpy as np
 import rasterio
+
+from pathlib import Path
 
 
 def run_inference(df, model, processing_dir, inference_dir, model_dir=Path('/isipd/projects/p_aicore_pf/initze/models/thaw_slumps'), gpu=0, run=False, patch_size=1024, margin_size=256):
@@ -138,8 +140,6 @@ def get_processing_status_ensemble(inference_dir, model_input_names=['RTS_v5_not
 
     return df_process[['data_available', 'process']].reset_index(drop=False).rename(columns={'index':'name'})
 
-
-#def create_ensemble(inference_dir: Path, modelnames: List[str], ensemblename: str, image_id: str, binary_threshold: list[float]=[0.3,0.4,0.5], delete_proba=True, delete_binary=True) -> None:
     
 def create_ensemble(inference_dir: Path, modelnames: List[str], ensemblename: str, image_id: str, binary_threshold: list=[0.3,0.4,0.5], delete_proba=True, delete_binary=True):
     """
@@ -155,7 +155,7 @@ def create_ensemble(inference_dir: Path, modelnames: List[str], ensemblename: st
     None
     """
     try:
-    # setup
+        # setup
         outpath = inference_dir / ensemblename / image_id / f'{image_id}_{ensemblename}_proba.tif'
         os.makedirs(outpath.parent, exist_ok=True)
 
@@ -239,3 +239,67 @@ def load_and_parse_vector(file_path: Union[str, Path]) -> gpd.GeoDataFrame:
     gdf['satellite'] = satellite
     
     return gdf
+
+
+
+def create_ensemble_with_negative(inference_dir: Path, 
+                                  modelnames: List[str],
+                                  ensemblename: str, 
+                                  image_id: str, 
+                                  binary_threshold: list=[0.3,0.4,0.5], 
+                                  negative_modelname: Optional[str] = None, 
+                                  negative_binary_threshold: float=0.8,
+                                  delete_proba: bool = True, 
+                                  delete_binary: bool = True):
+    """
+    Calculate the mean of two model predictions and write the output to disk.
+    
+    Args:
+    modelnames (List[str]): A list of two model names.
+    ensemblename (str): The name of the ensemble model.
+    image_id (str): The ID of the image.
+    binary_threshold (float): The binary threshold value.
+    
+    Returns:
+    None
+    """
+    # setup
+    outpath = inference_dir / ensemblename / image_id / f'{image_id}_{ensemblename}_proba.tif'
+    os.makedirs(outpath.parent, exist_ok=True)
+
+    # calculate
+    image1 = inference_dir / modelnames[0] / image_id / 'pred_probability.tif'
+    image2 = inference_dir / modelnames[1] / image_id / 'pred_probability.tif'
+
+    with rasterio.open(image1) as src1:
+        with rasterio.open(image2) as src2:
+            a1 = src1.read()
+            a2 = src2.read()
+
+        out_meta = src1.meta.copy()
+        out_meta_binary = out_meta.copy()
+        out_meta_binary['dtype'] = 'uint8'
+
+    out = np.mean([a1, a2], axis=0)
+    
+    # optional if negative thresh
+    if negative_modelname:
+        print('Using negative class')
+        image_negative = inference_dir / negative_modelname / image_id / 'pred_probability.tif'
+        with rasterio.open(image_negative) as src_negative:
+            a_negative = src_negative.read()
+            a_binary = a_negative < negative_binary_threshold
+            out *= a_binary
+    
+    with rasterio.open(outpath, 'w', **out_meta) as target:
+        target.write(out)
+
+    # write binary raster
+    for threshold in binary_threshold:
+        thresh_str = str(threshold).replace('.','')
+        outpath_class = Path(str(outpath).replace('proba', f'class_{thresh_str}'))
+        outpath_shp = outpath_class.with_suffix('.gpkg')
+
+        out_binary = (out >= threshold)
+
+    return out_binary

@@ -49,8 +49,14 @@ def build_planet_cube(planet_file: Path, out_dir: Path):
     data.init_data_paths(out_dir.parent)
 
     scene = data.PlanetScope.build_scene(planet_file)
-    labels = gpd.read_file(next(planet_file.parent.glob('*.shp')))
-    scene.add_layer(data.Mask(labels.geometry))
+    # label loading
+    label_files = list(planet_file.parent.glob('*.shp'))
+    if len(label_files) == 1:
+      labels = gpd.read_file(label_files[0])
+      scene.add_layer(data.Mask(labels.geometry))
+    else:
+      print('Skipped label loading. No valid vector file available!\nBuilding datacube without label!')
+    
     complete_scene(scene)
     # Create some masking here
     # mask_scene(scene)
@@ -59,7 +65,8 @@ def build_planet_cube(planet_file: Path, out_dir: Path):
 
 
 def mask_scene(scene):
-
+    # mask all data layer with 'Mask value'
+    scene.data_mask
     pass
 
 

@@ -18,10 +18,15 @@ model:
 loss_function: FocalLoss
 # Data Configuration
 data_threads: 4  # Number of threads for data loading, must be 0 on Windows
+tile_size: 512 # tile size in pixels
+# Sampling mode to Use. Available:
+# deterministic, random, targets_only
+sampling_mode: deterministic
 data_sources:  # Enabled input features
   - PlanetScope
   - TCVIS
-  - RelativeElevation
+  #- RelativeElevation
+  - AbsoluteElevation
   - Slope
 datasets:
   train:
@@ -35,23 +40,17 @@ datasets:
     - MultiplicativeNoise
     shuffle: true
     scenes:
-      - 20180702_025400_0f31_3B_AnalyticMS_SR
-      - 20180702_025401_0f31_3B_AnalyticMS_SR
-      - 20180703_192559_1006_3B_AnalyticMS_SR
-      - 20180704_075857_1044_3B_AnalyticMS_SR
-      - 20180708_075756_1011_3B_AnalyticMS_SR
+      - 4694518_0870514_2021-07-15_1064
   val:
     augment: false
     shuffle: false
     scenes:
-      - 20180921_203252_101f_3B_AnalyticMS_SR
-      - 20190607_204203_1044_3B_AnalyticMS_SR
+      - 20200722_081437_1032
   test:
     augment: false
     shuffle: false
     scenes:
-      - 20190607_204204_1044_3B_AnalyticMS_SR
-      - 20190607_204205_1044_3B_AnalyticMS_SR
+      - 20200722_081438_1032
 # Training Parameters
 batch_size: 4
 learning_rate: 0.01
@@ -65,7 +64,7 @@ lr_gamma: 0.1
 # Training Schedule
 schedule:
   - phase: Training
-    epochs: 30
+    epochs: 4
     steps:
       - train_on: train
       - validate_on: val

@@ -34,9 +34,10 @@ parser.add_argument("--mode", default='planet',
                     choices=['planet', 's1', 's2', 's2_4w', 's2_timeseries',
                              's2_unlabelled', 's2_unlabelled_4w', 'qinghai', 's2_ts_inference'],
         help="The type of data cubes to build.")
+parser.add_argument("--no_compression", action='store_false', help="Set flag to do save datacubes in uncompressed format: slightly faster but much larger file sizes")
 
 
-def complete_scene(scene):
+def complete_scene(scene, mask_data=False):
     # scene.add_layer(data.RelativeElevation())
     scene.add_layer(data.AbsoluteElevation())
     scene.add_layer(data.Slope())
@@ -49,11 +50,18 @@ def build_planet_cube(planet_file: Path, out_dir: Path):
     data.init_data_paths(out_dir.parent)
 
     scene = data.PlanetScope.build_scene(planet_file)
-    labels = gpd.read_file(next(planet_file.parent.glob('*.shp')))
-    scene.add_layer(data.Mask(labels.geometry))
+    # label loading
+    label_files = list(planet_file.parent.glob('*.shp'))
+    if len(label_files) == 1:
+      labels = gpd.read_file(label_files[0])
+      scene.add_layer(data.Mask(labels.geometry))
+    else:
+      print('Skipped label loading. No valid vector file available!\nBuilding datacube without label!')
+
     complete_scene(scene)
+    # Create some masking here
     out_dir.mkdir(exist_ok=True, parents=True)
-    scene.save(out_dir / f'{scene.id}.nc')
+    scene.save(out_dir / f'{scene.id}.nc', compression=args.no_compression)
 
 
 def build_sentinel1_cubes(site_poly, image_id, image_date, tiles, targets, out_dir: Path):
@@ -75,7 +83,7 @@ def build_sentinel1_cubes(site_poly, image_id, image_date, tiles, targets, out_d
     # TODO: Re-add this for git push
     # complete_scene(scene)
     scene.add_layer(data.Mask(targets.geometry, tiles.geometry))
-    scene.save(out_dir / f'{scene.id}.nc')
+    scene.save(out_dir / f'{scene.id}.nc', compression=args.no_compression)
 
 
 def build_sentinel2_cubes(site_poly, image_id, image_date, tiles, targets, out_dir: Path):
@@ -97,7 +105,7 @@ def build_sentinel2_cubes(site_poly, image_id, image_date, tiles, targets, out_d
     # TODO: Re-add this for git push
     # complete_scene(scene)
     scene.add_layer(data.Mask(targets.geometry, tiles.geometry))
-    scene.save(out_dir / f'{scene.id}.nc')
+    scene.save(out_dir / f'{scene.id}.nc', compression=args.no_compression)
 
 
 def build_sentinel2_4w(site_poly, image_id, image_date, tiles, targets, out_dir: Path):
@@ -245,7 +253,7 @@ def build_sentinel2_unlabelled(tile_id, out_dir: Path):
     scene = data.Sentinel2.scene_for_tile(tile_id,
       start_date=start_date, end_date=end_date,
     )
-    scene.save(out_dir / f'{scene.id}.nc')
+    scene.save(out_dir / f'{scene.id}.nc', compression=args.no_compression)
 
 
 def build_s2_unlabelled_multi(tile_id, out_dir: Path):
@@ -319,7 +327,7 @@ def build_sentinel2_qinghai(tile_id, targets, out_dir):
     scene.add_layer(
         data.Mask(geometries=targets.geometry, bounds=None)
     )
-    scene.save(out_dir / f'qinghai_{tile_id}.nc')
+    scene.save(out_dir / f'{scene.id}.nc', compression=args.no_compression)
 
 
 def run_jobs(function, n_jobs, out_dir, args_list):

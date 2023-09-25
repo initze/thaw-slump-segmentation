@@ -105,7 +105,7 @@ class Scene:
         return ds
 
 
-    def save(self, path: Union[str, Path]):
+    def save(self, path: Union[str, Path], compression=True):
         """
         Save the dataset to a NetCDF file with optional data masking and compression.
 
@@ -131,7 +131,10 @@ class Scene:
             xarray_ds[key].attrs['_FillValue'] = 0
         # Compression type can be set here, e.g. encoding_dict={"compression": "gzip", "compression_opts": 4}
         # works well with gzip, "lzw" is fast but causes issues - so please avoid
-        encoding = create_encoding_dict(xarray_ds, encoding_dict={"compression": "gzip", "compression_opts": 2})
+        if compression:
+            encoding = create_encoding_dict(xarray_ds, encoding_dict={"compression": "gzip", "compression_opts": 2})
+        else:
+            encoding = {}
         xarray_ds.to_netcdf(path, engine='h5netcdf', encoding=encoding)
 
 

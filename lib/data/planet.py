@@ -35,6 +35,7 @@ class PlanetScope(TileSource):
     data = data.rename(band='PlanetScope_band')
     return data
 
+
   @staticmethod
   def build_scene(tile_path):
     tile_path = Path(tile_path)
@@ -43,6 +44,9 @@ class PlanetScope(TileSource):
     ds = rioxarray.open_rasterio(tile_path, decode_coords='all')
     udm_file = [f for f in list(tile_path.parent.glob('*udm*.tif')) if 'udm2' not in f.name][0]
     data_mask = udm.get_mask_from_udm(udm_file)
+    #ds = ds * data_mask
+    #ds.attrs['_FillValue'] = 0
+
     scene = Scene(
       id=tile_id,
       crs=ds.rio.crs,

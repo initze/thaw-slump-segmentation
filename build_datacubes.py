@@ -56,18 +56,11 @@ def build_planet_cube(planet_file: Path, out_dir: Path):
       scene.add_layer(data.Mask(labels.geometry))
     else:
       print('Skipped label loading. No valid vector file available!\nBuilding datacube without label!')
-    
+
     complete_scene(scene)
     # Create some masking here
-    # mask_scene(scene)
     out_dir.mkdir(exist_ok=True, parents=True)
     scene.save(out_dir / f'{scene.id}.nc')
-
-
-def mask_scene(scene):
-    # mask all data layer with 'Mask value'
-    scene.data_mask
-    pass
 
 
 def build_sentinel1_cubes(site_poly, image_id, image_date, tiles, targets, out_dir: Path):

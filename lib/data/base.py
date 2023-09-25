@@ -104,18 +104,36 @@ class Scene:
         ds.attrs['size'] = self.size
         return ds
 
-    def save(self, path: Union[str, Path]):
-        xarray = self.to_xarray()
-        # mask here
-        # metadata are being lost
 
-        # writes mask but bloats up data
-        for key in list(xarray.keys()):
-            #xarray[key].data = xarray[key].where(self.data_mask).data
-            # to 0
-            xarray[key].data = xarray[key].data * self.data_mask
-            xarray[key].attrs['_FillValue'] = 0
-        xarray.to_netcdf(path, engine='h5netcdf', encoding={})#, encoding ={"compression": "gzip", "compression_opts": 9})
+    def save(self, path: Union[str, Path]):
+        """
+        Save the dataset to a NetCDF file with optional data masking and compression.
+
+        Args:
+            path (Union[str, Path]): The path to the output NetCDF file.
+
+        Notes:
+            This function saves the dataset to a NetCDF file using the "h5netcdf" engine with optional data masking
+            and compression. It performs the following steps:
+
+            1. Converts the dataset to an xarray Dataset using the `to_xarray` method.
+            2. Applies data masking by multiplying each data variable by the `data_mask` attribute.
+            3. Sets the `_FillValue` attribute of each data variable to 0.
+            4. Configures compression options using the `create_encoding_dict` function. By default, "lzf" compression is applied,
+               but you can customize it by providing additional compression options in the `encoding_dict` argument.
+            5. Saves the modified dataset to the specified NetCDF file at the given path.
+        """
+        xarray_ds = self.to_xarray()
+        # writes mask
+        for key in list(xarray_ds.keys()):
+            # Set fill value of "0": might be unsuitable for some layers?
+            xarray_ds[key].data = xarray_ds[key].data * self.data_mask
+            xarray_ds[key].attrs['_FillValue'] = 0
+        # Compression type can be set here, e.g. encoding_dict={"compression": "gzip", "compression_opts": 4}
+        # works well with gzip, "lzw" is fast but causes issues - so please avoid
+        encoding = create_encoding_dict(xarray_ds, encoding_dict={"compression": "gzip", "compression_opts": 2})
+        xarray_ds.to_netcdf(path, engine='h5netcdf', encoding=encoding)
+
 
     def bounds(self, crs=None) -> Polygon:
         if crs is None:
@@ -171,4 +189,21 @@ def safe_download(img, out_path, **kwargs):
         # TODO: Debug Log Message
     img.download(tmp_path, **kwargs)
     tmp_path.rename(out_path)
+
+
+def create_encoding_dict(xr_dataset, encoding_dict={"compression": "gzip", "compression_opts": 2}):
+    # create empty dict
+    encoding = {}
+    # iterate over each layer
+    for dataset_name in xr_dataset.data_vars.variables.keys():
+        layer_encoding = xr_dataset[dataset_name].encoding.copy()
+        subset_dict = {}
+        # keep only necessary keys
+        for key in ['grid_mapping']:
+            subset_dict[key] = layer_encoding[key]
+        # save to each sub dataset
+        subset_dict.update(encoding_dict)
+        encoding[dataset_name] = subset_dict
+    return encoding
+
 

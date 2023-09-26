@@ -9,7 +9,6 @@
 Usecase 2 Training Script
 """
 import argparse
-import re
 import subprocess
 import sys
 from datetime import datetime
@@ -46,6 +45,10 @@ parser.add_argument('-r', '--resume', default='',
                          'checkpoint of that run, or a direct path to a checkpoint to be loaded.'
                          'Overrides the resume option in the config file if given.'
                     )
+parser.add_argument('-wp', '--wandb_project', default='RTS Sentinel2',
+                    help='Set a project name for weights and biases')
+parser.add_argument('-wn', '--wandb_name', default=None,
+                    help='Set a run name for weights and biases')
 
 
 class Engine:
@@ -138,9 +141,8 @@ class Engine:
       self.checkpoints = self.log_dir / 'checkpoints'
       self.checkpoints.mkdir()
 
-      # Tensorboard initialization
-      # TODO: unhardcode
-      wandb.init(project='RTS Sentinel2', config=self.config)
+      # Weights and Biases initialization
+      wandb.init(project=args.wandb_project, name=args.wandb_name, config=self.config)
 
   def run(self):
       for phase in self.config['schedule']:

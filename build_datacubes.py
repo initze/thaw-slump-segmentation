@@ -52,7 +52,7 @@ def build_planet_cube(planet_file: Path, out_dir: Path):
 
     scene = data.PlanetScope.build_scene(planet_file)
     # label loading
-    if args.nolabel:
+    if not args.nolabel:
         label_files = list(planet_file.parent.glob('*.shp'))
         if len(label_files) == 1:
           labels = gpd.read_file(label_files[0])

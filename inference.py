@@ -94,8 +94,10 @@ def do_inference(tile_path, model, args, config, dev, log_path=None):
 
     output_directory.mkdir(exist_ok=True, parents=True)
 
+    # file check, check for suffix and if exists
+    file_path = (DATA_ROOT / f'{tile_path}.nc').as_posix()
     # TODO: Overlap mode
-    data = NCDataset(tile_path, config)
+    data = NCDataset(file_path, config)
     loader = DataLoader(data, batch_size=config['batch_size'], num_workers=1, pin_memory=True)
 
     result = Compositor()
@@ -113,9 +115,9 @@ def do_inference(tile_path, model, args, config, dev, log_path=None):
     result = result.compose()
     nodata = nodata.compose() > 0.5
 
-    input_nc = rioxarray.open_rasterio(tile_path)
+    input_nc = rioxarray.open_rasterio(file_path)
     profile = {
-        'driver': 'GTiff',
+        'driver': 'COG',
         'dtype': np.float32,
         'width': result.shape[1],
         'height': result.shape[0],

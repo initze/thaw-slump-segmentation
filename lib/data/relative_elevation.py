@@ -12,18 +12,18 @@ class RelativeElevation(EETileSource):
     dem = ee.Image("UMN/PGC/ArcticDEM/V3/2m_mosaic")
     conv = dem.convolve(ee.Kernel.circle(self.kernel_size, 'meters'))
     diff = (dem
-            .subtract(conv)
-            .add(ee.Image.constant(self.offset))
-            .multiply(ee.Image.constant(self.factor))
-            .toInt16())
+            .subtract(conv))
+            #.add(ee.Image.constant(self.offset))
+            #.multiply(ee.Image.constant(self.factor))
+            #.toInt16())
     return diff
 
   def get_dtype(self):
-    return 'int16'
+    return 'float32'
 
   def __repr__(self):
     return f'RelativeElevation(kernel_size={self.kernel_size}, offset={self.offset}, factor={self.factor})'
 
   @staticmethod
   def normalize(tile):
-    return tile / 30000
+    return (np.clip(tile, -100, 100)+100) / 200

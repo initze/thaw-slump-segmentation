@@ -14,4 +14,5 @@ class AbsoluteElevation(EETileSource):
 
   @staticmethod
   def normalize(tile):
-    return tile / 30000
+    max_val = 10000
+    return np.clip((tile / max_val), 0, 1)

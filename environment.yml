@@ -16,6 +16,7 @@ dependencies:
   - matplotlib=3.2.2
   - numpy=1.18.5
   - numpy-base=1.18.5
+  - opencv=4.8.1
   - pandas=1.0.5
   - pillow=9.4
   - pip=20.1.1
@@ -35,5 +36,6 @@ dependencies:
   - timm=0.4.12
   - wandb=0.15.3
   - xarray=2023.4.2
+  - scikit-image
   - pip:
     - torchsummary=1.5.1

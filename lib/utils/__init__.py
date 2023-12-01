@@ -5,3 +5,4 @@
 
 from .plot_info import *
 from .logging import init_logging, get_logger, log_run
+from .images import extract_patches, Compositor, extract_contours

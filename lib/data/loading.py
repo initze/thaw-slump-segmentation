@@ -11,7 +11,6 @@ from math import ceil
 from einops import rearrange
 from tqdm import tqdm
 from pathlib import Path
-from skimage.measure import find_contours
 from .base import _LAYER_REGISTRY
 
 
@@ -79,7 +78,7 @@ class NCDataset(Dataset):
     }
     tile = {k: self.data[k][:, y0:y1, x0:x1].fillna(0).values for k in self.data_sources}
     tile = {k: _LAYER_REGISTRY[k].normalize(v) for k, v in tile.items()}
-    
+
     if 'Mask' in tile:
       return (
         np.concatenate([tile[k] for k in tile if k != 'Mask'], axis=0),
@@ -94,6 +93,19 @@ class NCDataset(Dataset):
 
   def __len__(self):
     return self.H_tile * self.W_tile
+
+
+def single_tile_loader(tile_path, config):
+  data = NCDataset(tile_path, config)
+
+  return DataLoader(
+    all_data,
+    shuffle = False,
+    batch_size = config['batch_size'],
+    num_workers=config['num_workers'],
+    persistent_workers=True,
+    pin_memory=True
+  )
 
 
 def get_loader(config):

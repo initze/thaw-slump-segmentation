@@ -12,7 +12,7 @@ class RelativeElevation(EETileSource):
     dem = ee.Image("UMN/PGC/ArcticDEM/V3/2m_mosaic")
     conv = dem.convolve(ee.Kernel.circle(self.kernel_size, 'meters'))
     diff = (dem
-            .subtract(conv))
+            .subtract(conv)).toFloat()
             #.add(ee.Image.constant(self.offset))
             #.multiply(ee.Image.constant(self.factor))
             #.toInt16())

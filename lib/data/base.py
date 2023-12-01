@@ -49,6 +49,7 @@ class EETileSource(TileSource):
             )
 
         data = rioxarray.open_rasterio(_cache_path)
+        data = self.replace_zeros(data)
         data = data.isel(band=slice(0, -1))
         data = data.rename(band=f'{class_name(self)}_band')
         return data
@@ -56,11 +57,13 @@ class EETileSource(TileSource):
     @abstractmethod
     def get_ee_image(self):
         ...
-
     @abstractmethod
     def get_dtype(self):
         ...
 
+    @staticmethod
+    def replace_zeros(data):
+        return data
 
 class Scene:
     """
@@ -128,7 +131,7 @@ class Scene:
         for key in list(xarray_ds.keys()):
             # Set fill value of "0": might be unsuitable for some layers?
             xarray_ds[key].data = xarray_ds[key].data * self.data_mask
-            xarray_ds[key].attrs['_FillValue'] = 0
+            #xarray_ds[key].attrs['_FillValue'] = 0
         # Compression type can be set here, e.g. encoding_dict={"compression": "gzip", "compression_opts": 4}
         # works well with gzip, "lzw" is fast but causes issues - so please avoid
         if compression:

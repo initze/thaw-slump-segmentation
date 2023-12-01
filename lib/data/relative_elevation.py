@@ -26,4 +26,4 @@ class RelativeElevation(EETileSource):
 
   @staticmethod
   def normalize(tile):
-    return (np.clip(tile, -100, 100)+100) / 200
+    return tile#(np.clip(tile, -100, 100)+100) / 200

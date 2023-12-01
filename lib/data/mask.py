@@ -13,14 +13,17 @@ class Mask(TileSource):
     self.bounds = bounds
 
   def get_raster_data(self, scene) -> xr.DataArray:
-    mask = rasterize(self.geometries.to_crs(scene.crs),
-                     out_shape=scene.size, transform=scene.transform)
-    if self.bounds is not None:
-      is_valid = rasterize(self.bounds.to_crs(scene.crs),
-                           out_shape=scene.size, transform=scene.transform)
+    if len(self.geometries) > 0:
+      mask = rasterize(self.geometries.to_crs(scene.crs),
+                       out_shape=scene.size, transform=scene.transform)
+      if self.bounds is not None:
+        is_valid = rasterize(self.bounds.to_crs(scene.crs),
+                             out_shape=scene.size, transform=scene.transform)
 
-      # Set unlabelled regions to mask=255
-      mask = np.where(is_valid, mask, 255)
+        # Set unlabelled regions to mask=255
+        mask = np.where(is_valid, mask, 255)
+    else:
+      mask = np.zeros(scene.size, np.uint8)
 
     mask = rearrange(mask, 'H W -> 1 H W')
 

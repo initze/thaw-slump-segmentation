@@ -35,6 +35,7 @@ parser.add_argument("--mode", default='planet',
                              's2_unlabelled', 's2_unlabelled_4w', 'qinghai', 's2_ts_inference'],
         help="The type of data cubes to build.")
 parser.add_argument("--no_compression", action='store_false', help="Set flag to do save datacubes in uncompressed format: slightly faster but much larger file sizes")
+parser.add_argument("--nolabel", action='store_true', help="Set flag to do preprocessing without label file, e.g. for inference only")
 
 
 def complete_scene(scene, mask_data=False):
@@ -51,12 +52,13 @@ def build_planet_cube(planet_file: Path, out_dir: Path):
 
     scene = data.PlanetScope.build_scene(planet_file)
     # label loading
-    label_files = list(planet_file.parent.glob('*.shp'))
-    if len(label_files) == 1:
-      labels = gpd.read_file(label_files[0])
-      scene.add_layer(data.Mask(labels.geometry))
-    else:
-      print('Skipped label loading. No valid vector file available!\nBuilding datacube without label!')
+    if not args.nolabel:
+        label_files = list(planet_file.parent.glob('*.shp'))
+        if len(label_files) == 1:
+          labels = gpd.read_file(label_files[0])
+          scene.add_layer(data.Mask(labels.geometry))
+        else:
+          print('Skipped label loading. No valid vector file available!\nBuilding datacube without label!')
 
     complete_scene(scene)
     # Create some masking here
@@ -353,6 +355,10 @@ if __name__ == "__main__":
     logger.info('################################')
     logger.info('# Starting Building Data Cubes #')
     logger.info('################################')
+
+    if args.nolabel:
+        print('Datacubes will be created without labels/mask. Please use only for inference')
+
 
     if args.mode == 'planet':
         planet_files = list((DATA_ROOT / 'input').glob('*/*_SR*.tif'))

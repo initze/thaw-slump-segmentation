@@ -15,4 +15,4 @@ class Slope(EETileSource):
 
   @staticmethod
   def normalize(tile):
-    return tile / 90
+    return tile / 90.

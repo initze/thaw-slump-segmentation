@@ -1,4 +1,5 @@
 import ee
+import numpy as np
 from .base import EETileSource
 
 
@@ -15,4 +16,4 @@ class Hillshade(EETileSource):
   @staticmethod
   def normalize(tile):
     #max_val = 10000
-    return tile
+    return tile.astype(np.float32) / 255.

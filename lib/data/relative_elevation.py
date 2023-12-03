@@ -1,4 +1,5 @@
 import ee
+import numpy as np
 from .base import EETileSource
 
 
@@ -26,4 +27,4 @@ class RelativeElevation(EETileSource):
 
   @staticmethod
   def normalize(tile):
-    return tile#(np.clip(tile, -100, 100)+100) / 200
+    return (np.clip(tile, -100, 100)+100) / 200

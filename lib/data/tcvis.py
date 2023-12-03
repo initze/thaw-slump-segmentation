@@ -21,8 +21,8 @@ class TCVIS(EETileSource):
 
   @staticmethod
   def normalize(tile):
-    #tile =
-    return replace_single_band_zeros(tile, 0, 1)
+    tile = replace_single_band_zeros(tile, 0, 1)
+    return tile.astype(np.float32) / 255.0
     #return tile / 255
 
 def replace_single_band_zeros(inarray, value_to_replace=0, replace_with=1):

@@ -61,4 +61,4 @@ class PlanetScope(TileSource):
 
   @staticmethod
   def normalize(tile):
-    return tile / 3000
+    return tile / 5000

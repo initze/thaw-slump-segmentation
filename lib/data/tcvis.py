@@ -26,7 +26,7 @@ class TCVIS(EETileSource):
     #return tile / 255
 
 def replace_single_band_zeros(inarray, value_to_replace=0, replace_with=1):
-  print(inarray.shape)
+  #print(inarray.shape)
   outarray = inarray.copy()
   # get locations of change value
   zero_mask = (inarray == value_to_replace)

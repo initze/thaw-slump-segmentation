@@ -184,6 +184,7 @@ class Engine:
           ds_config['data_root'] = self.DATA_ROOT
           ds_config['sampling_mode'] = self.config['sampling_mode']#'deterministic'
           ds_config['tile_size'] = self.config['tile_size']
+          print(self.config['datasets'][name])
           self.dataset_cache[name] = get_loader(ds_config)
 
       return self.dataset_cache[name]

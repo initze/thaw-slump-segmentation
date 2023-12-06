@@ -9,11 +9,12 @@ from .base import TileSource
 
 class Mask(TileSource):
   def __init__(self, geometries: gpd.GeoSeries, bounds: gpd.GeoSeries=None):
-    self.geometries = geometries
+    self.geometries = geometries.dropna()
     self.bounds = bounds
-
+    # check for
+    self.geometries_valid = (len(self.geometries) > 0) and (self.geometries is not None)
   def get_raster_data(self, scene) -> xr.DataArray:
-    if len(self.geometries) > 0:
+    if self.geometries_valid:
       mask = rasterize(self.geometries.to_crs(scene.crs),
                        out_shape=scene.size, transform=scene.transform)
       if self.bounds is not None:
@@ -23,6 +24,7 @@ class Mask(TileSource):
         # Set unlabelled regions to mask=255
         mask = np.where(is_valid, mask, 255)
     else:
+      print('No Geometry available, writing empty mask')
       mask = np.zeros(scene.size, np.uint8)
 
     mask = rearrange(mask, 'H W -> 1 H W')
@@ -47,3 +49,8 @@ class Mask(TileSource):
   @staticmethod
   def normalize(tile):
     return tile
+
+  @staticmethod
+  def check_geometry_valid(geometry):
+    geometry_is_empty = (len(gdf_empty)) == 0
+    geometry_is_invalid = (len(gdf_empty)) == all(gdf.geometry == None)

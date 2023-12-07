@@ -9,6 +9,8 @@ import geedim as gd
 from shapely.geometry import box, Polygon
 from shapely.ops import transform
 from pyproj import Transformer
+import geemap
+ee.Initialize(opt_url='https://earthengine-highvolume.googleapis.com')
 
 _root_path: Path = Path('data/')
 
@@ -39,15 +41,14 @@ class EETileSource(TileSource):
         _cache_path.parent.mkdir(parents=True, exist_ok=True)
 
         if not _cache_path.exists():
-            gd.Initialize(opt_url='https://earthengine-highvolume.googleapis.com')
             img = gd.MaskedImage(self.get_ee_image())
-            safe_download(img, _cache_path,
+            safe_download(img.ee_image, _cache_path,
                 region=scene.ee_bounds().getInfo(),
                 crs=str(scene.crs),
                 crs_transform=scene.transform,
                 shape=scene.size
             )
-
+        # TODO: sth wrong here
         data = rioxarray.open_rasterio(_cache_path)
         data = self.replace_zeros(data)
         data = data.isel(band=slice(0, -1))
@@ -193,7 +194,9 @@ def safe_download(img, out_path, **kwargs):
         tmp_path.unlink()
         print(f'Removing incomplete download at {tmp_path}')
         # TODO: Debug Log Message
-    img.download(tmp_path, **kwargs)
+    #img.download(tmp_path, **kwargs)
+    geemap.download_ee_image(image=img, filename=tmp_path, **kwargs)
+
     tmp_path.rename(out_path)
 
 

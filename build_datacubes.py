@@ -38,10 +38,10 @@ parser.add_argument("--no_compression", action='store_false', help="Set flag to 
 
 
 def complete_scene(scene, mask_data=False):
-    scene.add_layer(data.RelativeElevation())
     scene.add_layer(data.AbsoluteElevation())
     scene.add_layer(data.Slope())
     scene.add_layer(data.Hillshade())
+    scene.add_layer(data.RelativeElevation())
     scene.add_layer(data.TCVIS())
 
 

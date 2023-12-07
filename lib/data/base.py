@@ -39,7 +39,7 @@ class EETileSource(TileSource):
         _cache_path.parent.mkdir(parents=True, exist_ok=True)
 
         if not _cache_path.exists():
-            gd.Initialize()
+            gd.Initialize(opt_url='https://earthengine-highvolume.googleapis.com')
             img = gd.MaskedImage(self.get_ee_image())
             safe_download(img, _cache_path,
                 region=scene.ee_bounds().getInfo(),

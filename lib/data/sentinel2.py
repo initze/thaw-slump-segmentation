@@ -39,7 +39,7 @@ class Sentinel2(TileSource):
   @staticmethod
   def download_tile(out_path, s2sceneid, bounds=None):
     if not out_path.exists():
-      gd.Initialize()
+      gd.Initialize(opt_url='https://earthengine-highvolume.googleapis.com')
       img = ee.Image(s2sceneid)
       img = img.select(['B1','B2','B3','B4','B5','B6','B7','B8','B8A','B9','B10','B11','B12'])
       img = img.multiply(255 / 3000)
@@ -54,7 +54,7 @@ class Sentinel2(TileSource):
 
   @staticmethod
   def build_scene(bounds, crs, start_date, end_date, prefix, min_coverage=90, max_cloudy_pixels=20):
-    gd.Initialize()
+    gd.Initialize(opt_url='https://earthengine-highvolume.googleapis.com')
     s2 = ee.ImageCollection("COPERNICUS/S2_HARMONIZED")
     s2 = gd.MaskedCollection(s2)
 
@@ -94,7 +94,7 @@ class Sentinel2(TileSource):
 
   @staticmethod
   def build_scenes(bounds, crs, start_date, end_date, prefix, min_coverage=90, max_cloudy_pixels=20):
-    gd.Initialize()
+    gd.Initialize(opt_url='https://earthengine-highvolume.googleapis.com')
     s2 = ee.ImageCollection("COPERNICUS/S2_HARMONIZED")
     s2 = gd.MaskedCollection(s2)
 
@@ -135,7 +135,7 @@ class Sentinel2(TileSource):
   @staticmethod
   def scene_for_tile(tile_id, start_date, end_date,
                      max_cloudy_pixels=20):
-    gd.Initialize()
+    gd.Initialize(opt_url='https://earthengine-highvolume.googleapis.com')
     s2 = ee.ImageCollection("COPERNICUS/S2_HARMONIZED")
     s2 = s2.filterMetadata('MGRS_TILE', 'equals', tile_id)
     s2 = s2.filterDate(start_date, end_date)
@@ -163,7 +163,7 @@ class Sentinel2(TileSource):
 
   @staticmethod
   def scenes_for_tile(tile_id, start_date, end_date, max_cloudy_pixels=20):
-    gd.Initialize()
+    gd.Initialize(opt_url='https://earthengine-highvolume.googleapis.com')
     s2 = ee.ImageCollection("COPERNICUS/S2_HARMONIZED")
     s2 = s2.filterMetadata('MGRS_TILE', 'equals', tile_id)
     s2 = gd.MaskedCollection(s2)

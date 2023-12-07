@@ -28,7 +28,7 @@ class Sentinel1(TileSource):
   @staticmethod
   def download_tile(out_path, s1sceneid, bounds=None, crs=None):
     if not out_path.exists():
-      gd.Initialize()
+      gd.Initialize(opt_url='https://earthengine-highvolume.googleapis.com')
       img = ee.Image(s1sceneid)
       img = img.select(['HH', 'HV'])
       img = gd.MaskedImage(img)
@@ -40,7 +40,7 @@ class Sentinel1(TileSource):
 
   @staticmethod
   def build_scene(bounds, crs, start_date, end_date, prefix, min_coverage=90):
-    gd.Initialize()
+    gd.Initialize(opt_url='https://earthengine-highvolume.googleapis.com')
     s1 = ee.ImageCollection("COPERNICUS/S1_GRD")
     s1 = s1.filter(ee.Filter.eq('instrumentMode', 'EW'))
     s1 = s1.filter(ee.Filter.eq('orbitProperties_pass', 'DESCENDING'))

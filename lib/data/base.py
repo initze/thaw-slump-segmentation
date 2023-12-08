@@ -88,13 +88,15 @@ class Scene:
     (2) More to come :)
 
     """
-    def __init__(self, id, crs, transform, size, layers=[], data_mask=None):
+    def __init__(self, id, crs, transform, size, layers=[], data_mask=None, red_band=None, nir_band=None):
         self.id = id
         self.crs = crs
         self.transform = transform
         self.size = size
         self.layers = layers
         self.data_mask = data_mask
+        self.red_band = red_band
+        self.nir_band = nir_band
 
     def add_layer(self, source: TileSource):
         self.layers.append(source)

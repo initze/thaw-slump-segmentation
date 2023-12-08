@@ -38,6 +38,7 @@ parser.add_argument("--no_compression", action='store_false', help="Set flag to 
 
 
 def complete_scene(scene, mask_data=False):
+    scene.add_layer(data.NDVI(red_band=3, nir_band=4))
     scene.add_layer(data.AbsoluteElevation())
     scene.add_layer(data.Slope())
     scene.add_layer(data.Hillshade())
@@ -65,7 +66,7 @@ def build_planet_cube(planet_file: Path, out_dir: Path):
       scene.add_layer(data.Mask(geometry))
     else:
       print('Skipped label loading. No valid vector file available!\nBuilding datacube without label!')
-
+    
     complete_scene(scene)
     # Create some masking here
     out_dir.mkdir(exist_ok=True, parents=True)

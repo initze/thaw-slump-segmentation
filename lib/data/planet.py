@@ -1,9 +1,11 @@
 from typing import Union
 from pathlib import Path
+import numpy as np
 import xarray as xr
 import rasterio as rio
 import rioxarray
 from pyproj import Proj
+
 
 from .base import TileSource, Scene, cache_path
 from lib.data_pre_processing import udm
@@ -53,7 +55,9 @@ class PlanetScope(TileSource):
       transform=ds.rio.transform(),
       size=ds.shape[-2:],
       layers=[PlanetScope(tile_path)],
-      data_mask=data_mask)
+      data_mask=data_mask,
+      red_band = 3,
+      nir_band = 4)
     return scene
 
   def __repr__(self):

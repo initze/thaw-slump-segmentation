@@ -21,17 +21,18 @@ class Sentinel2(TileSource):
       Sentinel2.download_tile(_cache_path, self.s2sceneid, scene.ee_bounds(crs), crs=crs)
 
     data = rioxarray.open_rasterio(_cache_path)
-    data = data.isel(band=[0,1,2,3,4,5,6,7,8,9,10,11,12])
+    #data = data.isel(band=[0,1,2,3,4,5,6,7,8,9,10,11,12])
+    data = data.isel(band=[0,1,2,3,4,5,6,7,8,9,10])
     # We could transfer the band names as coordinate labels here
     # But other tools don't seem to be compatible with that (i.e. QGIS)
     # data = data.assign_coords({'band': list(data.long_name[:13])})
 
-    data = data / 255
+    data = data# / 255
     data.encoding.update({
-      'chunksizes': (13, 128, 128),
-      'scale_factor': 1/255,
+      'chunksizes': (11, 128, 128),
+      'scale_factor': 1,#1/255,
       'offset': 0,
-      'dtype': 'uint8',
+      'dtype': 'uint16',#'uint8',
     })
     data.attrs['date'] = str(pd.to_datetime(scene.id.split('_')[-3]))
     return data
@@ -39,22 +40,24 @@ class Sentinel2(TileSource):
   @staticmethod
   def download_tile(out_path, s2sceneid, bounds=None):
     if not out_path.exists():
-      gd.Initialize()
-      img = ee.Image(s2sceneid)
-      img = img.select(['B1','B2','B3','B4','B5','B6','B7','B8','B8A','B9','B10','B11','B12'])
-      img = img.multiply(255 / 3000)
-      img = gd.MaskedImage(img)
+      gd.Initialize(opt_url='https://earthengine-highvolume.googleapis.com')
+      #img = ee.Image(s2sceneid)
+      im = ee.Image(s2sceneid).select(['B2','B3','B4','B5','B6','B7','B8','B8A','B11','B12'])
+      img = gd.MaskedImage(im).ee_image
+      #img = gd.MaskedImage.from_id(s2sceneid)
+      #img = img.select(['B2','B3','B4','B5','B6','B7','B8','B8A','B11','B12'])
+      #img = img.multiply(255 / 3000)
       safe_download(img, out_path,
         region=bounds,
         scale=10,
-        dtype='uint8',
+        dtype='uint16',
         max_tile_size=2,
         max_tile_dim=2000,
       )
 
   @staticmethod
   def build_scene(bounds, crs, start_date, end_date, prefix, min_coverage=90, max_cloudy_pixels=20):
-    gd.Initialize()
+    gd.Initialize(opt_url='https://earthengine-highvolume.googleapis.com')
     s2 = ee.ImageCollection("COPERNICUS/S2_HARMONIZED")
     s2 = gd.MaskedCollection(s2)
 
@@ -89,12 +92,14 @@ class Sentinel2(TileSource):
       crs=ds.rio.crs,
       transform=ds.rio.transform(),
       size=ds.shape[-2:],
-      layers=[Sentinel2(s2_id)])
+      layers=[Sentinel2(s2_id)],
+      red_band = 3,
+      nir_band = 5)
     return scene
 
   @staticmethod
   def build_scenes(bounds, crs, start_date, end_date, prefix, min_coverage=90, max_cloudy_pixels=20):
-    gd.Initialize()
+    gd.Initialize(opt_url='https://earthengine-highvolume.googleapis.com')
     s2 = ee.ImageCollection("COPERNICUS/S2_HARMONIZED")
     s2 = gd.MaskedCollection(s2)
 
@@ -135,7 +140,7 @@ class Sentinel2(TileSource):
   @staticmethod
   def scene_for_tile(tile_id, start_date, end_date,
                      max_cloudy_pixels=20):
-    gd.Initialize()
+    gd.Initialize(opt_url='https://earthengine-highvolume.googleapis.com')
     s2 = ee.ImageCollection("COPERNICUS/S2_HARMONIZED")
     s2 = s2.filterMetadata('MGRS_TILE', 'equals', tile_id)
     s2 = s2.filterDate(start_date, end_date)
@@ -163,7 +168,7 @@ class Sentinel2(TileSource):
 
   @staticmethod
   def scenes_for_tile(tile_id, start_date, end_date, max_cloudy_pixels=20):
-    gd.Initialize()
+    gd.Initialize(opt_url='https://earthengine-highvolume.googleapis.com')
     s2 = ee.ImageCollection("COPERNICUS/S2_HARMONIZED")
     s2 = s2.filterMetadata('MGRS_TILE', 'equals', tile_id)
     s2 = gd.MaskedCollection(s2)

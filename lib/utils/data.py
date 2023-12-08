@@ -9,6 +9,7 @@ import h5py
 from torch.utils.data import Dataset
 from pathlib import Path
 import albumentations as A
+from torchvision.transforms import v2
 
 
 class PTDataset(Dataset):
@@ -110,12 +111,27 @@ class Augment(Dataset):
         else:
             return base
         # scale data
-        transform = A.Compose(augment_list)
+        #transform = A.Compose(augment_list, is_check_shapes=False)
+        transform = v2.Compose(
+            [
+                # v2.ToImage(),
+                v2.RandomHorizontalFlip(p=0.5),
+                v2.RandomVerticalFlip(p=0.5),
+                v2.GaussianBlur(kernel_size=5),
+                v2.ColorJitter(),
+                v2.ToDtype(torch.float32),
+            ]
+        )
+        print('Inshape:', base[0].shape)
+        #augmented = transform(image=np.array(base[0].permute(1,2,0)), mask=np.array(base[1]))
+        #data = torch.from_numpy(np.ascontiguousarray(augmented['image']).transpose(2,0,1).copy())
+        #mask = torch.from_numpy(np.ascontiguousarray(augmented['mask']).copy())
 
-        augmented = transform(image=np.array(base[0].permute(1,2,0)), mask=np.array(base[1]))
-        data = torch.from_numpy(np.ascontiguousarray(augmented['image']).transpose(2,0,1).copy())
-        mask = torch.from_numpy(np.ascontiguousarray(augmented['mask']).copy())
-
+        augmented = transform(image=np.array(base[0]), mask=np.array(base[1]))
+        #data = torch.from_numpy(np.ascontiguousarray(augmented['image']).copy())
+        data = transform(base[0])
+        #mask = torch.from_numpy(np.ascontiguousarray(augmented['mask']).copy())
+        print('outshape:', data.shape)
         return (data, mask)
 
     def _augmented_idx_and_ops(self, idx):

@@ -24,7 +24,8 @@ class DataSources:
     TCVIS = DataSource('tcvis', 3, [255, 255, 255])
     RelativeElevation = DataSource('relative_elevation', 1, [30000])
     Slope = DataSource('slope', 1, [90])
-    LIST = list(sorted([Planet, NDVI, TCVIS, RelativeElevation, Slope, Sentinel2]))
+    Hillshade = DataSource('hillshade', 1, [255])
+    LIST = list(sorted([Planet, NDVI, TCVIS, RelativeElevation, Slope, Hillshade, Sentinel2]))
     NAME2SOURCE = {src.name: src for src in LIST}
 
     def __init__(self, sources):

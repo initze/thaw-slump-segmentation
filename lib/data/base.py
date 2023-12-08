@@ -9,6 +9,8 @@ import geedim as gd
 from shapely.geometry import box, Polygon
 from shapely.ops import transform
 from pyproj import Transformer
+import geemap
+ee.Initialize(opt_url='https://earthengine-highvolume.googleapis.com')
 
 _root_path: Path = Path('data/')
 
@@ -39,16 +41,16 @@ class EETileSource(TileSource):
         _cache_path.parent.mkdir(parents=True, exist_ok=True)
 
         if not _cache_path.exists():
-            gd.Initialize()
             img = gd.MaskedImage(self.get_ee_image())
-            safe_download(img, _cache_path,
+            safe_download(img.ee_image, _cache_path,
                 region=scene.ee_bounds().getInfo(),
                 crs=str(scene.crs),
                 crs_transform=scene.transform,
                 shape=scene.size
             )
-
+        # TODO: sth wrong here
         data = rioxarray.open_rasterio(_cache_path)
+        data = self.replace_zeros(data)
         data = data.isel(band=slice(0, -1))
         data = data.rename(band=f'{class_name(self)}_band')
         return data
@@ -56,11 +58,13 @@ class EETileSource(TileSource):
     @abstractmethod
     def get_ee_image(self):
         ...
-
     @abstractmethod
     def get_dtype(self):
         ...
 
+    @staticmethod
+    def replace_zeros(data):
+        return data
 
 class Scene:
     """
@@ -84,13 +88,15 @@ class Scene:
     (2) More to come :)
 
     """
-    def __init__(self, id, crs, transform, size, layers=[], data_mask=None):
+    def __init__(self, id, crs, transform, size, layers=[], data_mask=None, red_band=None, nir_band=None):
         self.id = id
         self.crs = crs
         self.transform = transform
         self.size = size
         self.layers = layers
         self.data_mask = data_mask
+        self.red_band = red_band
+        self.nir_band = nir_band
 
     def add_layer(self, source: TileSource):
         self.layers.append(source)
@@ -127,8 +133,9 @@ class Scene:
         # writes mask
         for key in list(xarray_ds.keys()):
             # Set fill value of "0": might be unsuitable for some layers?
-            xarray_ds[key].data = xarray_ds[key].data * self.data_mask
-            xarray_ds[key].attrs['_FillValue'] = 0
+            if self.data_mask is not None:
+                xarray_ds[key].data = xarray_ds[key].data * self.data_mask
+            #xarray_ds[key].attrs['_FillValue'] = 0
         # Compression type can be set here, e.g. encoding_dict={"compression": "gzip", "compression_opts": 4}
         # works well with gzip, "lzw" is fast but causes issues - so please avoid
         if compression:
@@ -190,7 +197,8 @@ def safe_download(img, out_path, **kwargs):
         tmp_path.unlink()
         print(f'Removing incomplete download at {tmp_path}')
         # TODO: Debug Log Message
-    img.download(tmp_path, **kwargs)
+    #img.download(filename=tmp_path, **kwargs)
+    geemap.download_ee_image(image=img, filename=tmp_path, **kwargs)
     tmp_path.rename(out_path)
 
 

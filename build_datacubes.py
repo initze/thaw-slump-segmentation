@@ -35,13 +35,14 @@ parser.add_argument("--mode", default='planet',
                              's2_unlabelled', 's2_unlabelled_4w', 'qinghai', 's2_ts_inference'],
         help="The type of data cubes to build.")
 parser.add_argument("--no_compression", action='store_false', help="Set flag to do save datacubes in uncompressed format: slightly faster but much larger file sizes")
-parser.add_argument("--nolabel", action='store_true', help="Set flag to do preprocessing without label file, e.g. for inference only")
 
 
 def complete_scene(scene, mask_data=False):
-    # scene.add_layer(data.RelativeElevation())
+    scene.add_layer(data.NDVI(red_band=3, nir_band=4))
     scene.add_layer(data.AbsoluteElevation())
     scene.add_layer(data.Slope())
+    scene.add_layer(data.Hillshade())
+    scene.add_layer(data.RelativeElevation())
     scene.add_layer(data.TCVIS())
 
 
@@ -52,14 +53,20 @@ def build_planet_cube(planet_file: Path, out_dir: Path):
 
     scene = data.PlanetScope.build_scene(planet_file)
     # label loading
-    if not args.nolabel:
-        label_files = list(planet_file.parent.glob('*.shp'))
-        if len(label_files) == 1:
-          labels = gpd.read_file(label_files[0])
-          scene.add_layer(data.Mask(labels.geometry))
-        else:
-          print('Skipped label loading. No valid vector file available!\nBuilding datacube without label!')
-
+    label_files = list(planet_file.parent.glob('*.shp'))
+    # sanity check if mask is available
+    if len(label_files) == 1:
+      labels = gpd.read_file(label_files[0])
+      # check if it has geometries
+      try:
+        geometry = labels.geometry
+      except:
+        geometry = None
+      # make exception if labes are empty
+      scene.add_layer(data.Mask(geometry))
+    else:
+      print('Skipped label loading. No valid vector file available!\nBuilding datacube without label!')
+    
     complete_scene(scene)
     # Create some masking here
     out_dir.mkdir(exist_ok=True, parents=True)
@@ -89,9 +96,11 @@ def build_sentinel1_cubes(site_poly, image_id, image_date, tiles, targets, out_d
 
 
 def build_sentinel2_cubes(site_poly, image_id, image_date, tiles, targets, out_dir: Path):
+    """
     if any(out_dir.glob(f'{image_id}*')):
       print(f'Skipping {image_id} as it has already been built')
       return
+    """
     data.init_data_paths(out_dir.parent)
 
     start_date = image_date - pd.to_timedelta('14 days')
@@ -107,6 +116,11 @@ def build_sentinel2_cubes(site_poly, image_id, image_date, tiles, targets, out_d
     # TODO: Re-add this for git push
     # complete_scene(scene)
     scene.add_layer(data.Mask(targets.geometry, tiles.geometry))
+    scene.add_layer(data.NDVI(red_band=3, nir_band=5))
+    scene.add_layer(data.AbsoluteElevation())
+    scene.add_layer(data.Slope())
+    scene.add_layer(data.Hillshade())
+    scene.add_layer(data.TCVIS())
     scene.save(out_dir / f'{scene.id}.nc', compression=args.no_compression)
 
 
@@ -283,14 +297,22 @@ def build_s2_unlabelled_multi(tile_id, out_dir: Path):
     combined.to_netcdf(out_dir / f'{tile_id}_{year}.nc', engine='h5netcdf')
 
 
-def load_annotations(shapefile_root):
-    targets = map(gpd.read_file, shapefile_root.glob('*/TrainingLabel*.shp'))
+def load_annotations(shapefile_root, extensions=['shp', 'gpkg']):
+    #targets = map(gpd.read_file, shapefile_root.glob('*/TrainingLabel*.shp'))
+    label_files = []
+    for ext in extensions:
+      label_files.extend(shapefile_root.glob(f'TrainingLabel*.{ext}'))
+    targets = map(gpd.read_file, label_files)
     targets = pd.concat(targets).to_crs('EPSG:3995').reset_index(drop=True)
     targets['geometry'] = targets['geometry'].buffer(0)
     targets['image_date'] = pd.to_datetime(targets['image_date'])
     id2date = dict(targets[['image_id', 'image_date']].values)
 
-    scenes = map(gpd.read_file, shapefile_root.glob('*/ImageFootprints*.shp'))
+    #scenes = map(gpd.read_file, shapefile_root.glob('*/ImageFootprints*.shp'))
+    footprint_files = []
+    for ext in extensions:
+      footprint_files.extend(shapefile_root.glob(f'ImageFootprints*.{ext}'))
+    scenes = map(gpd.read_file, footprint_files)
     scenes = pd.concat(scenes).to_crs('EPSG:3995').reset_index(drop=True)
     scenes = scenes[scenes.image_id.isin(targets.image_id)]
     scenes['geometry'] = scenes['geometry'].buffer(0)
@@ -355,10 +377,6 @@ if __name__ == "__main__":
     logger.info('################################')
     logger.info('# Starting Building Data Cubes #')
     logger.info('################################')
-
-    if args.nolabel:
-        print('Datacubes will be created without labels/mask. Please use only for inference')
-
 
     if args.mode == 'planet':
         planet_files = list((DATA_ROOT / 'input').glob('*/*_SR*.tif'))

@@ -1,4 +1,5 @@
 import ee
+import numpy as np
 from .base import EETileSource
 
 
@@ -14,4 +15,6 @@ class AbsoluteElevation(EETileSource):
 
   @staticmethod
   def normalize(tile):
-    return tile / 30000
+    max_val = 3000
+    return np.clip((tile / max_val), 0, 1)
+    #return tile

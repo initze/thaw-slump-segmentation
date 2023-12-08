@@ -116,7 +116,7 @@ def build_sentinel2_cubes(site_poly, image_id, image_date, tiles, targets, out_d
     # TODO: Re-add this for git push
     # complete_scene(scene)
     scene.add_layer(data.Mask(targets.geometry, tiles.geometry))
-    #scene.add_layer(data.NDVI(red_band=3, nir_band=5))
+    scene.add_layer(data.NDVI(red_band=3, nir_band=5))
     scene.add_layer(data.AbsoluteElevation())
     scene.add_layer(data.Slope())
     scene.add_layer(data.Hillshade())

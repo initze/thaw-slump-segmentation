@@ -94,7 +94,7 @@ class Sentinel2(TileSource):
       size=ds.shape[-2:],
       layers=[Sentinel2(s2_id)],
       red_band = 3,
-      nir_band = 4)
+      nir_band = 5)
     return scene
 
   @staticmethod

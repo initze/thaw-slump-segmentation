@@ -18,12 +18,10 @@ class TCVIS(EETileSource):
     data.loc[dict(band=[1, 2, 3])] = replace_single_band_zeros(data.sel(band=[1, 2, 3]).to_numpy())
     return data
 
-
   @staticmethod
   def normalize(tile):
     tile = replace_single_band_zeros(tile, 0, 1)
     return tile.astype(np.float32) / 255.0
-    #return tile / 255
 
 def replace_single_band_zeros(inarray, value_to_replace=0, replace_with=1):
   #print(inarray.shape)

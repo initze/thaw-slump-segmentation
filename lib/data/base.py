@@ -194,9 +194,7 @@ def safe_download(img, out_path, **kwargs):
         tmp_path.unlink()
         print(f'Removing incomplete download at {tmp_path}')
         # TODO: Debug Log Message
-    #img.download(tmp_path, **kwargs)
     geemap.download_ee_image(image=img, filename=tmp_path, **kwargs)
-
     tmp_path.rename(out_path)
 
 

@@ -14,9 +14,6 @@ class RelativeElevation(EETileSource):
     conv = dem.convolve(ee.Kernel.circle(self.kernel_size, 'meters'))
     diff = (dem
             .subtract(conv)).toFloat()
-            #.add(ee.Image.constant(self.offset))
-            #.multiply(ee.Image.constant(self.factor))
-            #.toInt16())
     return diff
 
   def get_dtype(self):

@@ -133,7 +133,8 @@ class Scene:
         # writes mask
         for key in list(xarray_ds.keys()):
             # Set fill value of "0": might be unsuitable for some layers?
-            xarray_ds[key].data = xarray_ds[key].data * self.data_mask
+            if self.data_mask is not None:
+                xarray_ds[key].data = xarray_ds[key].data * self.data_mask
             #xarray_ds[key].attrs['_FillValue'] = 0
         # Compression type can be set here, e.g. encoding_dict={"compression": "gzip", "compression_opts": 4}
         # works well with gzip, "lzw" is fast but causes issues - so please avoid
@@ -196,6 +197,7 @@ def safe_download(img, out_path, **kwargs):
         tmp_path.unlink()
         print(f'Removing incomplete download at {tmp_path}')
         # TODO: Debug Log Message
+    #img.download(filename=tmp_path, **kwargs)
     geemap.download_ee_image(image=img, filename=tmp_path, **kwargs)
     tmp_path.rename(out_path)
 

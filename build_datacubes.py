@@ -290,14 +290,22 @@ def build_s2_unlabelled_multi(tile_id, out_dir: Path):
     combined.to_netcdf(out_dir / f'{tile_id}_{year}.nc', engine='h5netcdf')
 
 
-def load_annotations(shapefile_root):
-    targets = map(gpd.read_file, shapefile_root.glob('*/TrainingLabel*.shp'))
+def load_annotations(shapefile_root, extensions=['shp', 'gpkg']):
+    #targets = map(gpd.read_file, shapefile_root.glob('*/TrainingLabel*.shp'))
+    label_files = []
+    for ext in extensions:
+      label_files.extend(shapefile_root.glob(f'TrainingLabel*.{ext}'))
+    targets = map(gpd.read_file, label_files)
     targets = pd.concat(targets).to_crs('EPSG:3995').reset_index(drop=True)
     targets['geometry'] = targets['geometry'].buffer(0)
     targets['image_date'] = pd.to_datetime(targets['image_date'])
     id2date = dict(targets[['image_id', 'image_date']].values)
 
-    scenes = map(gpd.read_file, shapefile_root.glob('*/ImageFootprints*.shp'))
+    #scenes = map(gpd.read_file, shapefile_root.glob('*/ImageFootprints*.shp'))
+    footprint_files = []
+    for ext in extensions:
+      footprint_files.extend(shapefile_root.glob(f'ImageFootprints*.{ext}'))
+    scenes = map(gpd.read_file, footprint_files)
     scenes = pd.concat(scenes).to_crs('EPSG:3995').reset_index(drop=True)
     scenes = scenes[scenes.image_id.isin(targets.image_id)]
     scenes['geometry'] = scenes['geometry'].buffer(0)

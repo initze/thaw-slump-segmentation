@@ -96,9 +96,11 @@ def build_sentinel1_cubes(site_poly, image_id, image_date, tiles, targets, out_d
 
 
 def build_sentinel2_cubes(site_poly, image_id, image_date, tiles, targets, out_dir: Path):
+    """
     if any(out_dir.glob(f'{image_id}*')):
       print(f'Skipping {image_id} as it has already been built')
       return
+    """
     data.init_data_paths(out_dir.parent)
 
     start_date = image_date - pd.to_timedelta('14 days')
@@ -114,6 +116,11 @@ def build_sentinel2_cubes(site_poly, image_id, image_date, tiles, targets, out_d
     # TODO: Re-add this for git push
     # complete_scene(scene)
     scene.add_layer(data.Mask(targets.geometry, tiles.geometry))
+    #scene.add_layer(data.NDVI(red_band=3, nir_band=5))
+    scene.add_layer(data.AbsoluteElevation())
+    scene.add_layer(data.Slope())
+    scene.add_layer(data.Hillshade())
+    scene.add_layer(data.TCVIS())
     scene.save(out_dir / f'{scene.id}.nc', compression=args.no_compression)
 
 

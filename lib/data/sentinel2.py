@@ -92,7 +92,9 @@ class Sentinel2(TileSource):
       crs=ds.rio.crs,
       transform=ds.rio.transform(),
       size=ds.shape[-2:],
-      layers=[Sentinel2(s2_id)])
+      layers=[Sentinel2(s2_id)],
+      red_band = 3,
+      nir_band = 4)
     return scene
 
   @staticmethod

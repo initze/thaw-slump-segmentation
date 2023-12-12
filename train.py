@@ -124,7 +124,7 @@ class Engine:
       self.metrics = Metrics(Accuracy, Precision, Recall, F1, IoU)
 
       if args.summary:
-          from torchsummary import summary
+          from torchinfo import summary
           summary(self.model, [(self.config['model']['input_channels'], 256, 256)])
           sys.exit(0)
 
@@ -184,7 +184,7 @@ class Engine:
           ds_config['data_root'] = self.DATA_ROOT
           ds_config['sampling_mode'] = self.config['sampling_mode']#'deterministic'
           ds_config['tile_size'] = self.config['tile_size']
-          print(self.config['datasets'][name])
+          #print(self.config['datasets'][name])
           self.dataset_cache[name] = get_loader(ds_config)
 
       return self.dataset_cache[name]

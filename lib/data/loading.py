@@ -132,11 +132,7 @@ def get_loader(config):
     # add loading from config
     print(config['augment_types'])
     if config['augment_types'] is not None:
-      transforms = v2.Compose([v2.RandomHorizontalFlip(p=0.5), v2.RandomVerticalFlip(p=0.5),
-                               v2.GaussianBlur(kernel_size=(5, 5), sigma=[0.1, 2.0]), v2.ColorJitter()])
-      #transforms = create_augmentor(config['augment_types'])
-      all_data = transforms(all_data)
-    #all_data = augment_dataset(all_data, augmentation_types=config['augment_types'])
+      all_data = Augment(all_data, augment_types=config['augment_types'])
 
   return DataLoader(
     all_data,

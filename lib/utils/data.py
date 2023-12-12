@@ -107,32 +107,18 @@ class Augment(Dataset):
         augment_list = []
         if self.augment_types:
             for aug_type in self.augment_types:
-                augment_list.append(getattr(A, aug_type)())
+                if aug_type == 'GaussianBlur':
+                    kwargs = dict(kernel_size=5)
+                elif aug_type == 'RandomAdjustSharpness':
+                    kwargs = dict(sharpness_factor=np.random.rand())
+                else:
+                    kwargs = {}
+                augment_list.append(getattr(v2, aug_type)(**kwargs))
         else:
             return base
         # scale data
-        #transform = A.Compose(augment_list, is_check_shapes=False)
-        transform = v2.Compose(
-            [
-                # v2.ToImage(),
-                v2.RandomHorizontalFlip(p=0.5),
-                v2.RandomVerticalFlip(p=0.5),
-                v2.GaussianBlur(kernel_size=5),
-                v2.ColorJitter(),
-                v2.ToDtype(torch.float32),
-            ]
-        )
-        print('Inshape:', base[0].shape)
-        #augmented = transform(image=np.array(base[0].permute(1,2,0)), mask=np.array(base[1]))
-        #data = torch.from_numpy(np.ascontiguousarray(augmented['image']).transpose(2,0,1).copy())
-        #mask = torch.from_numpy(np.ascontiguousarray(augmented['mask']).copy())
-
-        augmented = transform(image=np.array(base[0]), mask=np.array(base[1]))
-        #data = torch.from_numpy(np.ascontiguousarray(augmented['image']).copy())
-        data = transform(base[0])
-        #mask = torch.from_numpy(np.ascontiguousarray(augmented['mask']).copy())
-        print('outshape:', data.shape)
-        return (data, mask)
+        transform = v2.Compose(augment_list)
+        return transform(base)
 
     def _augmented_idx_and_ops(self, idx):
         idx, carry = divmod(idx, 8)

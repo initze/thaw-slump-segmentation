@@ -1,4 +1,5 @@
 import ee
+import numpy as np
 from .base import EETileSource
 
 
@@ -15,4 +16,4 @@ class Slope(EETileSource):
 
   @staticmethod
   def normalize(tile):
-    return tile / 90.
+    return np.clip(tile / 30., 0, 1)

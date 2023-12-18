@@ -156,3 +156,22 @@ class Scaling():
         # Imagery is sample[0]
         sample[0] = sample[0].to(torch.float) * self.normalize
         return sample
+    
+
+class Normalize(Dataset):
+    def __init__(self, dataset):
+        self.dataset = dataset
+        
+    def __getitem__(self, idx):
+        base = self.dataset[idx]
+        # calculate mean and std
+        #####
+        # 
+        # scale data
+        #transform = v2.Compose([v2.ToImage(), v2.ToDtype(torch.float32, scale=True)])
+        transform = v2.Compose([v2.ToDtype(torch.float32, scale=True)])
+        #transform = v2.Compose([v2.ToTensor()])
+        return transform(base)
+    
+    def __len__(self):
+        return len(self.dataset)

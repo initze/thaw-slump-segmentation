@@ -15,5 +15,4 @@ class Hillshade(EETileSource):
 
   @staticmethod
   def normalize(tile):
-    #max_val = 10000
-    return tile.astype(np.float32) / 255.
+    return np.clip(tile.astype(np.float32) / 255., 0, 1)

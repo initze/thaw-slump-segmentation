@@ -124,7 +124,7 @@ class Engine:
       self.metrics = Metrics(Accuracy, Precision, Recall, F1, IoU)
 
       if args.summary:
-          from torchsummary import summary
+          from torchinfo import summary
           summary(self.model, [(self.config['model']['input_channels'], 256, 256)])
           sys.exit(0)
 
@@ -182,9 +182,9 @@ class Engine:
           ds_config['num_workers'] = self.config['data_threads']
           ds_config['data_sources'] = self.data_sources
           ds_config['data_root'] = self.DATA_ROOT
-          ds_config['sampling_mode'] = self.config['sampling_mode']#'deterministic'
+          ds_config['sampling_mode'] = self.config['sampling_mode']
           ds_config['tile_size'] = self.config['tile_size']
-          print(self.config['datasets'][name])
+          #print(self.config['datasets'][name])
           self.dataset_cache[name] = get_loader(ds_config)
 
       return self.dataset_cache[name]
@@ -352,6 +352,7 @@ class Engine:
               gamma = self.config['lr_gamma']
           self.scheduler = torch.optim.lr_scheduler.StepLR(self.opt, step_size=step_size, gamma=gamma)
           print(f"running with 'StepLR' learning rate scheduler with step_size = {step_size} and gamma = {gamma}")
+      
       elif self.config['learning_rate_scheduler'] == 'ExponentialLR':
           if 'lr_gamma' not in self.config.keys():
               gamma = 0.9
@@ -359,6 +360,18 @@ class Engine:
               gamma = self.config['lr_gamma']
           self.scheduler = torch.optim.lr_scheduler.ExponentialLR(self.opt, gamma=gamma)
           print(f"running with 'ExponentialLR' learning rate scheduler with gamma = {gamma}")
+      
+      elif self.config['learning_rate_scheduler'] == 'ReduceLROnPlateau':
+          if 'lr_factor' not in self.config.keys():
+              factor = 0.1
+          else:
+              factor = self.config['lr_factor']          
+          if 'lr_patience' not in self.config.keys():
+              patience = 10
+          else:
+              patience = self.config['lr_patience']
+          self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.opt, factor=factor, patience=patience)
+          print(f"running with 'ReduceLROnPlateau' learning rate scheduler with factor={factor} and patience={patience}")
 
 
 def scoped_get(key, *scopestack):

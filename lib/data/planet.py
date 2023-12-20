@@ -65,4 +65,4 @@ class PlanetScope(TileSource):
 
   @staticmethod
   def normalize(tile):
-    return np.clip((tile / 5000), 0, 1)
+    return np.clip((tile / 3000), 0, 1)

@@ -195,9 +195,10 @@ class Engine:
       self.logger.info(f'Epoch {self.epoch} - Training Started')
       progress = tqdm(train_loader)
       self.model.train(True)
-      for iteration, (img, target, metadata) in enumerate(progress):
+      #for iteration, (img, target, metadata) in enumerate(progress):
+      for iteration, (img, target) in enumerate(progress):
           img = img.to(self.dev, torch.float)
-          target = target.to(self.dev, torch.long, non_blocking=True)
+          target = target.to(self.dev, torch.long, non_blocking=True)[:,[0]]
 
           self.opt.zero_grad()
           y_hat = self.model(img)

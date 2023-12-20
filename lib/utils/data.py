@@ -10,6 +10,7 @@ from torch.utils.data import Dataset
 from pathlib import Path
 import albumentations as A
 from torchvision.transforms import v2
+from albumentations.pytorch import ToTensorV2
 
 
 class PTDataset(Dataset):
@@ -95,7 +96,7 @@ class Augment(Dataset):
     def __init__(self, dataset, augment_types=None):
         self.dataset = dataset
         if not augment_types:
-            self.augment_types = ['HorizontalFlip', 'VerticalFlip', 'Blur', 'RandomRotate90']
+            self.augment_types = ['HorizontalFlip', 'VerticalFlip', 'Blur', 'RandomRotate90', 'Cutout']
         else:
             self.augment_types = augment_types
         
@@ -112,7 +113,7 @@ class Augment(Dataset):
                 elif aug_type == 'RandomAdjustSharpness':
                     kwargs = dict(sharpness_factor=np.random.rand())
                 else:
-                    kwargs = {}
+                    kwargs = dict(p=0.5)
                 augment_list.append(getattr(v2, aug_type)(**kwargs))
         else:
             return base
@@ -129,6 +130,65 @@ class Augment(Dataset):
 
     def __len__(self):
         return len(self.dataset)
+    
+class Augment_A(Dataset):
+    def __init__(self, dataset, augment_types=None):
+        self.dataset = dataset
+        if not augment_types:
+            self.augment_types = ['HorizontalFlip', 'VerticalFlip', 'RandomRotate90']
+        else:
+            self.augment_types = augment_types
+            #self.augment_types = ['HorizontalFlip', 'VerticalFlip', 'RandomRotate90']
+
+        # Define the augmentations
+        # make more flexible ##########################
+        augmentation_list = []
+        kwargs_aug = {}
+        for aug_type in self.augment_types:
+            kwargs_aug = {}
+            if aug_type in ['HorizontalFlip','VerticalFlip','RandomRotate90']:
+                kwargs_aug = dict(p=0.5)
+            elif aug_type in ['Cutout']:
+                kwargs_aug = dict(max_h_size=20, max_w_size=20, p=0.2)
+            elif aug_type in ['CropAndPad']:
+                kwargs_aug = dict(p=0.5, percent=20)
+            elif aug_type in ['RandomResizedCrop']:
+                # TODO: get tile size here
+                kwargs_aug = dict(height=256, width=256)
+
+            
+            augmentation_list.append(getattr(A, aug_type)(**kwargs_aug))
+        #augmentation_list = [getattr(A, aug_type)(p=0.5) for aug_type in self.augment_types]
+        self.augmentations = A.Compose(augmentation_list)
+
+    def __getitem__(self, idx):
+        idx, (flipx, flipy, transpose) = self._augmented_idx_and_ops(idx)
+        image, mask, metadata = self.dataset[idx]
+        mask = np.repeat(mask, image.shape[0], axis=0)
+
+        shp_img = image.shape
+        shp_mask = mask.shape
+        # Apply the augmentations
+        augmented = self.augmentations(image=image, mask=mask)
+        image = augmented['image']
+        mask = augmented['mask']
+
+        if image.shape != shp_img:
+            image = image.transpose(1, 2, 0)
+        if mask.shape != shp_mask:
+            mask = mask.transpose(1, 2, 0)
+        return image, mask
+
+    def _augmented_idx_and_ops(self, idx):
+        idx, carry = divmod(idx, 8)
+        carry, flipx = divmod(carry, 2)
+        transpose, flipy = divmod(carry, 2)
+
+        return idx, (flipx, flipy, transpose)
+
+    def __len__(self):
+        return len(self.dataset)
+
 
 
 class Transformed(Dataset):

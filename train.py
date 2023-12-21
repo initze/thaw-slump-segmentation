@@ -204,7 +204,7 @@ class Engine:
           y_hat = self.model(img)
           # squeeze target/label from 4 to 3 dims
           if y_hat.dim() > target.dim():
-             y_hat = y_hat.squeeze(1)
+             target = target.unsqueeze(1)
 
           metrics_terms = {}
           loss = self.loss_function(y_hat, target)
@@ -247,12 +247,17 @@ class Engine:
       img = raw_img.to(self.dev, torch.float)
       target = raw_target.to(self.dev, torch.long, non_blocking=True)
       y_hat = self.model(img)
+      # squeeze target/label from 4 to 3 dims
+      if y_hat.dim() > target.dim():
+        target = target.unsqueeze(1)
       loss = self.loss_function(y_hat, target)
       if target.min() < 255:
         self.metrics.step(y_hat, target, Loss=loss.detach())
 
       for i in range(y_hat.shape[0]):
         name = Path(metadata['source_file'][i]).stem
+        #'PatchShape:', y_hat[i].cpu().numpy().shape)
+        #print('RGBShape:', raw_img[i].numpy().shape)
         val_outputs[name].append({
           'Prediction': y_hat[i].cpu().numpy(),
           'Image': raw_img[i].numpy(),
@@ -293,11 +298,16 @@ class Engine:
         y0, x0, y1, x1 = [patch[k] for k in ['y0', 'x0', 'y1', 'x1']]
         patch_rgb = patch['Image'][[3,2,1]]
         patch_rgb = np.clip(2 * 255 * patch_rgb, 0, 255).astype(np.uint8)
+        #print('Patch shape', patch['Target'].shape)
         patch_target = np.clip(255 * patch['Target'], 0, 255).astype(np.uint8)
         patch_pred = np.clip(255 * patch['Prediction'], 0, 255).astype(np.uint8)
 
         rgb[y0:y1, x0:x1]    = rearrange(patch_rgb, 'C H W -> H W C')
-        target[y0:y1, x0:x1] = rearrange(patch_target, 'C H W -> H W C')
+        # check for dimensions of target and add dimenstion if necessary
+        if patch_target.ndim == 3:
+          target[y0:y1, x0:x1] = rearrange(patch_target, 'C H W -> H W C')
+        else:
+          target[y0:y1, x0:x1] = np.expand_dims(patch_target, axis=2)
         pred[y0:y1, x0:x1]   = rearrange(patch_pred, 'C H W -> H W C')
 
       stacked = np.concatenate([

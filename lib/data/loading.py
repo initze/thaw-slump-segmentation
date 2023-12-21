@@ -7,7 +7,7 @@ import xarray
 import torch
 import numpy as np
 from torch.utils.data import DataLoader, ConcatDataset, Dataset
-from ..utils.data import Augment, Normalize, Augment_A
+from ..utils.data import Augment, Normalize, Augment_A, Augment_A2
 from math import ceil
 from einops import rearrange
 from tqdm import tqdm
@@ -84,7 +84,7 @@ class NCDataset(Dataset):
     if 'Mask' in tile:
       return (
         np.concatenate([tile[k] for k in tile if k != 'Mask'], axis=0),
-        tile['Mask'],
+        tile['Mask'].squeeze(),
         metadata
       )
     else:
@@ -136,7 +136,7 @@ def get_loader(config):
     print(config['augment_types'])
     if config['augment_types'] is not None:
       #all_data = Augment(all_data, augment_types=config['augment_types'])
-      all_data = Augment_A(all_data, augment_types=config['augment_types'])
+      all_data = Augment_A2(all_data, augment_types=config['augment_types'], tile_size=config['tile_size'])
   # TODO: test if normalization step can be used here 
   #all_data = Normalize(all_data)
   

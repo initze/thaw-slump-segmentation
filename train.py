@@ -142,7 +142,8 @@ class Engine:
       self.checkpoints.mkdir()
 
       # Weights and Biases initialization
-      wandb.init(project=args.wandb_project, name=args.wandb_name, config=self.config)
+      if True:
+        wandb.init(project=args.wandb_project, name=args.wandb_name, config=self.config)
 
   def run(self):
       for phase in self.config['schedule']:
@@ -184,7 +185,6 @@ class Engine:
           ds_config['data_root'] = self.DATA_ROOT
           ds_config['sampling_mode'] = self.config['sampling_mode']
           ds_config['tile_size'] = self.config['tile_size']
-          #print(self.config['datasets'][name])
           self.dataset_cache[name] = get_loader(ds_config)
 
       return self.dataset_cache[name]
@@ -198,7 +198,7 @@ class Engine:
       #for iteration, (img, target, metadata) in enumerate(progress):
       for iteration, (img, target) in enumerate(progress):
           img = img.to(self.dev, torch.float)
-          target = target.to(self.dev, torch.long, non_blocking=True)[:,[0]]
+          target = target.to(self.dev, torch.long, non_blocking=True)#[:,[0]]
 
           self.opt.zero_grad()
           y_hat = self.model(img)

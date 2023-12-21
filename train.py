@@ -202,6 +202,9 @@ class Engine:
 
           self.opt.zero_grad()
           y_hat = self.model(img)
+          # squeeze target/label from 4 to 3 dims
+          if y_hat.dim() > target.dim():
+             y_hat = y_hat.squeeze(1)
 
           metrics_terms = {}
           loss = self.loss_function(y_hat, target)

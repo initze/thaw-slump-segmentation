@@ -131,66 +131,6 @@ class Augment(Dataset):
     def __len__(self):
         return len(self.dataset)
     
-class Augment_A(Dataset):
-    def __init__(self, dataset, augment_types=None, tile_size=256):
-        self.dataset = dataset
-        self.tile_size = tile_size
-        if not augment_types:
-            self.augment_types = ['HorizontalFlip', 'VerticalFlip', 'RandomRotate90']
-        else:
-            self.augment_types = augment_types
-            #self.augment_types = ['HorizontalFlip', 'VerticalFlip', 'RandomRotate90']
-
-        # Define the augmentations
-        # make more flexible ##########################
-        augmentation_list = []
-        kwargs_aug = {}
-        for aug_type in self.augment_types:
-            kwargs_aug = {}
-            if aug_type in ['HorizontalFlip','VerticalFlip','RandomRotate90']:
-                kwargs_aug = dict(p=0.5)
-            elif aug_type in ['Cutout']:
-                kwargs_aug = dict(max_h_size=20, max_w_size=20, p=0.2)
-            elif aug_type in ['CropAndPad']:
-                kwargs_aug = dict(p=0.5, percent=20)
-            elif aug_type in ['RandomResizedCrop', 'RandomCrop']:
-                # TODO: get tile size here
-                kwargs_aug = dict(height=tile_size, width=tile_size, p=0.5)
-
-            augmentation_list.append(getattr(A, aug_type)(**kwargs_aug))
-        #augmentation_list = [getattr(A, aug_type)(p=0.5) for aug_type in self.augment_types]
-        self.augmentations = A.Compose(augmentation_list, is_check_shapes=True)
-
-    def __getitem__(self, idx):
-        idx, (flipx, flipy, transpose) = self._augmented_idx_and_ops(idx)
-        image, mask, metadata = self.dataset[idx]
-        #mask = np.repeat(mask, image.shape[0], axis=0)
-        #mask = mask.squeeze()
-
-        shp_img = image.shape
-        shp_mask = mask.shape
-        # Apply the augmentations
-        augmented = self.augmentations(image=image, mask=mask)
-        image = augmented['image']
-        mask = augmented['mask']
-        
-        if image.shape != shp_img:
-            image = image.transpose(1, 2, 0)
-        if mask.shape != shp_mask:
-            mask = mask.transpose(1, 2, 0)
-
-        return image, mask
-
-    def _augmented_idx_and_ops(self, idx):
-        idx, carry = divmod(idx, 8)
-        carry, flipx = divmod(carry, 2)
-        transpose, flipy = divmod(carry, 2)
-
-        return idx, (flipx, flipy, transpose)
-
-    def __len__(self):
-        return len(self.dataset)
-
 
 class Augment_A2(Dataset):
     def __init__(self, dataset, augment_types=None, tile_size=256):
@@ -223,6 +163,9 @@ class Augment_A2(Dataset):
                     elif aug_type in ['RandomResizedCrop', 'RandomCrop']:
                         # TODO: get tile size here
                         kwargs_aug = dict(height=self.tile_size, width=self.tile_size, p=0.5)
+                    elif aug_type in ['CoarseDropout']:
+                        # TODO: get tile size here
+                        kwargs_aug = dict(max_height=100, max_width=100, min_height=20, min_width=20, max_holes=20, p=0.2)
 
                     augment_list.append(getattr(A, aug_type)(**kwargs_aug))
         else:

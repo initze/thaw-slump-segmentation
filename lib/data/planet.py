@@ -10,15 +10,19 @@ from pyproj import Proj
 from .base import TileSource, Scene, cache_path
 from lib.data_pre_processing import udm
 
-def scale_array_ignore_zero_add_constant_per_band_3D(arr, constant=1e-10, perc_min=2, perc_max=98):
+def scale_array_ignore_zero_add_constant_per_band_3D(arr, constant=1e-5, perc_min=2, perc_max=98):
     if (arr == 0).all():
         return arr
 
     non_zero_mask = arr != 0
     min_vals = np.percentile(arr[non_zero_mask], perc_min, axis=0)
     max_vals = np.percentile(arr[non_zero_mask], perc_max, axis=0)
-    scaled_arr = np.where(non_zero_mask, (arr - min_vals) / (max_vals - min_vals) + constant, 0)
-    return np.clip(scaled_arr, 0, 1)
+    if max_vals == min_vals:
+      max_vals += 1e-4
+  
+    out = np.clip(np.where(non_zero_mask, (arr - min_vals) / (max_vals - min_vals), 0), constant, 1)
+    out[~non_zero_mask] = 0
+    return out
 
 class PlanetScope(TileSource):
   def __init__(self, tile_path: Union[str, Path]):

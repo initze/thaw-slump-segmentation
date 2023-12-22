@@ -130,7 +130,7 @@ class Augment_TV(Dataset):
         input = torch.cat((image, mask.unsqueeze(0)), dim=0)
         augmented = transform(input)
         #print('Image equals augmented', (augmented_image == image).all())
-        return (augmented[:-1], augmented[-1])
+        return (augmented[:-1], augmented[-1].round().byte())
         #return transform(base)
 
     def _augmented_idx_and_ops(self, idx):

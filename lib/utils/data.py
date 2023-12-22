@@ -113,9 +113,9 @@ class Augment_TV(Dataset):
         if self.augment_types:
             for aug_type in self.augment_types:
                 if aug_type == 'RandomRotation':
-                    kwargs = dict(degrees=[-90, 90, -45, 45])
+                    kwargs = dict(degrees=[0,180], interpolation=v2.InterpolationMode.BILINEAR)
                 else:
-                    kwargs = dict(p=0.6)
+                    kwargs = dict(p=0.5)
                 
                 if aug_type in transforms_geom_list:
                     augment_list_geom.append(getattr(v2, aug_type)(**kwargs))

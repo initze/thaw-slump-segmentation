@@ -10,6 +10,8 @@ from torch.utils.data import Dataset
 from pathlib import Path
 import albumentations as A
 from torchvision.transforms import v2
+from torchvision import transforms
+
 from albumentations.pytorch import ToTensorV2
 
 
@@ -92,34 +94,44 @@ class H5Dataset(Dataset):
         return self.length
 
 
-class Augment(Dataset):
-    def __init__(self, dataset, augment_types=None):
+class Augment_TV(Dataset):
+    def __init__(self, dataset, augment_types=None, tile_size=256):
         self.dataset = dataset
+        self.tile_size = tile_size
         if not augment_types:
-            self.augment_types = ['HorizontalFlip', 'VerticalFlip', 'Blur', 'RandomRotate90', 'Cutout']
+            self.augment_types = ['RandomHorizontalFlip', 'RandomVerticalFlip', 'Blur', 'RandomRotate90', 'Cutout']
         else:
             self.augment_types = augment_types
         
     def __getitem__(self, idx):
         idx, (flipx, flipy, transpose) = self._augmented_idx_and_ops(idx)
         base = self.dataset[idx]
-
+        transforms_geom_list = ["RandomCrop", "RandomResizedCrop", "RandomHorizontalFlip", "RandomVerticalFlip", "RandomRotation", "RandomAffine"]
         # add Augmentation types
-        augment_list = []
+        augment_list_geom = []
+        augment_list_visual = []
         if self.augment_types:
             for aug_type in self.augment_types:
-                if aug_type == 'GaussianBlur':
-                    kwargs = dict(kernel_size=5)
-                elif aug_type == 'RandomAdjustSharpness':
-                    kwargs = dict(sharpness_factor=np.random.rand())
+                if aug_type == 'RandomRotation':
+                    kwargs = dict(degrees=[-90, 90, -45, 45])
                 else:
-                    kwargs = dict(p=0.5)
-                augment_list.append(getattr(v2, aug_type)(**kwargs))
+                    kwargs = dict(p=0.6)
+                
+                if aug_type in transforms_geom_list:
+                    augment_list_geom.append(getattr(v2, aug_type)(**kwargs))
+            augment_list = augment_list_geom + augment_list_visual
         else:
             return base
         # scale data
+        #transform = transforms.Compose([transforms.RandomHorizontalFlip(), transforms.RandomVerticalFlip()])
         transform = v2.Compose(augment_list)
-        return transform(base)
+        image = torch.tensor(base[0])
+        mask = torch.tensor(base[1])
+        input = torch.cat((image, mask.unsqueeze(0)), dim=0)
+        augmented = transform(input)
+        #print('Image equals augmented', (augmented_image == image).all())
+        return (augmented[:-1], augmented[-1])
+        #return transform(base)
 
     def _augmented_idx_and_ops(self, idx):
         idx, carry = divmod(idx, 8)

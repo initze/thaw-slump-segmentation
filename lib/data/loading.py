@@ -7,7 +7,7 @@ import xarray
 import torch
 import numpy as np
 from torch.utils.data import DataLoader, ConcatDataset, Dataset
-from ..utils.data import Augment_A2
+from ..utils.data import Augment_A2, Augment_TV
 from math import ceil
 from einops import rearrange
 from tqdm import tqdm
@@ -101,7 +101,7 @@ def single_tile_loader(tile_path, config):
   data = NCDataset(tile_path, config)
 
   return DataLoader(
-    all_data,
+    data,
     shuffle = False,
     batch_size = config['batch_size'],
     num_workers=config['num_workers'],
@@ -128,17 +128,15 @@ def get_loader(config):
   scene_names = config['scenes']
   scenes = [NCDataset(f'{root}/{scene}.nc', config) for scene in scene_names]
   all_data = ConcatDataset(scenes)
-
   
   if config['augment']:
     # add loading from config
     # check if validation also gets augmented
     print(config['augment_types'])
     if config['augment_types'] is not None:
-      #all_data = Augment(all_data, augment_types=config['augment_types'])
-      all_data = Augment_A2(all_data, augment_types=config['augment_types'], tile_size=config['tile_size'])
+      all_data = Augment_TV(all_data, augment_types=config['augment_types'], tile_size=config['tile_size'])
+      #all_data = Augment_A2(all_data, augment_types=config['augment_types'], tile_size=config['tile_size'])
   # TODO: test if normalization step can be used here 
-  #all_data = Normalize(all_data)
   
   return DataLoader(
     all_data,
@@ -146,8 +144,7 @@ def get_loader(config):
     batch_size=config['batch_size'],
     num_workers=config['num_workers'],
     persistent_workers=True,
-    pin_memory=True,
-
+    pin_memory=True
   )
 
 

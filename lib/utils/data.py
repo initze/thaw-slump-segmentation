@@ -130,7 +130,7 @@ class Augment_TV(Dataset):
         input = torch.cat((image, mask.unsqueeze(0)), dim=0)
         augmented = transform(input)
         #print('Image equals augmented', (augmented_image == image).all())
-        return (augmented[:-1], augmented[-1].round().byte())
+        return (augmented[:-1].clone(), augmented[-1].round().byte().clone())
         #return transform(base)
 
     def _augmented_idx_and_ops(self, idx):
@@ -244,10 +244,10 @@ class Normalize(Dataset):
         #####
         # 
         # scale data
-        #transform = v2.Compose([v2.ToImage(), v2.ToDtype(torch.float32, scale=True)])
+        image = torch.tensor(base[0])
+        mask = torch.tensor(base[1])
         transform = v2.Compose([v2.ToDtype(torch.float32, scale=True)])
-        #transform = v2.Compose([v2.ToTensor()])
-        return transform(base)
+        return (transform(image.clone(), mask.clone()))
     
     def __len__(self):
         return len(self.dataset)

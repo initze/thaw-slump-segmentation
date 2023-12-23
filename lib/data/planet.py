@@ -80,6 +80,7 @@ class PlanetScope(TileSource):
   def normalize(tile):
     clipped = np.clip((tile / 3000), 0, 1)
     #np.clip(scale_array_ignore_zero_add_constant(clipped), 0, 1)
-    return scale_array_ignore_zero_add_constant_per_band_3D(clipped)
+    return clipped
+    #return scale_array_ignore_zero_add_constant_per_band_3D(clipped)
     #return np.clip((tile / 3000), 0, 1)
 

@@ -15,6 +15,7 @@ from datetime import datetime
 from pathlib import Path
 from collections import defaultdict
 import wandb
+import multiprocessing
 
 import numpy as np
 import torch
@@ -281,10 +282,13 @@ class Engine:
         print(logstr, file=f)
 
     wandb.log({f'{tag}/{k}': v for k, v in m.items()}, step=self.epoch)
-    self.log_images(val_outputs)
+    #self.log_images(val_outputs)
+    process = multiprocessing.Process(target=self.log_images, args=(val_outputs,))
+    process.start()
 
   def log_images(self, val_outputs):
     self.logger.debug(f'Epoch {self.epoch} - Image Logging')
+    print("Image logging started")
 
     for tile, data in val_outputs.items():
       y_max = max(d['y1'] for d in data)
@@ -293,12 +297,10 @@ class Engine:
       rgb    = np.zeros([y_max, x_max, 3], dtype=np.uint8)
       target = np.zeros([y_max, x_max, 1], dtype=np.uint8)
       pred   = np.zeros([y_max, x_max, 1], dtype=np.uint8)
-
       for patch in data:
         y0, x0, y1, x1 = [patch[k] for k in ['y0', 'x0', 'y1', 'x1']]
         patch_rgb = patch['Image'][[3,2,1]]
-        patch_rgb = np.clip(2 * 255 * patch_rgb, 0, 255).astype(np.uint8)
-        #print('Patch shape', patch['Target'].shape)
+        patch_rgb = np.clip(255 * patch_rgb, 0, 255).astype(np.uint8)
         patch_target = np.clip(255 * patch['Target'], 0, 255).astype(np.uint8)
         patch_pred = np.clip(255 * patch['Prediction'], 0, 255).astype(np.uint8)
 

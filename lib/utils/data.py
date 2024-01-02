@@ -106,7 +106,8 @@ class Augment_TV(Dataset):
     def __getitem__(self, idx):
         idx, (flipx, flipy, transpose) = self._augmented_idx_and_ops(idx)
         base = self.dataset[idx]
-        transforms_geom_list = ["RandomCrop", "RandomResizedCrop", "RandomHorizontalFlip", "RandomVerticalFlip", "RandomRotation", "RandomAffine"]
+        transforms_geom_list = ["RandomCrop", "RandomResizedCrop", "RandomHorizontalFlip", "RandomVerticalFlip", "RandomRotation", "RandomAffine", "RandomRotation"]
+        transforms_visual_list = ["GaussianBlur"]
         # add Augmentation types
         augment_list_geom = []
         augment_list_visual = []
@@ -114,35 +115,52 @@ class Augment_TV(Dataset):
             for aug_type in self.augment_types:
                 if aug_type == 'RandomRotation':
                     kwargs = dict(degrees=[0,180], interpolation=v2.InterpolationMode.BILINEAR)
+                elif aug_type == 'GaussianBlur':
+                    kwargs = dict(kernel_size=5, sigma=2)
                 else:
                     kwargs = dict(p=0.5)
                 
                 if aug_type in transforms_geom_list:
                     augment_list_geom.append(getattr(v2, aug_type)(**kwargs))
-            augment_list = augment_list_geom + augment_list_visual
+                if aug_type in transforms_visual_list:
+                    augment_list_visual.append(getattr(v2, aug_type)(**kwargs))
+
+            #augment_list = augment_list_geom + augment_list_visual
         else:
             return base
-        # scale data
-        #transform = transforms.Compose([transforms.RandomHorizontalFlip(), transforms.RandomVerticalFlip()])
-        transform = v2.Compose(augment_list)
-        image = torch.tensor(base[0])
-        mask = torch.tensor(base[1])
+        
+        # setup data
+        image = torch.from_numpy(base[0])
+        mask = torch.from_numpy(base[1])
         input = torch.cat((image, mask.unsqueeze(0)), dim=0)
-        augmented = transform(input)
+        
+        # merge augmentation list
+        if len(augment_list_geom) > 0:
+            transform_geom = v2.Compose(augment_list_geom)
+            input = transform_geom(input)
+        if len(augment_list_visual) > 0:
+            transform_visual = v2.Compose(augment_list_visual)
+            input = torch.cat(transform_visual((input[:-1]), input[-1].unsqueeze(0)), dim=0)
+        
         #print('Image equals augmented', (augmented_image == image).all())
-        return (augmented[:-1].clone(), augmented[-1].round().byte().clone())
+        return (input[:-1], input[-1].round().byte())
         #return transform(base)
-
-    def _augmented_idx_and_ops(self, idx):
-        idx, carry = divmod(idx, 8)
-        carry, flipx = divmod(carry, 2)
-        transpose, flipy = divmod(carry, 2)
-
-        return idx, (flipx, flipy, transpose)
-
-    def __len__(self):
-        return len(self.dataset)
     
+    
+    def _augmented_idx_and_ops(self, idx):
+        #idx, carry = divmod(idx, 8)
+        #carry, flipx = divmod(carry, 2)
+        #transpose, flipy = divmod(carry, 2)
+
+        #return idx, (flipx, flipy, transpose)
+        return idx, (0, 0, 0)
+    
+    
+    def __len__(self):
+        #return len(self.dataset) * 8
+        return len(self.dataset)
+
+
 
 class Augment_A2(Dataset):
     def __init__(self, dataset, augment_types=None, tile_size=256):
@@ -156,7 +174,6 @@ class Augment_A2(Dataset):
     def __getitem__(self, idx):
         idx, (flipx, flipy, transpose) = self._augmented_idx_and_ops(idx)
         base = self.dataset[idx]
-
 
         # add Augmentation types
         augment_list = []
@@ -244,10 +261,14 @@ class Normalize(Dataset):
         #####
         # 
         # scale data
-        image = torch.tensor(base[0])
-        mask = torch.tensor(base[1])
+        if isinstance(base[0], np.ndarray):
+            image = torch.from_numpy(base[0])
+            mask = torch.from_numpy(base[1])
+        else:
+            image = base[0]
+            mask = base[1]
         transform = v2.Compose([v2.ToDtype(torch.float32, scale=True)])
-        return (transform(image.clone(), mask.clone()))
+        return (transform(image, mask))
     
     def __len__(self):
         return len(self.dataset)

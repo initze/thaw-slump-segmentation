@@ -134,10 +134,12 @@ def get_loader(config):
     # check if validation also gets augmented
     print(config['augment_types'])
     if config['augment_types'] is not None:
+      # Torchvision
       all_data = Augment_TV(all_data, augment_types=config['augment_types'], tile_size=config['tile_size'])
+      # albumentations
       #all_data = Augment_A2(all_data, augment_types=config['augment_types'], tile_size=config['tile_size'])
-  # TODO: test if normalization step can be used here
-    all_data = Normalize(all_data)
+    
+  all_data = Normalize(all_data)
   
   return DataLoader(
     all_data,

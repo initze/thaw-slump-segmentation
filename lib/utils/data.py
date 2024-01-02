@@ -117,6 +117,8 @@ class Augment_TV(Dataset):
                     kwargs = dict(degrees=[0,180], interpolation=v2.InterpolationMode.BILINEAR)
                 elif aug_type == 'GaussianBlur':
                     kwargs = dict(kernel_size=5, sigma=2)
+                elif aug_type == 'RandomResizedCrop':
+                    kwargs = dict(size=self.tile_size, antialias=True)
                 else:
                     kwargs = dict(p=0.5)
                 
@@ -140,11 +142,9 @@ class Augment_TV(Dataset):
             input = transform_geom(input)
         if len(augment_list_visual) > 0:
             transform_visual = v2.Compose(augment_list_visual)
-            input = torch.cat(transform_visual((input[:-1]), input[-1].unsqueeze(0)), dim=0)
+            input = torch.cat((transform_visual(input[:-1]), input[-1].clamp(0,255).unsqueeze(0)), dim=0)
         
-        #print('Image equals augmented', (augmented_image == image).all())
-        return (input[:-1], input[-1].round().byte())
-        #return transform(base)
+        return (input[:-1].clamp(0,1), input[-1].round().byte().clamp(0,255))
     
     
     def _augmented_idx_and_ops(self, idx):

@@ -16,6 +16,7 @@ from pathlib import Path
 from collections import defaultdict
 import wandb
 import multiprocessing
+import copy
 
 import numpy as np
 import torch
@@ -30,6 +31,8 @@ from lib import Metrics, Accuracy, Precision, Recall, F1, IoU
 from lib.models import create_model, create_loss
 from lib.data.loading import get_loader
 from lib.utils import showexample, plot_metrics, plot_precision_recall, init_logging, get_logger, yaml_custom
+
+from joblib import Parallel, delayed
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-s', '--summary', action='store_true',
@@ -80,7 +83,7 @@ class Engine:
       intersection = train_scenes & val_scenes
       if intersection:
         self.logger.warn(f'The following scenes are in train and val: {intersection}')
-
+      
       for (img, mask, _) in self.get_dataloader('val'):
         self.config['model']['input_channels'] = img.shape[1]
         break
@@ -196,8 +199,7 @@ class Engine:
       self.logger.info(f'Epoch {self.epoch} - Training Started')
       progress = tqdm(train_loader)
       self.model.train(True)
-      #for iteration, (img, target, metadata) in enumerate(progress):
-      for iteration, (img, target) in enumerate(progress):
+      for iteration, (img, target, metadata) in enumerate(progress):
           img = img.to(self.dev, torch.float)
           target = target.to(self.dev, torch.long, non_blocking=True)#[:,[0]]
 
@@ -283,74 +285,9 @@ class Engine:
 
     wandb.log({f'{tag}/{k}': v for k, v in m.items()}, step=self.epoch)
     #self.log_images(val_outputs)
-    process = multiprocessing.Process(target=self.log_images, args=(val_outputs,))
+    process = multiprocessing.Process(target=log_images, args=(copy.deepcopy(val_outputs), self.epoch, self.log_dir))
     process.start()
 
-  def log_images(self, val_outputs):
-    self.logger.debug(f'Epoch {self.epoch} - Image Logging')
-    print("Image logging started")
-
-    for tile, data in val_outputs.items():
-      y_max = max(d['y1'] for d in data)
-      x_max = max(d['x1'] for d in data)
-
-      rgb    = np.zeros([y_max, x_max, 3], dtype=np.uint8)
-      target = np.zeros([y_max, x_max, 1], dtype=np.uint8)
-      pred   = np.zeros([y_max, x_max, 1], dtype=np.uint8)
-      for patch in data:
-        y0, x0, y1, x1 = [patch[k] for k in ['y0', 'x0', 'y1', 'x1']]
-        patch_rgb = patch['Image'][[3,2,1]]
-        patch_rgb = np.clip(255 * patch_rgb, 0, 255).astype(np.uint8)
-        patch_target = np.clip(255 * patch['Target'], 0, 255).astype(np.uint8)
-        patch_pred = np.clip(255 * patch['Prediction'], 0, 255).astype(np.uint8)
-
-        rgb[y0:y1, x0:x1]    = rearrange(patch_rgb, 'C H W -> H W C')
-        # check for dimensions of target and add dimenstion if necessary
-        if patch_target.ndim == 3:
-          target[y0:y1, x0:x1] = rearrange(patch_target, 'C H W -> H W C')
-        else:
-          target[y0:y1, x0:x1] = np.expand_dims(patch_target, axis=2)
-        pred[y0:y1, x0:x1]   = rearrange(patch_pred, 'C H W -> H W C')
-
-      stacked = np.concatenate([
-        rgb,
-        np.concatenate([
-          target,
-          pred,
-          np.zeros_like(target)
-        ], axis=-1),
-      ], axis=1)
-
-      stacked = Image.fromarray(stacked)
-
-      target_img = Image.new("L", (x_max, y_max), 0)
-      target_draw = ImageDraw.Draw(target_img)
-      for contour in find_contours(target[..., 0], 0.5):
-        target_draw.polygon([(x,y) for y,x in contour],
-                          fill=0, outline=255, width=3)
-
-      pred_img = Image.new("L", (x_max, y_max), 0)
-      pred_draw = ImageDraw.Draw(pred_img)
-      for contour in find_contours(pred[..., 0], 0.7):
-        pred_draw.polygon([(x,y) for y,x in contour],
-                          fill=0, outline=255, width=3)
-      target_img = np.asarray(target_img)
-      pred_img = np.asarray(pred_img)
-      annot = np.stack([
-        target_img,
-        pred_img,
-        np.zeros_like(target_img),
-      ], axis=-1)
-      rgb_with_annot = np.where(np.all(annot == 0, axis=-1, keepdims=True),
-                                rgb, annot)
-      rgb_with_annot = Image.fromarray(rgb_with_annot)
-
-      (self.log_dir / 'tile_predictions').mkdir(exist_ok=True)
-      rgb_with_annot.save(self.log_dir / 'tile_predictions' / f'{tile}_contour_{self.epoch}.jpg')
-      stacked.save(self.log_dir / 'tile_predictions' / f'{tile}_masks_{self.epoch}.jpg')
-
-      outdir = self.log_dir / 'metrics_plots'
-      outdir.mkdir(exist_ok=True)
 
   def setup_lr_scheduler(self):
       # Scheduler
@@ -403,6 +340,78 @@ def safe_append(dictionary, key, value):
         dictionary[key].append(value)
     except KeyError:
         dictionary[key] = [value]
+
+def log_image(tile, data, epoch, log_dir):
+    y_max = max(d['y1'] for d in data)
+    x_max = max(d['x1'] for d in data)
+
+    rgb    = np.zeros([y_max, x_max, 3], dtype=np.uint8)
+    target = np.zeros([y_max, x_max, 1], dtype=np.uint8)
+    pred   = np.zeros([y_max, x_max, 1], dtype=np.uint8)
+    for patch in data:
+        y0, x0, y1, x1 = [patch[k] for k in ['y0', 'x0', 'y1', 'x1']]
+        patch_rgb = patch['Image'][[3,2,1]]
+        patch_rgb = np.clip(255 * patch_rgb, 0, 255).astype(np.uint8)
+        patch_target = np.clip(255 * patch['Target'], 0, 255).astype(np.uint8)
+        patch_pred = np.clip(255 * patch['Prediction'], 0, 255).astype(np.uint8)
+
+        rgb[y0:y1, x0:x1]    = rearrange(patch_rgb, 'C H W -> H W C')
+        # check for dimensions of target and add dimenstion if necessary
+        if patch_target.ndim == 3:
+            target[y0:y1, x0:x1] = rearrange(patch_target, 'C H W -> H W C')
+        else:
+            target[y0:y1, x0:x1] = np.expand_dims(patch_target, axis=2)
+        pred[y0:y1, x0:x1]   = rearrange(patch_pred, 'C H W -> H W C')
+
+    stacked = np.concatenate([
+    rgb,
+    np.concatenate([
+        target,
+        pred,
+        np.zeros_like(target)
+    ], axis=-1),
+    ], axis=1)
+
+    stacked = Image.fromarray(stacked)
+
+    target_img = Image.new("L", (x_max, y_max), 0)
+    target_draw = ImageDraw.Draw(target_img)
+    for contour in find_contours(target[..., 0], 0.5):
+      target_draw.polygon([(x,y) for y,x in contour],
+                        fill=0, outline=255, width=3)
+
+    pred_img = Image.new("L", (x_max, y_max), 0)
+    pred_draw = ImageDraw.Draw(pred_img)
+    for contour in find_contours(pred[..., 0], 0.7):
+      pred_draw.polygon([(x,y) for y,x in contour],
+                        fill=0, outline=255, width=3)
+    target_img = np.asarray(target_img)
+    pred_img = np.asarray(pred_img)
+    annot = np.stack([
+    target_img,
+    pred_img,
+    np.zeros_like(target_img),
+    ], axis=-1)
+    rgb_with_annot = np.where(np.all(annot == 0, axis=-1, keepdims=True),
+                            rgb, annot)
+    rgb_with_annot = Image.fromarray(rgb_with_annot)
+
+    (log_dir / 'tile_predictions').mkdir(exist_ok=True)
+    rgb_with_annot.save(log_dir / 'tile_predictions' / f'{tile}_contour_{epoch}.jpg')
+    stacked.save(log_dir / 'tile_predictions' / f'{tile}_masks_{epoch}.jpg')
+
+    outdir = log_dir / 'metrics_plots'
+    outdir.mkdir(exist_ok=True)
+
+
+def log_images(val_outputs, epoch, log_dir):
+    print("Image logging started")
+    # parallelize
+    """
+    for tile, data in val_outputs.items():
+      log_image(tile, data, epoch, log_dir)
+    """
+    Parallel(n_jobs=8)(delayed(log_image)(tile, data, epoch, log_dir) for tile, data in val_outputs.items())
 
 
 if __name__ == "__main__":

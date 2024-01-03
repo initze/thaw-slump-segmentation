@@ -104,7 +104,8 @@ class Augment_TV(Dataset):
             self.augment_types = augment_types
         
     def __getitem__(self, idx):
-        idx, (flipx, flipy, transpose) = self._augmented_idx_and_ops(idx)
+
+        #idx, (flipx, flipy, transpose) = self._augmented_idx_and_ops(idx)
         base = self.dataset[idx]
         transforms_geom_list = ["RandomCrop", "RandomResizedCrop", "RandomHorizontalFlip", "RandomVerticalFlip", "RandomRotation", "RandomAffine", "RandomRotation"]
         transforms_visual_list = ["GaussianBlur"]
@@ -116,7 +117,7 @@ class Augment_TV(Dataset):
                 if aug_type == 'RandomRotation':
                     kwargs = dict(degrees=[0,180], interpolation=v2.InterpolationMode.BILINEAR)
                 elif aug_type == 'GaussianBlur':
-                    kwargs = dict(kernel_size=5, sigma=2)
+                    kwargs = dict(kernel_size=10, sigma=2)
                 elif aug_type == 'RandomResizedCrop':
                     kwargs = dict(size=self.tile_size, antialias=True)
                 else:
@@ -127,33 +128,36 @@ class Augment_TV(Dataset):
                 if aug_type in transforms_visual_list:
                     augment_list_visual.append(getattr(v2, aug_type)(**kwargs))
 
-            #augment_list = augment_list_geom + augment_list_visual
         else:
             return base
         
         # setup data
         image = torch.from_numpy(base[0])
         mask = torch.from_numpy(base[1])
+
+        # merge to one stack for geometric transformations
         input = torch.cat((image, mask.unsqueeze(0)), dim=0)
         
-        # merge augmentation list
+        # Augment geometric transformations (data + mask)
         if len(augment_list_geom) > 0:
             transform_geom = v2.Compose(augment_list_geom)
             input = transform_geom(input)
+        
+        # Augment visual transformations (data only)
         if len(augment_list_visual) > 0:
             transform_visual = v2.Compose(augment_list_visual)
             input = torch.cat((transform_visual(input[:-1]), input[-1].clamp(0,255).unsqueeze(0)), dim=0)
         
-        return (input[:-1].clamp(0,1), input[-1].round().byte().clamp(0,255))
+        return (input[:-1].clamp(0,1), input[-1].round().byte().clamp(0,255), base[2])
     
     
     def _augmented_idx_and_ops(self, idx):
-        #idx, carry = divmod(idx, 8)
-        #carry, flipx = divmod(carry, 2)
-        #transpose, flipy = divmod(carry, 2)
+        idx, carry = divmod(idx, 8)
+        carry, flipx = divmod(carry, 2)
+        transpose, flipy = divmod(carry, 2)
 
-        #return idx, (flipx, flipy, transpose)
-        return idx, (0, 0, 0)
+        return idx, (flipx, flipy, transpose)
+        #return idx, (0, 0, 0)
     
     
     def __len__(self):
@@ -172,7 +176,7 @@ class Augment_A2(Dataset):
             self.augment_types = augment_types
         
     def __getitem__(self, idx):
-        idx, (flipx, flipy, transpose) = self._augmented_idx_and_ops(idx)
+        #idx, (flipx, flipy, transpose) = self._augmented_idx_and_ops(idx)
         base = self.dataset[idx]
 
         # add Augmentation types
@@ -268,7 +272,8 @@ class Normalize(Dataset):
             image = base[0]
             mask = base[1]
         transform = v2.Compose([v2.ToDtype(torch.float32, scale=True)])
-        return (transform(image, mask))
+        image_out, mask_out = (transform(image, mask))
+        return (image_out, mask_out, base[2])
     
     def __len__(self):
         return len(self.dataset)

@@ -145,7 +145,8 @@ def get_loader(config):
       # albumentations
       #all_data = Augment_A2(all_data, augment_types=config['augment_types'], tile_size=config['tile_size'])
     # moving it one level lower breaks validation
-  all_data = Normalize(all_data)
+  if config['normalize']:
+    all_data = Normalize(all_data)
   
   return DataLoader(
     all_data,

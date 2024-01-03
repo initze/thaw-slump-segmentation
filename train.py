@@ -182,6 +182,9 @@ class Engine:
           ds_config = self.config['datasets'][name]
           if 'batch_size' not in ds_config:
               ds_config['batch_size'] = self.config['batch_size']
+          # set normalize to default for previous versions
+          if 'normalize' not in ds_config:
+              ds_config['normalize'] = True
           ds_config['num_workers'] = self.config['data_threads']
           ds_config['data_sources'] = self.data_sources
           ds_config['data_root'] = self.DATA_ROOT

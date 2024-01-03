@@ -2,7 +2,7 @@
 model:
   # Model Architecture. Available:
   # Unet, UnetPlusPlus, Unet3Plus, MAnet, Linknet, FPN, PSPNet, DeepLabV3, DeepLabV3Plus, PAN]
-  architecture: Unet
+  architecture: UnetPlusPlus
   # Model Encoder. Examples:
   # resnet18, resnet34, resnet50, resnet101, resnet152
   # Check https://github.com/qubvel/segmentation_models.pytorch#encoders for the full list of available encoders
@@ -24,29 +24,33 @@ tile_size: 512 # tile size in pixels
 sampling_mode: deterministic
 data_sources:  # Enabled input features
   - PlanetScope
+  - NDVI
   - TCVIS
-  #- RelativeElevation
+  - RelativeElevation
   - AbsoluteElevation
   - Slope
+  - Hillshade
 datasets:
   train:
+    normalize: true
     augment: true
     augment_types:
-    - HorizontalFlip
-    - VerticalFlip
-    - Blur
-    - RandomRotate90
-    - RandomBrightnessContrast
-    - MultiplicativeNoise
+    - RandomHorizontalFlip
+    - RandomVerticalFlip
+    - RandomRotation
+    - RandomResizedCrop
+    - GaussianBlur
     shuffle: true
     scenes:
       - 4694518_0870514_2021-07-15_1064
   val:
+    normalize: true
     augment: false
     shuffle: false
     scenes:
       - 20200722_081437_1032
   test:
+    normalize: true
     augment: false
     shuffle: false
     scenes:

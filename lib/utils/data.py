@@ -117,7 +117,7 @@ class Augment_TV(Dataset):
                 if aug_type == 'RandomRotation':
                     kwargs = dict(degrees=[0,180], interpolation=v2.InterpolationMode.BILINEAR)
                 elif aug_type == 'GaussianBlur':
-                    kwargs = dict(kernel_size=10, sigma=2)
+                    kwargs = dict(kernel_size=9, sigma=2)
                 elif aug_type == 'RandomResizedCrop':
                     kwargs = dict(size=self.tile_size, antialias=True)
                 else:
@@ -152,12 +152,12 @@ class Augment_TV(Dataset):
     
     
     def _augmented_idx_and_ops(self, idx):
-        idx, carry = divmod(idx, 8)
-        carry, flipx = divmod(carry, 2)
-        transpose, flipy = divmod(carry, 2)
+        #idx, carry = divmod(idx, 8)
+        #carry, flipx = divmod(carry, 2)
+        #transpose, flipy = divmod(carry, 2)
 
-        return idx, (flipx, flipy, transpose)
-        #return idx, (0, 0, 0)
+        #return idx, (flipx, flipy, transpose)
+        return idx, (0, 0, 0)
     
     
     def __len__(self):

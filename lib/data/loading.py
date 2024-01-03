@@ -14,6 +14,7 @@ from tqdm import tqdm
 from pathlib import Path
 from .base import _LAYER_REGISTRY
 from torchvision.transforms import v2
+from skimage.measure import find_contours
 
 
 class NCDataset(Dataset):

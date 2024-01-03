@@ -49,6 +49,7 @@ class NCDataset(Dataset):
       y0 = int(torch.randint(0, self.H - self.tile_size, ()))
       x0 = int(torch.randint(0, self.W - self.tile_size, ()))
     elif self.sampling_mode == 'targets_only':
+      # breaks when len = 0
       bbox_idx = int(torch.randint(0, len(self.bboxes), ()))
       ymin, xmin, ymax, xmax = self.bboxes[bbox_idx]
 
@@ -95,6 +96,10 @@ class NCDataset(Dataset):
       )
 
   def __len__(self):
+    # skip dataset if empty
+    if (self.sampling_mode == 'targets_only'):
+      if (len(self.bboxes) == 0):
+        return 0
     return self.H_tile * self.W_tile
 
 

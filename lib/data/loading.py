@@ -7,13 +7,14 @@ import xarray
 import torch
 import numpy as np
 from torch.utils.data import DataLoader, ConcatDataset, Dataset
-from ..utils import Augment, Normalize
+from ..utils.data import Augment_A2, Augment_TV, Normalize
 from math import ceil
 from einops import rearrange
 from tqdm import tqdm
 from pathlib import Path
 from .base import _LAYER_REGISTRY
 from torchvision.transforms import v2
+from skimage.measure import find_contours
 
 
 class NCDataset(Dataset):
@@ -48,6 +49,7 @@ class NCDataset(Dataset):
       y0 = int(torch.randint(0, self.H - self.tile_size, ()))
       x0 = int(torch.randint(0, self.W - self.tile_size, ()))
     elif self.sampling_mode == 'targets_only':
+      # breaks when len = 0
       bbox_idx = int(torch.randint(0, len(self.bboxes), ()))
       ymin, xmin, ymax, xmax = self.bboxes[bbox_idx]
 
@@ -84,7 +86,7 @@ class NCDataset(Dataset):
     if 'Mask' in tile:
       return (
         np.concatenate([tile[k] for k in tile if k != 'Mask'], axis=0),
-        tile['Mask'],
+        tile['Mask'].squeeze(),
         metadata
       )
     else:
@@ -94,6 +96,10 @@ class NCDataset(Dataset):
       )
 
   def __len__(self):
+    # skip dataset if empty
+    if (self.sampling_mode == 'targets_only'):
+      if (len(self.bboxes) == 0):
+        return 0
     return self.H_tile * self.W_tile
 
 
@@ -101,7 +107,7 @@ def single_tile_loader(tile_path, config):
   data = NCDataset(tile_path, config)
 
   return DataLoader(
-    all_data,
+    data,
     shuffle = False,
     batch_size = config['batch_size'],
     num_workers=config['num_workers'],
@@ -128,17 +134,19 @@ def get_loader(config):
   scene_names = config['scenes']
   scenes = [NCDataset(f'{root}/{scene}.nc', config) for scene in scene_names]
   all_data = ConcatDataset(scenes)
-
   
   if config['augment']:
     # add loading from config
     # check if validation also gets augmented
     print(config['augment_types'])
     if config['augment_types'] is not None:
-      all_data = Augment(all_data, augment_types=config['augment_types'])
-  
-  # TODO: test if normalization step can be used here
-  all_data = Normalize(all_data)
+      # Torchvision
+      all_data = Augment_TV(all_data, augment_types=config['augment_types'], tile_size=config['tile_size'])
+      # albumentations
+      #all_data = Augment_A2(all_data, augment_types=config['augment_types'], tile_size=config['tile_size'])
+    # moving it one level lower breaks validation
+  if config['normalize']:
+    all_data = Normalize(all_data)
   
   return DataLoader(
     all_data,
@@ -146,8 +154,7 @@ def get_loader(config):
     batch_size=config['batch_size'],
     num_workers=config['num_workers'],
     persistent_workers=True,
-    pin_memory=True,
-
+    pin_memory=True
   )
 
 

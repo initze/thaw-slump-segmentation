@@ -5,5 +5,6 @@
 
 from .plot_info import *
 from .logging import init_logging, get_logger, log_run
-from .data import Augment, Transformed, Scaling, Normalize
+from .data import Transformed, Scaling, Normalize, Augment_A2, Augment_TV
+from math import ceil
 from .images import extract_patches, Compositor, extract_contours

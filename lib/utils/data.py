@@ -10,6 +10,9 @@ from torch.utils.data import Dataset
 from pathlib import Path
 import albumentations as A
 from torchvision.transforms import v2
+from torchvision import transforms
+
+from albumentations.pytorch import ToTensorV2
 
 
 class PTDataset(Dataset):
@@ -91,34 +94,123 @@ class H5Dataset(Dataset):
         return self.length
 
 
-class Augment(Dataset):
-    def __init__(self, dataset, augment_types=None):
+class Augment_TV(Dataset):
+    def __init__(self, dataset, augment_types=None, tile_size=256):
         self.dataset = dataset
+        self.tile_size = tile_size
+        if not augment_types:
+            self.augment_types = ['RandomHorizontalFlip', 'RandomVerticalFlip', 'Blur', 'RandomRotate90', 'Cutout']
+        else:
+            self.augment_types = augment_types
+        
+    def __getitem__(self, idx):
+
+        #idx, (flipx, flipy, transpose) = self._augmented_idx_and_ops(idx)
+        base = self.dataset[idx]
+        transforms_geom_list = ["RandomCrop", "RandomResizedCrop", "RandomHorizontalFlip", "RandomVerticalFlip", "RandomRotation", "RandomAffine", "RandomRotation"]
+        transforms_visual_list = ["GaussianBlur"]
+        # add Augmentation types
+        augment_list_geom = []
+        augment_list_visual = []
+        if self.augment_types:
+            for aug_type in self.augment_types:
+                if aug_type == 'RandomRotation':
+                    kwargs = dict(degrees=[0,180], interpolation=v2.InterpolationMode.BILINEAR)
+                elif aug_type == 'GaussianBlur':
+                    kwargs = dict(kernel_size=9, sigma=2)
+                elif aug_type == 'RandomResizedCrop':
+                    kwargs = dict(size=self.tile_size, antialias=True)
+                else:
+                    kwargs = dict(p=0.5)
+                
+                if aug_type in transforms_geom_list:
+                    augment_list_geom.append(getattr(v2, aug_type)(**kwargs))
+                if aug_type in transforms_visual_list:
+                    augment_list_visual.append(getattr(v2, aug_type)(**kwargs))
+
+        else:
+            return base
+        
+        # setup data
+        image = torch.from_numpy(base[0])
+        mask = torch.from_numpy(base[1])
+
+        # merge to one stack for geometric transformations
+        input = torch.cat((image, mask.unsqueeze(0)), dim=0)
+        
+        # Augment geometric transformations (data + mask)
+        if len(augment_list_geom) > 0:
+            transform_geom = v2.Compose(augment_list_geom)
+            input = transform_geom(input)
+        
+        # Augment visual transformations (data only)
+        if len(augment_list_visual) > 0:
+            transform_visual = v2.Compose(augment_list_visual)
+            input = torch.cat((transform_visual(input[:-1]), input[-1].clamp(0,255).unsqueeze(0)), dim=0)
+        
+        return (input[:-1].clamp(0,1), input[-1].round().byte().clamp(0,255), base[2])
+    
+    
+    def _augmented_idx_and_ops(self, idx):
+        #idx, carry = divmod(idx, 8)
+        #carry, flipx = divmod(carry, 2)
+        #transpose, flipy = divmod(carry, 2)
+
+        #return idx, (flipx, flipy, transpose)
+        return idx, (0, 0, 0)
+    
+    
+    def __len__(self):
+        #return len(self.dataset) * 8
+        return len(self.dataset)
+
+
+
+class Augment_A2(Dataset):
+    def __init__(self, dataset, augment_types=None, tile_size=256):
+        self.dataset = dataset
+        self.tile_size = tile_size
         if not augment_types:
             self.augment_types = ['HorizontalFlip', 'VerticalFlip', 'Blur', 'RandomRotate90']
         else:
             self.augment_types = augment_types
         
     def __getitem__(self, idx):
-        idx, (flipx, flipy, transpose) = self._augmented_idx_and_ops(idx)
+        #idx, (flipx, flipy, transpose) = self._augmented_idx_and_ops(idx)
         base = self.dataset[idx]
 
         # add Augmentation types
         augment_list = []
         if self.augment_types:
             for aug_type in self.augment_types:
-                if aug_type == 'GaussianBlur':
-                    kwargs = dict(kernel_size=5)
-                elif aug_type == 'RandomAdjustSharpness':
-                    kwargs = dict(sharpness_factor=np.random.rand())
-                else:
-                    kwargs = {}
-                augment_list.append(getattr(v2, aug_type)(**kwargs))
+                augment_list = []
+                kwargs_aug = {}
+                for aug_type in self.augment_types:
+                    kwargs_aug = {}
+                    if aug_type in ['HorizontalFlip','VerticalFlip','RandomRotate90']:
+                        kwargs_aug = dict(p=0.5)
+                    elif aug_type in ['Cutout']:
+                        kwargs_aug = dict(max_h_size=20, max_w_size=20, p=0.2)
+                    elif aug_type in ['CropAndPad']:
+                        kwargs_aug = dict(p=0.5, percent=20)
+                    elif aug_type in ['RandomResizedCrop', 'RandomCrop']:
+                        # TODO: get tile size here
+                        kwargs_aug = dict(height=self.tile_size, width=self.tile_size, p=0.5)
+                    elif aug_type in ['CoarseDropout']:
+                        # TODO: get tile size here
+                        kwargs_aug = dict(max_height=100, max_width=100, min_height=20, min_width=20, max_holes=20, p=0.2)
+
+                    augment_list.append(getattr(A, aug_type)(**kwargs_aug))
         else:
             return base
         # scale data
-        transform = v2.Compose(augment_list)
-        return transform(base)
+        transform = A.Compose(augment_list)
+
+        augmented = transform(image=np.array(base[0].transpose(1,2,0)), mask=np.array(base[1]))
+        data = torch.from_numpy(np.ascontiguousarray(augmented['image']).transpose(2,0,1).copy())
+        mask = torch.from_numpy(np.ascontiguousarray(augmented['mask']).copy())
+
+        return (data, mask)
 
     def _augmented_idx_and_ops(self, idx):
         idx, carry = divmod(idx, 8)
@@ -127,8 +219,13 @@ class Augment(Dataset):
 
         return idx, (flipx, flipy, transpose)
 
+    def _get_nth_tensor_raw(self, idx, n):
+        """Hacky way of transparently accessing the underlying get_nth_tensor of a PTDataset"""
+        idx, ops = self._augmented_idx_and_ops(idx)
+        return self.dataset.get_nth_tensor(idx, n)
+
     def __len__(self):
-        return len(self.dataset)
+        return len(self.dataset) * 8
 
 
 class Transformed(Dataset):
@@ -168,10 +265,15 @@ class Normalize(Dataset):
         #####
         # 
         # scale data
-        #transform = v2.Compose([v2.ToImage(), v2.ToDtype(torch.float32, scale=True)])
+        if isinstance(base[0], np.ndarray):
+            image = torch.from_numpy(base[0])
+            mask = torch.from_numpy(base[1])
+        else:
+            image = base[0]
+            mask = base[1]
         transform = v2.Compose([v2.ToDtype(torch.float32, scale=True)])
-        #transform = v2.Compose([v2.ToTensor()])
-        return transform(base)
+        image_out, mask_out = (transform(image, mask))
+        return (image_out, mask_out, base[2])
     
     def __len__(self):
         return len(self.dataset)

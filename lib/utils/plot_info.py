@@ -5,11 +5,12 @@
 
 import matplotlib.pyplot as plt
 from einops import rearrange
+from skimage.measure import find_contours
 import torch
 import numpy as np
 import os
 import pandas as pd
-from PIL import Image
+from PIL import Image, ImageDraw
 import wandb
 from matplotlib.ticker import MaxNLocator
 from matplotlib.colors import LinearSegmentedColormap
@@ -119,3 +120,66 @@ def plot_precision_recall(train_metrics, val_metrics, outdir='.'):
     outfile = os.path.join(outdir, f'precision_recall.png')
     fig.savefig(outfile)
     fig.clear()
+
+
+def log_image(tile, data, epoch, log_dir, image_bands=[3,2,1]):
+    y_max = max(d['y1'] for d in data)
+    x_max = max(d['x1'] for d in data)
+
+    rgb    = np.zeros([y_max, x_max, 3], dtype=np.uint8)
+    target = np.zeros([y_max, x_max, 1], dtype=np.uint8)
+    pred   = np.zeros([y_max, x_max, 1], dtype=np.uint8)
+    for patch in data:
+        y0, x0, y1, x1 = [patch[k] for k in ['y0', 'x0', 'y1', 'x1']]
+        patch_rgb = patch['Image'][image_bands]
+        patch_rgb = np.clip(255 * patch_rgb, 0, 255).astype(np.uint8)
+        patch_target = np.clip(255 * patch['Target'], 0, 255).astype(np.uint8)
+        patch_pred = np.clip(255 * patch['Prediction'], 0, 255).astype(np.uint8)
+
+        rgb[y0:y1, x0:x1]    = rearrange(patch_rgb, 'C H W -> H W C')
+        # check for dimensions of target and add dimenstion if necessary
+        if patch_target.ndim == 3:
+            target[y0:y1, x0:x1] = rearrange(patch_target, 'C H W -> H W C')
+        else:
+            target[y0:y1, x0:x1] = np.expand_dims(patch_target, axis=2)
+        pred[y0:y1, x0:x1]   = rearrange(patch_pred, 'C H W -> H W C')
+
+    stacked = np.concatenate([
+    rgb,
+    np.concatenate([
+        target,
+        pred,
+        np.zeros_like(target)
+    ], axis=-1),
+    ], axis=1)
+
+    stacked = Image.fromarray(stacked)
+
+    target_img = Image.new("L", (x_max, y_max), 0)
+    target_draw = ImageDraw.Draw(target_img)
+    for contour in find_contours(target[..., 0], 0.5):
+      target_draw.polygon([(x,y) for y,x in contour],
+                        fill=0, outline=255, width=3)
+
+    pred_img = Image.new("L", (x_max, y_max), 0)
+    pred_draw = ImageDraw.Draw(pred_img)
+    for contour in find_contours(pred[..., 0], 0.7):
+      pred_draw.polygon([(x,y) for y,x in contour],
+                        fill=0, outline=255, width=3)
+    target_img = np.asarray(target_img)
+    pred_img = np.asarray(pred_img)
+    annot = np.stack([
+    target_img,
+    pred_img,
+    np.zeros_like(target_img),
+    ], axis=-1)
+    rgb_with_annot = np.where(np.all(annot == 0, axis=-1, keepdims=True),
+                            rgb, annot)
+    rgb_with_annot = Image.fromarray(rgb_with_annot)
+
+    (log_dir / 'tile_predictions').mkdir(exist_ok=True)
+    rgb_with_annot.save(log_dir / 'tile_predictions' / f'{tile}_contour_{epoch}.jpg')
+    stacked.save(log_dir / 'tile_predictions' / f'{tile}_masks_{epoch}.jpg')
+
+    outdir = log_dir / 'metrics_plots'
+    outdir.mkdir(exist_ok=True)

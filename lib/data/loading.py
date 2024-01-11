@@ -18,13 +18,16 @@ from skimage.measure import find_contours
 
 
 class NCDataset(Dataset):
-  def __init__(self, netcdf_path, config):
+  def __init__(self, netcdf_path, config, inference=False):
     self.netcdf_path = netcdf_path
     self.tile_size = config['tile_size']
     self.data_sources = config['data_sources']
+    if inference:
+      if 'Mask' in self.data_sources:
+        self.data_sources.remove('Mask')
     self.data = xarray.open_dataset(netcdf_path, cache=False)
     self.sampling_mode = config['sampling_mode']
-
+    
     self.H, self.W = len(self.data.y), len(self.data.x)
     self.H_tile = self.H // self.tile_size
     self.W_tile = self.W // self.tile_size

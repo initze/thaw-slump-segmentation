@@ -35,7 +35,6 @@ cmap_ndvi = 'RdYlGn'
 
 FIGSIZE_MAX = 20
 
-
 def predict(model, imagery, device='cpu'):
     prediction = torch.zeros(1, *imagery.shape[2:])
     weights = torch.zeros(1, *imagery.shape[2:])
@@ -97,13 +96,16 @@ def do_inference(tile_path, model, args, config, dev, log_path=None):
     # file check, check for suffix and if exists
     file_path = (DATA_ROOT / f'{tile_path}.nc').as_posix()
     # TODO: Overlap mode
-    data = NCDataset(file_path, config)
+    # set config automatically to deterministic
+    config['sampling_mode'] = 'deterministic'
+    data = NCDataset(file_path, config, inference=True)
     loader = DataLoader(data, batch_size=config['batch_size'], num_workers=1, pin_memory=True)
 
     result = Compositor()
     nodata = Compositor()
     for batch in loader:
-      img = batch[0].to(dev)
+      #img = batch[0].to(dev)
+      img = torch.tensor(batch[0]).to(torch.float32).to(dev)
       nds = (batch[0].numpy() == 0).all(axis=1)
       metadata = batch[-1]
       preds = torch.sigmoid(model(img))[:, 0]
@@ -139,7 +141,7 @@ def do_inference(tile_path, model, args, config, dev, log_path=None):
     mat = [tx.a, tx.b, tx.d, tx.e, tx.c, tx.f]
     contours = contours.buffer(0)
     contours = contours.affine_transform(mat)
-    contours.to_file(output_directory / 'predictions.shp')
+    contours.to_file(output_directory / 'predictions.gpkg', driver='GPKG')
 
 
 if __name__ == "__main__":

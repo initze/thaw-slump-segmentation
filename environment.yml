@@ -33,8 +33,9 @@ dependencies:
   - rioxarray
   - rtree
   - scikit-image
-  - tensorboard=
+  - tensorboard
   - tqdm
+  - torchmetrics
   - torchvision
   - timm
   - wandb=0.15.3

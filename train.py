@@ -286,8 +286,8 @@ class Engine:
 
     wandb.log({f'{tag}/{k}': v for k, v in m.items()}, step=self.epoch)
     #self.log_images(val_outputs)
-    process = multiprocessing.Process(target=log_images, args=(copy.deepcopy(val_outputs), self.epoch, self.log_dir))
-    process.start()
+    #process = multiprocessing.Process(target=log_images, args=(copy.deepcopy(val_outputs), self.epoch, self.log_dir))
+    #process.start()
 
 
   def setup_lr_scheduler(self):

@@ -251,7 +251,7 @@ class Scaling():
     def __call__(self, sample):
         sample = list(sample)
         # Imagery is sample[0]
-        sample[0] = sample[0].to(torch.float) * self.normalize
+        sample[0] = sample[0].to(torch.float64) * self.normalize
         return sample
     
 
@@ -271,7 +271,7 @@ class Normalize(Dataset):
         else:
             image = base[0]
             mask = base[1]
-        transform = v2.Compose([v2.ToDtype(torch.float32, scale=True)])
+        transform = v2.Compose([v2.ToDtype(torch.float64, scale=True)])
         image_out, mask_out = (transform(image, mask))
         return (image_out, mask_out, base[2])
     

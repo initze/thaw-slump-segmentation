@@ -178,7 +178,6 @@ class Augment_A2(Dataset):
     def __getitem__(self, idx):
         #idx, (flipx, flipy, transpose) = self._augmented_idx_and_ops(idx)
         base = self.dataset[idx]
-
         # add Augmentation types
         augment_list = []
         if self.augment_types:
@@ -210,22 +209,13 @@ class Augment_A2(Dataset):
         data = torch.from_numpy(np.ascontiguousarray(augmented['image']).transpose(2,0,1).copy())
         mask = torch.from_numpy(np.ascontiguousarray(augmented['mask']).copy())
 
-        return (data, mask)
+        return (data, mask, base[2])
 
     def _augmented_idx_and_ops(self, idx):
-        idx, carry = divmod(idx, 8)
-        carry, flipx = divmod(carry, 2)
-        transpose, flipy = divmod(carry, 2)
-
-        return idx, (flipx, flipy, transpose)
-
-    def _get_nth_tensor_raw(self, idx, n):
-        """Hacky way of transparently accessing the underlying get_nth_tensor of a PTDataset"""
-        idx, ops = self._augmented_idx_and_ops(idx)
-        return self.dataset.get_nth_tensor(idx, n)
+        return idx, (0, 0, 0)
 
     def __len__(self):
-        return len(self.dataset) * 8
+        return len(self.dataset)
 
 
 class Transformed(Dataset):
@@ -251,7 +241,7 @@ class Scaling():
     def __call__(self, sample):
         sample = list(sample)
         # Imagery is sample[0]
-        sample[0] = sample[0].to(torch.float) * self.normalize
+        sample[0] = sample[0].to(torch.float64) * self.normalize
         return sample
     
 
@@ -271,7 +261,7 @@ class Normalize(Dataset):
         else:
             image = base[0]
             mask = base[1]
-        transform = v2.Compose([v2.ToDtype(torch.float32, scale=True)])
+        transform = v2.Compose([v2.ToDtype(torch.float64, scale=True)])
         image_out, mask_out = (transform(image, mask))
         return (image_out, mask_out, base[2])
     

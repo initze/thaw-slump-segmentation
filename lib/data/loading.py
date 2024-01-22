@@ -18,13 +18,16 @@ from skimage.measure import find_contours
 
 
 class NCDataset(Dataset):
-  def __init__(self, netcdf_path, config):
+  def __init__(self, netcdf_path, config, inference=False):
     self.netcdf_path = netcdf_path
     self.tile_size = config['tile_size']
     self.data_sources = config['data_sources']
+    if inference:
+      if 'Mask' in self.data_sources:
+        self.data_sources.remove('Mask')
     self.data = xarray.open_dataset(netcdf_path, cache=False)
     self.sampling_mode = config['sampling_mode']
-
+    
     self.H, self.W = len(self.data.y), len(self.data.x)
     self.H_tile = self.H // self.tile_size
     self.W_tile = self.W // self.tile_size
@@ -141,9 +144,9 @@ def get_loader(config):
     print(config['augment_types'])
     if config['augment_types'] is not None:
       # Torchvision
-      all_data = Augment_TV(all_data, augment_types=config['augment_types'], tile_size=config['tile_size'])
+      #all_data = Augment_TV(all_data, augment_types=config['augment_types'], tile_size=config['tile_size'])
       # albumentations
-      #all_data = Augment_A2(all_data, augment_types=config['augment_types'], tile_size=config['tile_size'])
+      all_data = Augment_A2(all_data, augment_types=config['augment_types'], tile_size=config['tile_size'])
     # moving it one level lower breaks validation
   if config['normalize']:
     all_data = Normalize(all_data)

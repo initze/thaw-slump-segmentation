@@ -189,6 +189,7 @@ def do_inference(tilename, args=None, log_path=None):
     out_path_label = output_directory / 'pred_binarized.tif'
     out_path_pre_poly = output_directory / 'pred_binarized_tmp.tif'
     out_path_shp = output_directory / 'pred_binarized.shp'
+    out_path_gpkg = output_directory / 'pred_binarized.gpkg'
 
     # Get the input profile
     with rio.open(planet_imagery_path) as input_raster:
@@ -196,7 +197,9 @@ def do_inference(tilename, args=None, log_path=None):
         profile.update(
             dtype=rio.float32,
             count=1,
-            compress='lzw'
+            compress='lzw',
+            driver='COG',
+            tiled=True
         )
 
     with rio.open(out_path_proba, 'w', **profile) as output_raster:
@@ -217,6 +220,7 @@ def do_inference(tilename, args=None, log_path=None):
 
     # create vectors
     log_run(f'{gdal.polygonize} {out_path_pre_poly} -q -mask {out_path_pre_poly} -f "ESRI Shapefile" {out_path_shp}', tile_logger)
+    log_run(f'{gdal.polygonize} {out_path_pre_poly} -q -mask {out_path_pre_poly} -f "GPKG" {out_path_gpkg}', tile_logger)
     #log_run(f'python {gdal.polygonize} {out_path_pre_poly} -q -mask {out_path_pre_poly} -f "ESRI Shapefile" {out_path_shp}', tile_logger)
     out_path_pre_poly.unlink()
 

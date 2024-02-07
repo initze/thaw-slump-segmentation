@@ -83,11 +83,19 @@ def get_mask_images(image_directory, udm='udm.tif', udm2='udm2.tif', images=['_S
     image_files = []
     for im in images:
         image_files.extend([f for f in flist if im in f])
-    udm_file = [f for f in flist if udm in f][0]
+    # check which udms are available, if not then set to None
+    try:
+        udm_file = [f for f in flist if udm in f][0]
+    except:
+        udm_file = None
     try:
         udm2_file = [f for f in flist if udm2 in f][0]
     except:
         udm2_file = None
+    # raise error if no udms available
+    if (udm_file == None) & (udm2_file == None):
+        raise ValueError(f'There are no udm or udm2 files for image {image_directory.name}!')
+
     remaining_files = [f for f in flist if f not in [udm_file, *image_files]]
 
     return dict(udm=udm_file, udm2=udm2_file, images=image_files, others=remaining_files)

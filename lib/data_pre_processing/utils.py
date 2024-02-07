@@ -65,11 +65,13 @@ def make_ndvi_file(image_directory, nir_band=3, red_band=2):
     with rio.Env():
         with rio.open(images['images'][0]) as ds_src:
             data = ds_src.read().astype(np.float)
-            mask = ds_src.read_masks()[0] != 0
+            #mask = ds_src.read_masks()[0] != 0
+            mask = data[[red_band, nir_band]].sum(axis=0) != 0
             ndvi = np.zeros_like(data[0])
             upper = (data[nir_band][mask] - data[red_band][mask])
             lower = (data[nir_band][mask] + data[red_band][mask])
-            ndvi[mask] = np.around((np.divide(upper, lower) + 1) * 1e4).astype(np.uint16)
+            ndvi[mask] = np.around((np.divide(upper, lower) + 1) * 1e4)
+            ndvi = ndvi.astype(np.uint16)
             profile = ds_src.profile
             profile['count'] = 1
 

@@ -34,7 +34,8 @@ From: nvidia/cuda:11.2.0-cudnn8-devel-ubuntu20.04
    pip3 install torch==1.7.0+cu110 torchvision==0.8.1+cu110 -f https://download.pytorch.org/whl/torch_stable.html
    pip3 install nvidia-pyindex cuda-python
    pip3 install torchvision efficientnet-pytorch==0.7 ipython numpy matplotlib\
-   earthengine-api==0.1.227 joblib==1.0.1 scikit-image h5py\
+   earthengine-api==0.1.227 geemap eemont\ 
+   joblib==1.0.1 scikit-image h5py\
    iPython cython tqdm PyYAML pathlib docopt pandas rtree pretrainedmodels\
    rasterio==1.1.5 yacs tensorboard timm tqdm requests albumentations gdal==3.0.4 jupyter notebook
    

@@ -40,23 +40,30 @@ gdal_bin: '%CONDA_PREFIX%\Library\bin' # must be single quote
 
 ## Data Processing
 
-### Data Preprocessing
+### Data Preprocessing for Planet data
 
+#### Setting up all required files for training and/or inference 
 ```bash
 python setup_raw_data.py --data_dir <DATA_DIR>
 ```
+
+#### Setting up required files for training 
+```bash
+python download_s2_4band_planet_format.py --s2id <IMAGE_ID> --data_dir <DATA_DIR>
+```
+
+### Data Preprocessing for Sentinel 2 data to match planet format
 ```bash
 python prepare_data.py --data_dir <DATA_DIR>
 ```
 
-### Training a model
 
+### Training a model
 ```bash
 python train.py --data_dir <DATA_DIR> -n <MODEL_NAME>
 ```
 
 ### Running Inference
-
 ```bash
 python setup_raw_data.py --data_dir <DATA_DIR> --nolabel
 python inference.py --data_dir <DATA_DIR> --model_dir <MODEL_NAME> 20190727_160426_104e 20190709_042959_08_1057

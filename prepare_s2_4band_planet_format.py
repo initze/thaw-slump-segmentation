@@ -6,7 +6,8 @@ import ee
 import geemap
 from joblib import Parallel, delayed
 import argparse
-from lib.data_pre_processing.earthengine import ee_geom_from_image_bounds
+#from lib.data_pre_processing.earthengine import ee_geom_from_image_bounds
+from rasterio.coords import BoundingBox
 ee.Initialize(opt_url='https://earthengine-highvolume.googleapis.com')
 
 def get_ndvi_from_4bandS2(image_path):
@@ -66,15 +67,23 @@ def process_local_data(image_path, elevation, slope):
 def download_tcvis(image_path):
     with rasterio.open(image_path) as src:
         epsg = src.crs.to_string()
+        crs = src.crs
         bounds = src.bounds
         xres, yres = src.res
 
-    geom = ee_geom_from_image_bounds(image_path, buffer=0)
+    # needs to cut one pixel on top
+    fixed_bounds = BoundingBox(left=bounds.left, bottom=bounds.bottom, right=bounds.right, top=bounds.top - yres)
+    # create ee geom
+    gdf = geemap.bbox_to_gdf(fixed_bounds)
+    gdf.crs = crs
+    geom = geemap.gdf_to_ee(gdf).first().geometry()
+
+    # download result
     ee_image_tcvis = ee.ImageCollection("users/ingmarnitze/TCTrend_SR_2000-2019_TCVIS").mosaic()
     tcvis_outfile = image_path.parent /'tcvis.tif'
     
     if not tcvis_outfile.exists():
-        geemap.download_ee_image(ee_image_tcvis, filename=tcvis_outfile, region=geom[0], scale=xres, crs=epsg)
+        geemap.download_ee_image(ee_image_tcvis, filename=tcvis_outfile, region=geom, scale=xres, crs=epsg)
     else:
         print('TCVIS file already exists!')
 

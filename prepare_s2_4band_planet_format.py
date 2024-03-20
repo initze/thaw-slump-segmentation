@@ -11,20 +11,23 @@ ee.Initialize(opt_url='https://earthengine-highvolume.googleapis.com')
 
 def get_ndvi_from_4bandS2(image_path):
     image_path = Path(image_path)
-    with rasterio.open(image_path) as src:
-        #read data
-        data = src.read().astype(float)
-        # calc ndvi
-        ndvi = (data[3]-data[2]) / (data[3]+data[2])
-        # factor to correct output
-        ndvi_out = ((np.clip(ndvi, -1, 1) + 1) * 1e4).astype(np.uint16)
-        # get and adapt profile to match output
-        profile = src.profile
-        profile.update({'dtype':'uint16', 'count':1})
-    # save ndvi
-    ndvi_path = image_path.parent / 'ndvi.tif'
-    with rasterio.open(ndvi_path, 'w', **profile) as target:
-        target.write(np.expand_dims(ndvi_out, 0))
+    if not image_path.exists():
+        with rasterio.open(image_path) as src:
+            #read data
+            data = src.read().astype(float)
+            # calc ndvi
+            ndvi = (data[3]-data[2]) / (data[3]+data[2])
+            # factor to correct output
+            ndvi_out = ((np.clip(ndvi, -1, 1) + 1) * 1e4).astype(np.uint16)
+            # get and adapt profile to match output
+            profile = src.profile
+            profile.update({'dtype':'uint16', 'count':1})
+        # save ndvi
+        ndvi_path = image_path.parent / 'ndvi.tif'
+        with rasterio.open(ndvi_path, 'w', **profile) as target:
+            target.write(np.expand_dims(ndvi_out, 0))
+    else:
+        print('NDVI file already exists!')
 
 def get_elevation_and_slope(image_path, rel_el_vrt, slope_vrt, parallel=True):
     # get image_metadata
@@ -35,10 +38,17 @@ def get_elevation_and_slope(image_path, rel_el_vrt, slope_vrt, parallel=True):
     
     # setup gdal runs
     target_el = image_path.parent / 'relative_elevation.tif'
-    s_el = f'gdalwarp -multi -tap -te {bounds.left} {bounds.top} {bounds.right} {bounds.bottom} -t_srs {epsg} -tr {xres} {yres} -r cubic -co COMPRESS=DEFLATE {rel_el_vrt} {target_el}'
+    if not target_el.exists():
+        s_el = f'gdalwarp -multi -tap -te {bounds.left} {bounds.top} {bounds.right} {bounds.bottom} -t_srs {epsg} -tr {xres} {yres} -r cubic -co COMPRESS=DEFLATE {rel_el_vrt} {target_el}'
+    else:
+        print('Elevation file already exists!')
+        s_el = ''
     target_slope = image_path.parent / 'slope.tif'
-    s_slope = f'gdalwarp -multi -tap -te {bounds.left} {bounds.top} {bounds.right} {bounds.bottom} -t_srs {epsg} -tr {xres} {yres} -r cubic -co COMPRESS=DEFLATE {slope_vrt} {target_slope}'
-    
+    if not target_slope.exists():
+        s_slope = f'gdalwarp -multi -tap -te {bounds.left} {bounds.top} {bounds.right} {bounds.bottom} -t_srs {epsg} -tr {xres} {yres} -r cubic -co COMPRESS=DEFLATE {slope_vrt} {target_slope}'
+    else:
+        print('Slope file already exists!')
+        s_slope = ''
     # run in console
     if parallel:
         def execute_command(cmd):
@@ -67,24 +77,12 @@ def download_tcvis(image_path):
         geemap.download_ee_image(ee_image_tcvis, filename=tcvis_outfile, region=geom[0], scale=xres, crs=epsg)
     else:
         print('TCVIS file already exists!')
-"""
-get_elevation_and_slope(image_path, elevation, slope)
 
-with rasterio.open(image_path) as src:
-    epsg = src.crs.to_string()
-    bounds = src.bounds
-    xres, yres = src.res
-
-geom = ee_geom_from_image_bounds(image_path, buffer=0)
-ee_image_tcvis = ee.ImageCollection("users/ingmarnitze/TCTrend_SR_2000-2019_TCVIS").mosaic()
-tcvis_outfile = outdir/'tcvis.tif'
-
-geemap.download_ee_image(ee_image_tcvis, filename=tcvis_outfile, region=geom[0], scale=xres, crs=epsg)
-"""
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Prepare aux data for downloaded S2 images.')
     parser.add_argument('--data_dir', type=str, help='data directory (parent of download dir)', required=True)
-    parser.add_argument('--image_regex', type=str, default='*/*SR.tif', help='')
+    parser.add_argument('--image_regex', type=str, default='*/*SR.tif', help='regex term to find image file')
+    parser.add_argument('--n_jobs', type=int, default=6, help='Number of parallel- images to prepare data for')
     parser.add_argument('--aux_dir', 
                         default='/isipd/projects/p_aicore_pf/initze/processing/auxiliary/', 
                         type=str, 
@@ -100,9 +98,7 @@ if __name__ == "__main__":
     slope = base_dir / 'slope.vrt'
     
     #for image_path in infiles:
-    #    process_local_data(image_path, elevation, slope)
-    
-    #Parallel(n_jobs=6)(delayed(process_local_data)(image_path, elevation, slope) for image_path in infiles)
+    Parallel(n_jobs=args.n_jobs)(delayed(process_local_data)(image_path, elevation, slope) for image_path in infiles)
     
     for image_path in infiles:
         download_tcvis(image_path)

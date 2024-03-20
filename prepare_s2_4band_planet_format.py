@@ -53,6 +53,20 @@ def process_local_data(image_path, elevation, slope):
     get_ndvi_from_4bandS2(image_path)
     get_elevation_and_slope(image_path, elevation, slope)
 
+def download_tcvis(image_path):
+    with rasterio.open(image_path) as src:
+        epsg = src.crs.to_string()
+        bounds = src.bounds
+        xres, yres = src.res
+
+    geom = ee_geom_from_image_bounds(image_path, buffer=0)
+    ee_image_tcvis = ee.ImageCollection("users/ingmarnitze/TCTrend_SR_2000-2019_TCVIS").mosaic()
+    tcvis_outfile = image_path.parent /'tcvis.tif'
+    
+    if not tcvis_outfile.exists():
+        geemap.download_ee_image(ee_image_tcvis, filename=tcvis_outfile, region=geom[0], scale=xres, crs=epsg)
+    else:
+        print('TCVIS file already exists!')
 """
 get_elevation_and_slope(image_path, elevation, slope)
 
@@ -88,4 +102,7 @@ if __name__ == "__main__":
     #for image_path in infiles:
     #    process_local_data(image_path, elevation, slope)
     
-    Parallel(n_jobs=6)(delayed(process_local_data)(image_path, elevation, slope) for image_path in infiles)
+    #Parallel(n_jobs=6)(delayed(process_local_data)(image_path, elevation, slope) for image_path in infiles)
+    
+    for image_path in infiles:
+        download_tcvis(image_path)

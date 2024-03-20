@@ -109,7 +109,7 @@ def do_inference(tilename, args=None, log_path=None):
         logger.info(f'Preprocessing directory {tilename}')
         raw_directory = DATA_ROOT / 'input' / tilename
         if not raw_directory.exists():
-            logger.error(f"Couldn't find tile '{tilename}' in {DIR_ROOT}/tiles or {DIR_ROOT}/input. Skipping this tile")
+            logger.error(f"Couldn't find tile '{tilename}' in {DATA_ROOT}/tiles or {DATA_ROOT}/input. Skipping this tile")
             return
         preprocess_directory(raw_directory, args, log_path, label_required=False)
         # After this, data_directory should contain all the stuff that we need.

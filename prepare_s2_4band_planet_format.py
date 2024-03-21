@@ -63,6 +63,51 @@ def get_elevation_and_slope(image_path, rel_el_vrt, slope_vrt, parallel=True):
         os.system(s_slope)
 
 
+def replace_tcvis_zeronodata(infile):
+    """
+    This function replaces zero values in the input raster file with 1, and writes the result to a new file.
+    
+    Parameters:
+    infile (Path): The path to the input raster file.
+    
+    The function performs the following steps:
+    1. Reads the data from the input file.
+    2. Creates a mask of zero values.
+    3. Identifies values with single bands at 0.
+    4. Replaces zero values with 1.
+    5. Writes the modified data to a new file with the same profile as the input file.
+    6. Deletes the original file.
+    7. Renames the new file to have the same name as the original file.
+    
+    The function does not return any value.
+    """
+    # setup outfile name
+    tcvis_replace = infile.parent / 'tcvis_tmpfix.tif'
+    
+    with rasterio.open(infile, 'r') as src:
+        # read data
+        ds = src.read()
+        # get mask
+        mask = ds == 0
+        # get values with single bands at 0
+        mask_all = mask.all(axis=0)
+        mask_any = mask.any(axis=0)
+        replace_mask = np.logical_and(mask_any, ~mask_all)
+        #replace zero values with 1a
+        for i in [0,1,2]:
+            ds[i][(ds[i] == 0) & replace_mask] = 1
+        # get profile for new output
+        profile = src.profile
+
+    with rasterio.open(tcvis_replace, 'w', **profile) as dst:
+        dst.write(ds)
+        
+    # delete_original
+    infile.unlink()
+    # rename 
+    tcvis_replace.rename(infile)
+
+
 def process_local_data(image_path, elevation, slope):
     get_ndvi_from_4bandS2(image_path)
     get_elevation_and_slope(image_path, elevation, slope)
@@ -124,6 +169,9 @@ def download_tcvis(image_path):
         s_fix_tcvis = f'gdalwarp -te {bounds.left} {bounds.bottom} {bounds.right} {bounds.top} -tr {xres} {yres} -co COMPRESS=DEFLATE {tcvis_outfile_tmp} {tcvis_outfile}'
         os.system(s_fix_tcvis)
         tcvis_outfile_tmp.unlink()
+    
+    print('Write mask corrected TCVIS')
+    replace_tcvis_zeronodata(tcvis_outfile)
 
 
 if __name__ == "__main__":

@@ -26,16 +26,17 @@ def download_S2image_preprocessed(s2_image_id, outfile, outbands=['B2', 'B3', 'B
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Download preprocessed S2 image.')
-    parser.add_argument('--s2id', type=str, help='S2 image ID')
+    parser.add_argument('--s2id', type=str, nargs='+', help='S2 image ID, you can use several separated by space')
     parser.add_argument('--data_dir', type=str, help='Output directory')
     args = parser.parse_args()
     
     outdir = Path(args.data_dir)
     s2id = args.s2id
     
-    # Call the function with the provided s2id
-    outfile = outdir/ s2id / f'{s2id}_SR.tif'
-    if not outdir.exists():
-        print('Creating output directory', outdir)
-        outdir.mkdir()
-    download_S2image_preprocessed(args.s2id, outfile)
+    for s2id in args.s2id:
+        # Call the function with the provided s2id
+        outfile = outdir/ s2id / f'{s2id}_SR.tif'
+        if not outdir.exists():
+            print('Creating output directory', outdir)
+            outdir.mkdir()
+        download_S2image_preprocessed(s2id, outfile)

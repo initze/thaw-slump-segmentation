@@ -13,7 +13,8 @@ ee.Initialize(opt_url='https://earthengine-highvolume.googleapis.com')
 
 def get_ndvi_from_4bandS2(image_path):
     image_path = Path(image_path)
-    if not image_path.exists():
+    ndvi_path = image_path.parent / 'ndvi.tif'
+    if not ndvi_path.exists():
         with rasterio.open(image_path) as src:
             #read data
             data = src.read().astype(float)
@@ -25,7 +26,7 @@ def get_ndvi_from_4bandS2(image_path):
             profile = src.profile
             profile.update({'dtype':'uint16', 'count':1})
         # save ndvi
-        ndvi_path = image_path.parent / 'ndvi.tif'
+        
         with rasterio.open(ndvi_path, 'w', **profile) as target:
             target.write(np.expand_dims(ndvi_out, 0))
     else:
@@ -149,6 +150,7 @@ def download_tcvis(image_path):
         geemap.download_ee_image(ee_image_tcvis, filename=tcvis_outfile, region=geom, scale=xres, crs=epsg)
     else:
         print(f'TCVIS file for {image_path.parent.name} already exists!')
+        return 0
     
     # check outfile props
     with rasterio.open(tcvis_outfile) as src:

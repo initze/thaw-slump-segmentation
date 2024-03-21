@@ -10,6 +10,7 @@ import argparse
 from rasterio.coords import BoundingBox
 ee.Initialize(opt_url='https://earthengine-highvolume.googleapis.com')
 
+
 def get_ndvi_from_4bandS2(image_path):
     image_path = Path(image_path)
     if not image_path.exists():
@@ -29,6 +30,7 @@ def get_ndvi_from_4bandS2(image_path):
             target.write(np.expand_dims(ndvi_out, 0))
     else:
         print('NDVI file already exists!')
+
 
 def get_elevation_and_slope(image_path, rel_el_vrt, slope_vrt, parallel=True):
     # get image_metadata
@@ -60,16 +62,32 @@ def get_elevation_and_slope(image_path, rel_el_vrt, slope_vrt, parallel=True):
         os.system(s_el)
         os.system(s_slope)
 
+
 def process_local_data(image_path, elevation, slope):
     get_ndvi_from_4bandS2(image_path)
     get_elevation_and_slope(image_path, elevation, slope)
 
+
 def download_tcvis(image_path):
+    """
+    Downloads a TCVIS, processes it, and saves the result as a GeoTIFF file.
+
+    Args:
+        image_path (str): Path to the input Sentinel-2 image (JP2 format).
+
+    Returns:
+        None: The function saves the processed TCVIS GeoTIFF file locally.
+
+    Example:
+        download_tcvis('path/to/your/input_image.tif')
+    """
+    
     with rasterio.open(image_path) as src:
         epsg = src.crs.to_string()
         crs = src.crs
         bounds = src.bounds
         xres, yres = src.res
+        image_shape = (src.height, src.width)
 
     # needs to cut one pixel on top
     fixed_bounds = BoundingBox(left=bounds.left, bottom=bounds.bottom, right=bounds.right, top=bounds.top - yres)
@@ -85,7 +103,28 @@ def download_tcvis(image_path):
     if not tcvis_outfile.exists():
         geemap.download_ee_image(ee_image_tcvis, filename=tcvis_outfile, region=geom, scale=xres, crs=epsg)
     else:
-        print('TCVIS file already exists!')
+        print(f'TCVIS file for {image_path.parent.name} already exists!')
+    
+    # check outfile props
+    with rasterio.open(tcvis_outfile) as src:
+        epsg_tcvis = src.crs.to_string()
+        crs_tcvis = src.crs
+        bounds_tcvis = src.bounds
+        xres_tcvis, yres_tcvis = src.res
+        shape_tcvis = (src.height, src.width)
+    # show diff
+    if not bounds == bounds_tcvis:
+        print(f'Downloaded TCVIS Image for dataset {image_path.parent.name} has wrong dimensions')
+        print('Input image:', bounds, xres, yres)
+        print('TCVIS Image:', bounds_tcvis, xres_tcvis, yres_tcvis)
+        
+        # fix output in case of size mismatch
+        tcvis_outfile_tmp = tcvis_outfile.parent / 'tcvis_temp.tif'
+        tcvis_outfile.rename(tcvis_outfile_tmp)
+        s_fix_tcvis = f'gdalwarp -te {bounds.left} {bounds.bottom} {bounds.right} {bounds.top} -tr {xres} {yres} -co COMPRESS=DEFLATE {tcvis_outfile_tmp} {tcvis_outfile}'
+        os.system(s_fix_tcvis)
+        tcvis_outfile_tmp.unlink()
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Prepare aux data for downloaded S2 images.')

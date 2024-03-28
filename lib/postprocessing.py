@@ -395,7 +395,7 @@ def load_and_parse_vector(file_path: Union[str, Path]) -> gpd.GeoDataFrame:
     gdf['take_id'] = take_id
     gdf['tile_id'] = tile_id
     gdf['date'] = date
-    gdf['year'] = pd.to_datetime(gdf['date'], infer_datetime_format=True).dt.year
+    gdf['year'] = pd.to_datetime(gdf['date']).dt.year
     gdf['satellite'] = satellite
     
     return gdf

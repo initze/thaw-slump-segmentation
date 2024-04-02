@@ -64,7 +64,7 @@ def make_ndvi_file(image_directory, nir_band=3, red_band=2):
     file_dst = os.path.join(os.path.dirname(file_src), 'ndvi.tif')
     with rio.Env():
         with rio.open(images['images'][0]) as ds_src:
-            data = ds_src.read().astype(np.float)
+            data = ds_src.read().astype(np.float32)
             #mask = ds_src.read_masks()[0] != 0
             mask = data[[red_band, nir_band]].sum(axis=0) != 0
             ndvi = np.zeros_like(data[0])

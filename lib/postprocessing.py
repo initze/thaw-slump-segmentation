@@ -92,6 +92,44 @@ def update_DEM(vrt_target_dir):
     os.system('./create_ArcticDEM.sh')
     shutil.copy('elevation.vrt', vrt_target_dir)
     shutil.copy('slope.vrt', vrt_target_dir)
+
+
+def update_DEM2(dem_data_dir, vrt_target_dir):
+    """
+    Update elevation and slope virtual raster tiles (VRTs) from a directory of GeoTIFF tiles.
+
+    Args:
+        dem_data_dir (Path): Path to the directory containing the elevation and slope GeoTIFF tiles.
+        vrt_target_dir (Path): Path to the directory where the updated VRTs will be saved.
+
+    This function creates two VRTs, one for elevation and one for slope, from the GeoTIFF tiles
+    in the `dem_data_dir` directory. The VRTs are saved in the `vrt_target_dir` directory with
+    the filenames 'elevation.vrt' and 'slope.vrt', respectively.
+
+    The function uses the `gdalbuildvrt` command-line utility to create the VRTs, and it sets
+    the nodata value for both the input tiles and the output VRTs to 0.
+    """
+    # elevation
+    flist = list((dem_data_dir / 'tiles_rel_el').glob('*.tif'))
+    flist = [f'{f.absolute().as_posix()}\n' for f in flist]
+    file_list_text = 'flist_rel_el.txt'
+    with open(file_list_text, 'w') as src:
+        src.writelines(flist)
+    vrt_target = Path(vrt_target_dir) / 'elevation.vrt'
+    s = f'gdalbuildvrt -input_file_list {file_list_text} -srcnodata "0" -vrtnodata "0" {vrt_target}'
+    os.system(s)
+    os.remove(file_list_text)
+
+    # slope
+    flist = list((dem_data_dir / 'tiles_slope').glob('*.tif'))
+    flist = [f'{f.absolute().as_posix()}\n' for f in flist]
+    file_list_text = 'flist_slope.txt'
+    with open(file_list_text, 'w') as src:
+        src.writelines(flist)
+    vrt_target = Path(vrt_target_dir) / 'slope.vrt'
+    s = f'gdalbuildvrt -input_file_list {file_list_text} -srcnodata "0" -vrtnodata "0" {vrt_target}'
+    os.system(s)
+    os.remove(file_list_text)
     
 
 def get_processing_status(raw_data_dir, procesing_dir, inference_dir, model):

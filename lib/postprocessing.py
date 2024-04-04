@@ -53,7 +53,10 @@ def get_PS_products_type(name):
     if len(name.split('_')) == 3:
         return 'PSScene'
     elif len(name.split('_')) == 4:
-        return 'PSOrthoTile'
+        if len(name.split('_')[0]) == 8:
+            return 'PSScene'
+        else:
+            return 'PSOrthoTile'
     else:
         None
         
@@ -65,7 +68,6 @@ def get_date_from_PSfilename(name):
 def get_datasets(path, depth=0, preprocessed=False):
     dirs = listdirs2(path, depth=depth)
     df = pd.DataFrame(data=dirs, columns=['path'])
-
     df['name'] = df.apply(lambda x: x['path'].name, axis=1)
     df['preprocessed'] = preprocessed
     df['PS_product_type'] = df.apply(lambda x: get_PS_products_type(x['name']), axis=1)
@@ -132,11 +134,14 @@ def update_DEM2(dem_data_dir, vrt_target_dir):
     os.remove(file_list_text)
     
 
-def get_processing_status(raw_data_dir, procesing_dir, inference_dir, model):
+def get_processing_status(raw_data_dir, processing_dir, inference_dir, model):
     # get raw tiles
-    df_raw = get_datasets(raw_data_dir, depth=1)
+    try:
+        df_raw = get_datasets(raw_data_dir, depth=1)
+    except:
+        df_raw = get_datasets(raw_data_dir, depth=0)
     # get processed
-    df_processed = get_datasets(procesing_dir / 'tiles', depth=0, preprocessed=True)
+    df_processed = get_datasets(processing_dir / 'tiles', depth=0, preprocessed=True)
     # calculate prperties
     diff = df_raw[~df_raw['name'].isin(df_processed['name'])]
     df_merged = pd.concat([df_processed, diff]).reset_index()
@@ -427,8 +432,19 @@ def load_and_parse_vector(file_path: Union[str, Path]) -> gpd.GeoDataFrame:
         return None
 
     image_id = file_path.parent.name
-    take_id, tile_id, date, satellite = image_id.split('_')
-
+    # parse and put into right format
+    PSProductType = get_PS_products_type(image_id)
+    if PSProductType == 'PSOrthoTile':
+        take_id, tile_id, date, satellite = image_id.split('_')
+    elif PSProductType == 'PSScene':
+        if len(image_id.split('_')) == 4:
+            date, take_id, _, satellite = image_id.split('_')
+        else:
+            date, take_id, satellite = image_id.split('_')
+        
+        date = f'{date[:4]}-{date[4:6]}-{date[6:]}'
+        tile_id = None
+        
     gdf['image_id'] = image_id
     gdf['take_id'] = take_id
     gdf['tile_id'] = tile_id

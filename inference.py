@@ -49,7 +49,7 @@ parser.add_argument("--inference_dir", default='inference', type=Path, help="Mai
 parser.add_argument("-n", "--name", default=None, type=str, help="Name of inference run, data will be stored in subdirectory")
 parser.add_argument("-m", "--margin_size", default=256, type=int, help="Size of patch overlap")
 parser.add_argument("-p", "--patch_size", default=1024, type=int, help="Size of patches")
-parser.add_argument("model_path", type=str, help="path to model")
+parser.add_argument("model_path", type=str, help="path to model, use the model base path")
 parser.add_argument("tile_to_predict", type=str, help="path to model", nargs='+')
 
 args = parser.parse_args()
@@ -199,7 +199,7 @@ def do_inference(tilename, args=None, log_path=None):
             count=1,
             compress='lzw',
             driver='COG',
-            tiled=True
+            #tiled=True
         )
 
     with rio.open(out_path_proba, 'w', **profile) as output_raster:

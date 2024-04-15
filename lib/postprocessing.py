@@ -65,6 +65,7 @@ def get_date_from_PSfilename(name):
     return date
     
 
+# TODO: create empty dataframe if no files found
 def get_datasets(path, depth=0, preprocessed=False):
     dirs = listdirs2(path, depth=depth)
     df = pd.DataFrame(data=dirs, columns=['path'])
@@ -141,6 +142,7 @@ def get_processing_status(raw_data_dir, processing_dir, inference_dir, model):
     except:
         df_raw = get_datasets(raw_data_dir, depth=0)
     # get processed
+    # TODO: check here for both options - make 2 runs 
     df_processed = get_datasets(processing_dir / 'tiles', depth=0, preprocessed=True)
     # calculate prperties
     diff = df_raw[~df_raw['name'].isin(df_processed['name'])]

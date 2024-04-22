@@ -59,16 +59,6 @@ df_ensemble_status = get_processing_status_ensemble(INFERENCE_DIR, model_input_n
 # Check which need to be process - check for already processed and invalid files
 process = df_ensemble_status[df_ensemble_status['process']]
 
-# #### Filter by tile_ids
-
-#process = process[process.apply(lambda x: x['name'].split('_')[1].startswith('42'), axis=1)]
-df_processing_status.groupby('inference_finished').count()
-
-# #### Documentation 
-
-print('Number of files to process')
-process.groupby('process').count().iloc[0,0]
-
 # #### Run Ensemble Merging
 
 print(f'Start running ensemble with {N_JOBS} jobs!')

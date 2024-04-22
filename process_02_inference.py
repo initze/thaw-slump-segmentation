@@ -7,8 +7,9 @@ import numpy as np
 import tqdm
 from joblib import delayed, Parallel
 import shutil
-from tqdm.notebook import tqdm
+from tqdm import tqdm
 import swifter
+from datetime import datetime
 
 from lib.postprocessing import *
 
@@ -17,7 +18,8 @@ from lib.postprocessing import *
 # Local code dir
 CODE_DIR = Path('/isipd/projects/p_aicore_pf/initze/code/aicore_inference')
 # Location of raw data
-RAW_DATA_DIR = Path('/isipd/projects/p_aicore_pf/initze/data/planet/planet_data_inference_grid/tiles')
+#RAW_DATA_DIR = Path('/isipd/projects/p_aicore_pf/initze/data/planet/planet_data_inference_grid/tiles')
+RAW_DATA_DIR = Path('/isipd/projects/p_aicore_pf/initze/data/planet/planet_data_inference_grid/scenes')
 # Location data processing
 PROCESSING_DIR = Path('/isipd/projects/p_aicore_pf/initze/processing')
 # Target directory for
@@ -47,7 +49,7 @@ print(f'Number of preprocessed images: {preprocessed_images}')
 print(f'Number of finished images: {finished_images}')
 print(f'Number of image to process: {preprocessed_images - finished_images}')
 
-# ## Preprocessing
+## Preprocessing
 
 # #### Update Arctic DEM data 
 print('Updating Elevation VRTs!')
@@ -114,13 +116,27 @@ print('Run inference!')
 _ = Parallel(n_jobs=n_splits)(delayed(run_inference)(df_split[split], model=MODEL, processing_dir=PROCESSING_DIR, inference_dir=INFERENCE_DIR, model_dir=MODEL_DIR, gpu=gpu_split[split], run=True) for split in range(n_splits))
 # #### Merge output files
 
-# read all files which followiw the above defined threshold
+# read all files which following the above defined threshold
 flist = list((INFERENCE_DIR / MODEL).glob(f'*/*pred_binarized.shp'))
 len(flist)
+# TODO:uncomment here
 if len(df_process_final) > 0:
     # load them in parallel
     out = Parallel(n_jobs=6)(delayed(load_and_parse_vector)(f) for f in tqdm(flist[:]))
+    
     # merge them and save to geopackage file
     merged_gdf = gpd.pd.concat(out)
-    print(INFERENCE_DIR / MODEL / f'{MODEL}_merged.gpkg')
-    merged_gdf.to_file(INFERENCE_DIR / MODEL / f'{MODEL}_merged.gpkg')
+    save_file = INFERENCE_DIR / MODEL / f'{MODEL}_merged.gpkg'
+    
+    # check if file already exists, create backup file if exists
+    if save_file.exists():
+        # Get the current timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        # Create the backup file name
+        save_file_bk = INFERENCE_DIR / MODEL / f"{MODEL}_merged_bk_{timestamp}.gpkg"
+        print (f'Creating backup of file {save_file} to {save_file_bk}')
+        shutil.move(save_file, save_file_bk)
+    
+    # save to files
+    print(f'Saving vectors to {save_file}')
+    merged_gdf.to_file(save_file)

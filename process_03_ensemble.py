@@ -8,6 +8,7 @@ from joblib import delayed, Parallel
 from tqdm import tqdm
 from lib.postprocessing import *
 import geopandas as gpd
+from datetime import datetime
 
 # ### Settings 
 # Local code dir
@@ -29,10 +30,7 @@ N_IMAGES = None # automatically run full set
 N_JOBS = 15 # number of cpu jobs for ensembling
 N_VECTOR_LOADERS = 6 # number of parallel vector loaders for final merge
 
-# ### Select Data 
-# * create list of available files
-# * filter whats available
-
+### Select Data 
 # check if cucim is available
 try:
     import cucim
@@ -55,22 +53,11 @@ kwargs_ensemble = {
     'gpu' : 0,
 }
 
-
 # Check for finalized products
 df_processing_status = get_processing_status(RAW_DATA_DIR, PROCESSING_DIR, INFERENCE_DIR, model=kwargs_ensemble['ensemblename'])
 df_ensemble_status = get_processing_status_ensemble(INFERENCE_DIR, model_input_names=kwargs_ensemble['modelnames'], model_ensemble_name=kwargs_ensemble['ensemblename'])
 # Check which need to be process - check for already processed and invalid files
 process = df_ensemble_status[df_ensemble_status['process']]
-
-# #### Filter by tile_ids
-
-#process = process[process.apply(lambda x: x['name'].split('_')[1].startswith('42'), axis=1)]
-df_processing_status.groupby('inference_finished').count()
-
-# #### Documentation 
-
-print('Number of files to process')
-process.groupby('process').count().iloc[0,0]
 
 # #### Run Ensemble Merging
 
@@ -79,11 +66,9 @@ print(f'Target ensemble name:', kwargs_ensemble['ensemblename'])
 print(f'Source model output', kwargs_ensemble['modelnames'])
 _ = Parallel(n_jobs=N_JOBS)(delayed(create_ensemble_v2)(image_id=process.iloc[row]['name'], **kwargs_ensemble) for row in tqdm(range(len(process.iloc[:N_IMAGES]))))
 
-# #### run parallelized batch 
+# # #### run parallelized batch 
 
 # ### Merge vectors to complete dataset 
-
-
 ensemblename = ENSEMBLE_NAME
 # set probability levels: 'class_05' means 50%, 'class_045' means 45%. This is the regex to search for vector naming
 proba_strings = ['class_05', 'class_045','class_04']
@@ -93,8 +78,25 @@ for proba_string in proba_strings:
     flist = list((INFERENCE_DIR / ensemblename).glob(f'*/*_{proba_string}.gpkg'))
     len(flist)
     # load them in parallel
+    print (f'Loading results {proba_string}')
     out = Parallel(n_jobs=6)(delayed(load_and_parse_vector)(f) for f in tqdm(flist[:N_IMAGES]))
     # merge them and save to geopackage file
     print ('Merging results')
     merged_gdf = gpd.pd.concat(out)
+
+    # Save output to vector
+    save_file = INFERENCE_DIR / ensemblename / f'merged_{proba_string}.gpkg'    
+    
+    # make file backup if necessary
+    if save_file.exists():
+        # Get the current timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        # Create the backup file name
+        save_file_bk = INFERENCE_DIR / ensemblename / f'merged_{proba_string}_bk_{timestamp}.gpkg'
+        print (f'Creating backup of file {save_file} to {save_file_bk}')
+        shutil.move(save_file, save_file_bk)
+    
+    # save to files
+    print(f'Saving vectors to {save_file}')
+    merged_gdf.to_file(save_file)
     merged_gdf.to_file(INFERENCE_DIR / ensemblename / f'merged_{proba_string}.gpkg')

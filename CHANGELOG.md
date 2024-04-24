@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.8.2] - 2024-04-24
+## [0.10.0] - 2024-04-24
 ### Added
 - pip-installable packaging
 

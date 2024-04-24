@@ -21,13 +21,13 @@ import torch.nn as nn
 from tqdm import tqdm
 from datetime import datetime
 
-from lib.models import create_model
-from lib.utils.plot_info import flatui_cmap
-from lib.utils import init_logging, get_logger, log_run
-from lib.data_pre_processing import gdal
+from ..models import create_model
+from ..utils.plot_info import flatui_cmap
+from ..utils import init_logging, get_logger, log_run
+from ..data_pre_processing import gdal
 
-from setup_raw_data import preprocess_directory
-from data_loading import DataSources
+from ..scripts.setup_raw_data import preprocess_directory
+from ..data_loading import DataSources
 
 import yaml
 
@@ -246,7 +246,7 @@ def do_inference(tilename, args=None, log_path=None):
     outpath = output_directory / 'pred_binarized.jpg'
     plot_results(np.ma.masked_where(nodata[0], binarized[0]), outpath)
 
-if __name__ == "__main__":
+def main():
     timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
     log_path = Path(args.log_dir) / f'inference-{timestamp}.log'
     if not Path(args.log_dir).exists():
@@ -307,3 +307,6 @@ if __name__ == "__main__":
 
     for tilename in tqdm(args.tile_to_predict):
         do_inference(tilename, args, log_path)
+
+if __name__ == "__main__":
+  main()

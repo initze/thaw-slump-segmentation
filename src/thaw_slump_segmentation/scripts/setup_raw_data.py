@@ -15,9 +15,9 @@ import os
 
 from joblib import Parallel, delayed
 
-from lib import data_pre_processing
-from lib.data_pre_processing import *
-from lib.utils import init_logging, get_logger, yaml_custom
+from .. import data_pre_processing
+from ..data_pre_processing import *
+from ..utils import init_logging, get_logger, yaml_custom
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--gdal_bin", default=None, help="Path to gdal binaries (ignored if --skip_gdal is passed)")
@@ -94,7 +94,7 @@ def preprocess_directory(image_dir, args, log_path, label_required=True):
     return success_state
 
 
-if __name__ == "__main__":
+def main():
     args = parser.parse_args()
     
     global DATA_ROOT, INPUT_DATA_DIR, BACKUP_DIR, DATA_DIR, AUX_DIR
@@ -120,3 +120,6 @@ if __name__ == "__main__":
         Parallel(n_jobs=args.n_jobs)(delayed(preprocess_directory)(image_dir, args, log_path, args.nolabel) for image_dir in dir_list)
     else:
         logger.error("Empty Input Data Directory! No Data available to process!")
+
+if __name__ == "__main__":
+  main()

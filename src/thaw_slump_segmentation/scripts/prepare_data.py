@@ -22,8 +22,8 @@ import rasterio as rio
 from joblib import Parallel, delayed
 from skimage.io import imsave
 
-from lib.data_pre_processing import gdal
-from lib.utils import init_logging, get_logger, log_run, yaml_custom
+from ..data_pre_processing import gdal
+from ..utils import init_logging, get_logger, log_run, yaml_custom
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--data_dir", default='data', type=Path, help="Path to data processing dir")
@@ -253,7 +253,7 @@ def main_function(dataset, args, log_path):
         datasets[t].resize(i, axis=0)
 
 
-if __name__ == "__main__":
+def main():
     args = parser.parse_args()
     # Tiling Settings
     XSIZE, YSIZE = map(int, args.tile_size.split('x'))
@@ -308,3 +308,7 @@ if __name__ == "__main__":
             sys.exit(1)
 
     Parallel(n_jobs=args.n_jobs)(delayed(main_function)(dataset, args, log_path) for dataset in datasets)
+
+
+if __name__ == "__main__":
+    main()

@@ -12,3 +12,6 @@ logs/
 inference/
 *.log
 *.yml
+dist/
+.python-version
+

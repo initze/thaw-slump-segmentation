@@ -5,6 +5,9 @@
 * Latest development version: `pip install git+https://github.com/initze/thaw-slump-segmentation`
 * Latest release: `pip install https://github.com/initze/thaw-slump-segmentation/releases/download/untagged-f6739f56e0ee4c2c64fe/thaw_slump_segmentation-0.10.0-py3-none-any.whl`
 
+This will pull the CUDA 12 version of pytorch. If you are running CUDA 11, you need to manually switch to the corresponding Pytorch package afterwards by running `pip3 install torch==2.1.2+cu118 --index-url https://download.pytorch.org/whl/cu118`
+
+
 ## System and Data Setup
 
 ### Option 1 - Singularity container

@@ -1,4 +1,9 @@
-# AICore - 
+# Thaw Slump Segmentation
+
+## Installation
+
+* Latest development version: `pip install git+https://github.com/initze/thaw-slump-segmentation`
+* Latest release: `pip install https://github.com/initze/thaw-slump-segmentation/releases/download/untagged-f6739f56e0ee4c2c64fe/thaw_slump_segmentation-0.10.0-py3-none-any.whl`
 
 ## System and Data Setup
 

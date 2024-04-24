@@ -1,4 +1,12 @@
 # Changelog
+
+## [0.8.2] - 2024-04-24
+### Added
+- pip-installable packaging
+
+### Changed
+- entire project structure (to make it pip-installable)
+
 ## [0.8.0] - 2022-09-09
 ### Added
 - added Unet3+ model

@@ -128,3 +128,4 @@ for proba_string in proba_strings:
     print(f'Saving vectors to {save_file}')
     merged_gdf.to_file(save_file)
     merged_gdf.to_file(INFERENCE_DIR / ensemblename / f'merged_{proba_string}.gpkg')
+    

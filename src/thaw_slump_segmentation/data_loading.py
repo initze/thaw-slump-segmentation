@@ -6,8 +6,8 @@
 import logging
 import torch
 from torch.utils.data import DataLoader, ConcatDataset, Subset
-from lib.utils import get_logger
-from lib.utils.data import H5Dataset, Augment, Transformed, Scaling
+from .utils import get_logger
+from .utils.data import H5Dataset, Augment, Transformed, Scaling
 from collections import namedtuple
 from tqdm import tqdm
 from pathlib import Path

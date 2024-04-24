@@ -20,10 +20,10 @@ import torch.nn as nn
 import yaml
 from tqdm import tqdm
 
-from data_loading import get_loader, get_vis_loader, get_slump_loader, DataSources
-from lib import Metrics, Accuracy, Precision, Recall, F1, IoU
-from lib.models import create_model, create_loss
-from lib.utils import showexample, plot_metrics, plot_precision_recall, init_logging, get_logger, yaml_custom
+from ..data_loading import get_loader, get_vis_loader, get_slump_loader, DataSources
+from .. import Metrics, Accuracy, Precision, Recall, F1, IoU
+from ..models import create_model, create_loss
+from ..utils import showexample, plot_metrics, plot_precision_recall, init_logging, get_logger, yaml_custom
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-s', '--summary', action='store_true',
@@ -343,6 +343,9 @@ def safe_append(dictionary, key, value):
         dictionary[key] = [value]
 
 
-if __name__ == "__main__":
+def main():
     args = parser.parse_args()
     Engine().run()
+
+if __name__ == "__main__":
+  main()

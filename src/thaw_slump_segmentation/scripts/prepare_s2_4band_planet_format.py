@@ -6,7 +6,7 @@ import ee
 import geemap
 from joblib import Parallel, delayed
 import argparse
-#from lib.data_pre_processing.earthengine import ee_geom_from_image_bounds
+#from ..data_pre_processing.earthengine import ee_geom_from_image_bounds
 from rasterio.coords import BoundingBox
 ee.Initialize(opt_url='https://earthengine-highvolume.googleapis.com')
 
@@ -176,7 +176,7 @@ def download_tcvis(image_path):
     replace_tcvis_zeronodata(tcvis_outfile)
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser(description='Prepare aux data for downloaded S2 images.')
     parser.add_argument('--data_dir', type=str, help='data directory (parent of download dir)', required=True)
     parser.add_argument('--image_regex', type=str, default='*/*SR.tif', help='regex term to find image file')
@@ -200,3 +200,7 @@ if __name__ == "__main__":
     
     for image_path in infiles:
         download_tcvis(image_path)
+
+
+if __name__ == "__main__":
+    main()

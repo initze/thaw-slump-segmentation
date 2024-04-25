@@ -24,7 +24,7 @@ def run_inference(df, model, processing_dir, inference_dir, model_dir=Path('/isi
         print('Empty dataframe')
     else:
         tiles = ' '.join(df.name.values)
-        run_string = f"CUDA_VISIBLE_DEVICES='{gpu}' python inference.py -n {model} --data_dir {processing_dir} --inference_dir {inference_dir}  --patch_size {patch_size} --margin_size {margin_size} {model_dir/model} {tiles}"
+        run_string = f"CUDA_VISIBLE_DEVICES='{gpu}' inference -n {model} --data_dir {processing_dir} --inference_dir {inference_dir}  --patch_size {patch_size} --margin_size {margin_size} {model_dir/model} {tiles}"
         print(run_string)
         if run:
             os.system(run_string)

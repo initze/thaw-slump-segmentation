@@ -126,7 +126,7 @@ def update_DEM2(dem_data_dir, vrt_target_dir):
     # slope
     flist = list((dem_data_dir / 'tiles_slope').glob('*.tif'))
     flist = [f'{f.absolute().as_posix()}\n' for f in flist]
-    file_list_text = 'flist_slope.txt'
+    file_list_text = Path(vrt_target_dir) / 'flist_slope.txt'
     with open(file_list_text, 'w') as src:
         src.writelines(flist)
     vrt_target = Path(vrt_target_dir) / 'slope.vrt'

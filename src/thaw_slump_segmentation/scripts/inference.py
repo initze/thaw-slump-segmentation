@@ -100,7 +100,7 @@ def flush_rio(filepath):
         pass
 
 
-def do_inference(tilename, sources, logger, args=None, log_path=None):
+def do_inference(tilename, sources, model, dev, logger, args=None, log_path=None):
     tile_logger = get_logger(f'inference.{tilename}')
     # ===== PREPARE THE DATA =====
     DATA_ROOT = args.data_dir
@@ -307,7 +307,7 @@ def main():
     torch.set_grad_enabled(False)
 
     for tilename in tqdm(args.tile_to_predict):
-        do_inference(tilename, sources, logger, args, log_path)
+        do_inference(tilename, sources, model, dev, logger, args, log_path)
 
 if __name__ == "__main__":
   main()

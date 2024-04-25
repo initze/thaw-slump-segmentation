@@ -121,7 +121,7 @@ def showexample(data, preds, filename, data_sources, step):
     plt.close()
     fig, ax = plt.subplots(1, 3, figsize=(9, 4), gridspec_kw=gridspec_kw)
     if 'planet' in ds_names:
-      offset = get_channel_offset(data_sources, 'planet')
+        offset = get_channel_offset(data_sources, 'planet')
         b, g, r, nir = np.arange(4) + offset
         bgnir = imageize(img[[nir, b, g]])
         ax[0].imshow(bgnir)

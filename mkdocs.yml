@@ -1,0 +1,37 @@
+# yaml-language-server: $schema=https://squidfunk.github.io/mkdocs-material/schema.json
+site_name: Thaw Slump Segmentation
+repo_name: thaw-slump-segmentation
+repo_url: https://github.com/initze/thaw-slump-segmentation
+theme:
+  name: material
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - content.code.annotate
+    - content.code.copy
+    - content.tabs.link
+    - content.action.edit
+    - toc.integrate
+    - toc.follow
+    - navigation.path
+    - navigation.top
+    - navigation.tabs
+    - navigation.footer
+
+nav:
+  - ...
+  - scripts.md
+
+plugins:
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          options:
+            paths: [src]  # search packages in the src folder
+            show_if_no_docstring: true
+  - search
+  - awesome-pages
+  - gen-files:
+      scripts:
+        - docs/gen_doc_stubs.py

@@ -21,7 +21,7 @@ import yaml
 from tqdm import tqdm
 
 from ..data_loading import get_loader, get_vis_loader, get_slump_loader, DataSources
-from .. import Metrics, Accuracy, Precision, Recall, F1, IoU
+from ..metrics import Metrics, Accuracy, Precision, Recall, F1, IoU
 from ..models import create_model, create_loss
 from ..utils import showexample, plot_metrics, plot_precision_recall, init_logging, get_logger, yaml_custom
 

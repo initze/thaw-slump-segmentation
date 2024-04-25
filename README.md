@@ -7,7 +7,6 @@
 
 This will pull the CUDA 12 version of pytorch. If you are running CUDA 11, you need to manually switch to the corresponding Pytorch package afterwards by running `pip3 install torch==2.2.0+cu118 torchvision==0.17.0+cu118 --index-url https://download.pytorch.org/whl/cu118`
 
-
 gdal incl. gdal-utilities (preferably version >=3.6) need to be installed in your environment, e.g. with conda
 
 ## System and Data Setup

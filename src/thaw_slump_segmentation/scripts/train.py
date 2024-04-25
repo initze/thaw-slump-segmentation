@@ -41,7 +41,7 @@ parser.add_argument('-r', '--resume', default='',
                          'checkpoint of that run, or a direct path to a checkpoint to be loaded.'
                          'Overrides the resume option in the config file if given.'
                     )
-parser.add_argument('-wp', '--wandb_project', default='RTS Sentinel2',
+parser.add_argument('-wp', '--wandb_project', default='thaw-slump-segmentation',
                     help='Set a project name for weights and biases')
 parser.add_argument('-wn', '--wandb_name', default=None,
                     help='Set a run name for weights and biases')

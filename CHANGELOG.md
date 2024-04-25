@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.10.1] - 2024-04-25
+### Changed
+- added gdal as pre-requirement to readme
+- fixed path issue for postprocessing scripts
+
 ## [0.10.0] - 2024-04-24
 ### Added
 - pip-installable packaging

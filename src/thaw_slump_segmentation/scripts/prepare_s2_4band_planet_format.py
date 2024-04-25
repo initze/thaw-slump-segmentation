@@ -177,7 +177,8 @@ def download_tcvis(image_path):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Prepare aux data for downloaded S2 images.')
+    parser = argparse.ArgumentParser(description='Prepare aux data for downloaded S2 images.',
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--data_dir', type=str, help='data directory (parent of download dir)', required=True)
     parser.add_argument('--image_regex', type=str, default='*/*SR.tif', help='regex term to find image file')
     parser.add_argument('--n_jobs', type=int, default=6, help='Number of parallel- images to prepare data for')

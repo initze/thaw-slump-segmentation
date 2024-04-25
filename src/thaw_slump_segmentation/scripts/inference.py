@@ -38,7 +38,8 @@ cmap_ndvi = 'RdYlGn'
 
 FIGSIZE_MAX = 20
 
-parser = argparse.ArgumentParser()
+parser = argparse.ArgumentParser(description='Inference Script', 
+                    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument("--gdal_bin", default='', help="Path to gdal binaries")
 parser.add_argument("--gdal_path", default='', help="Path to gdal scripts")
 parser.add_argument("--n_jobs", default=-1, type=int, help="number of parallel joblib jobs")

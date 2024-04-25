@@ -25,7 +25,8 @@ from skimage.io import imsave
 from ..data_pre_processing import gdal
 from ..utils import init_logging, get_logger, log_run, yaml_custom
 
-parser = argparse.ArgumentParser()
+parser = argparse.ArgumentParser(description='Make data ready for training',
+                    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument("--data_dir", default='data', type=Path, help="Path to data processing dir")
 parser.add_argument("--log_dir", default='logs', type=Path, help="Path to log dir")
 parser.add_argument("--skip_gdal", action='store_true', help="Skip the Gdal conversion stage (if it has already been "

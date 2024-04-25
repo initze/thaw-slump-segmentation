@@ -25,7 +25,8 @@ def download_S2image_preprocessed(s2_image_id, outfile, outbands=['B2', 'B3', 'B
     return 0
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Download preprocessed S2 image.')
+    parser = argparse.ArgumentParser(description='Download preprocessed S2 image.', 
+                    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--s2id', type=str, nargs='+', help='S2 image ID, you can use several separated by space')
     parser.add_argument('--data_dir', type=str, help='Output directory')
     args = parser.parse_args()

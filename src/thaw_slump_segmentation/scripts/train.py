@@ -25,7 +25,8 @@ from .. import Metrics, Accuracy, Precision, Recall, F1, IoU
 from ..models import create_model, create_loss
 from ..utils import showexample, plot_metrics, plot_precision_recall, init_logging, get_logger, yaml_custom
 
-parser = argparse.ArgumentParser()
+parser = argparse.ArgumentParser(description='Training script',
+                                 formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('-s', '--summary', action='store_true',
                     help='Only print model summary and return.')
 parser.add_argument("--data_dir", default='data', type=Path, help="Path to data processing dir")

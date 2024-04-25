@@ -37,6 +37,8 @@ parser.add_argument("--max_images", type=int, default=None,
                     help="Maximum number of images to process (optional)")
 parser.add_argument("--skip_vrt", action="store_false", 
                     help="set to skip DEM vrt creation")
+parser.add_argument("--skip_vector_save", action="store_true", 
+                    help="set to skip output vector creation")
 
 # TODO, make flag to skip vrt
 args = parser.parse_args()
@@ -94,7 +96,7 @@ def main():
     N_JOBS=40
     print(f'Preprocessing {len(df_preprocess)} images') #fix this
     if len(df_preprocess) > 0:
-        pp_string = f'python setup_raw_data.py --data_dir {args.processing_dir} --n_jobs {N_JOBS} --nolabel'
+        pp_string = f'setup_raw_data --data_dir {args.processing_dir} --n_jobs {N_JOBS} --nolabel'
         os.system(pp_string)
 
     # ## Processing/Inference
@@ -126,30 +128,33 @@ def main():
     _ = Parallel(n_jobs=n_splits)(delayed(run_inference)(df_split[split], model=args.model, processing_dir=args.processing_dir, inference_dir=args.inference_dir, model_dir=args.model_dir, gpu=gpu_split[split], run=True) for split in range(n_splits))
     # #### Merge output files
 
+    if not args.skip_vector_save:
     # read all files which following the above defined threshold
-    flist = list((args.inference_dir / args.model).glob(f'*/*pred_binarized.shp'))
-    len(flist)
-    # TODO:uncomment here
-    if len(df_process_final) > 0:
-        # load them in parallel
-        out = Parallel(n_jobs=6)(delayed(load_and_parse_vector)(f) for f in tqdm(flist[:]))
-        
-        # merge them and save to geopackage file
-        merged_gdf = gpd.pd.concat(out)
-        save_file = args.inference_dir / args.model / f'{args.model}_merged.gpkg'
-        
-        # check if file already exists, create backup file if exists
-        if save_file.exists():
-            # Get the current timestamp
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            # Create the backup file name
-            save_file_bk = args.inference_dir / args.model / f"{args.model}_merged_bk_{timestamp}.gpkg"
-            print (f'Creating backup of file {save_file} to {save_file_bk}')
-            shutil.move(save_file, save_file_bk)
-        
-        # save to files
-        print(f'Saving vectors to {save_file}')
-        merged_gdf.to_file(save_file)
+        flist = list((args.inference_dir / args.model).glob(f'*/*pred_binarized.shp'))
+        len(flist)
+        # TODO:uncomment here
+        if len(df_process_final) > 0:
+            # load them in parallel
+            out = Parallel(n_jobs=6)(delayed(load_and_parse_vector)(f) for f in tqdm(flist[:]))
+            
+            # merge them and save to geopackage file
+            merged_gdf = gpd.pd.concat(out)
+            save_file = args.inference_dir / args.model / f'{args.model}_merged.gpkg'
+            
+            # check if file already exists, create backup file if exists
+            if save_file.exists():
+                # Get the current timestamp
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                # Create the backup file name
+                save_file_bk = args.inference_dir / args.model / f"{args.model}_merged_bk_{timestamp}.gpkg"
+                print (f'Creating backup of file {save_file} to {save_file_bk}')
+                shutil.move(save_file, save_file_bk)
+            
+            # save to files
+            print(f'Saving vectors to {save_file}')
+            merged_gdf.to_file(save_file)
+    else:
+        print('Skipping output vector creation!')
 
 if __name__ == "__main__":
     main()

@@ -1,6 +1,6 @@
 [project]
 name = "thaw-slump-segmentation"
-version = "0.10.0"
+version = "0.10.1"
 description = "Add your description here"
 authors = [
     { name = "Ingmar Nitze", email = "ingmar.nitze@awi.de" },

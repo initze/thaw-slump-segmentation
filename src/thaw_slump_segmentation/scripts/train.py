@@ -134,7 +134,7 @@ class Engine:
         # Metrics and Weights and Biases initialization
         self.trn_metrics = {}
         self.val_metrics = {}
-        wandb.init(project=args.wandb_project, name=args.wandb_name, config=self.config)
+        wandb.init(project=args.wandb_project, name=args.wandb_name, config=self.config, entity='ml4earth')
 
     def run(self):
         for phase in self.config['schedule']:

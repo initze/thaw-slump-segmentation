@@ -58,7 +58,7 @@ def get_channel_offset(data_sources, target_source):
     return offset
 
 
-def showexample(data, preds, filename, data_sources, writer=None):
+def showexample(data, preds, filename, data_sources, step):
     # First plot
     ROWS = 6
     m = 0.02
@@ -119,23 +119,22 @@ def showexample(data, preds, filename, data_sources, writer=None):
     filename.parent.mkdir(exist_ok=True)
     plt.savefig(filename, bbox_inches='tight')
     plt.close()
-    if writer is not None:
-        fig, ax = plt.subplots(1, 3, figsize=(9, 4), gridspec_kw=gridspec_kw)
-        if 'planet' in ds_names:
-            offset = get_channel_offset(data_sources, 'planet')
-            b, g, r, nir = np.arange(4) + offset
-            bgnir = imageize(img[[nir, b, g]])
-            ax[0].imshow(bgnir)
-            ax[0].set_title('NIR-R-G')
-        ax[1].imshow(target.cpu(), **heatmap_args)
-        ax[1].set_title('Ground Truth')
+    fig, ax = plt.subplots(1, 3, figsize=(9, 4), gridspec_kw=gridspec_kw)
+    if 'planet' in ds_names:
+      offset = get_channel_offset(data_sources, 'planet')
+        b, g, r, nir = np.arange(4) + offset
+        bgnir = imageize(img[[nir, b, g]])
+        ax[0].imshow(bgnir)
+        ax[0].set_title('NIR-R-G')
+    ax[1].imshow(target.cpu(), **heatmap_args)
+    ax[1].set_title('Ground Truth')
 
-        pred = torch.sigmoid(preds[-1])
-        ax[2].imshow(pred, **heatmap_args)
-        ax[2].set_title('Prediction')
-        for axis in ax:
-            axis.axis('off')
-        writer.add_figure(filename.stem, fig, len(preds))
+    pred = torch.sigmoid(preds[-1])
+    ax[2].imshow(pred, **heatmap_args)
+    ax[2].set_title('Prediction')
+    for axis in ax:
+      axis.axis('off')
+    wandb.log({filename.stem: wandb.Image(fig)}, step=step)
 
 
 def read_metrics_file(file_path):

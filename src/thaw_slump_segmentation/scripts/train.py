@@ -41,6 +41,10 @@ parser.add_argument('-r', '--resume', default='',
                          'checkpoint of that run, or a direct path to a checkpoint to be loaded.'
                          'Overrides the resume option in the config file if given.'
                     )
+parser.add_argument('-wp', '--wandb_project', default='RTS Sentinel2',
+                    help='Set a project name for weights and biases')
+parser.add_argument('-wn', '--wandb_name', default=None,
+                    help='Set a run name for weights and biases')
 
 
 class Engine:
@@ -127,12 +131,10 @@ class Engine:
         self.checkpoints = self.log_dir / 'checkpoints'
         self.checkpoints.mkdir()
 
-        # Tensorboard initialization
-        from torch.utils.tensorboard import SummaryWriter
-        self.trn_writer = SummaryWriter(self.log_dir / 'train')
-        self.val_writer = SummaryWriter(self.log_dir / 'val')
+        # Metrics and Weights and Biases initialization
         self.trn_metrics = {}
         self.val_metrics = {}
+        wandb.init(project=args.wandb_project, name=args.wandb_name, config=self.config)
 
     def run(self):
         for phase in self.config['schedule']:
@@ -238,11 +240,11 @@ class Engine:
                 print(logstr, file=f)
 
         for key, val in metrics_vals.items():
-            self.trn_writer.add_scalar(key, val, self.board_idx)
             safe_append(self.trn_metrics, key, val)
+
+        wandb.log({'train/{k}': v for k, v in metrics_vals.items()}, step=self.board_idx)
         safe_append(self.trn_metrics, 'step', self.board_idx)
         safe_append(self.trn_metrics, 'epoch', self.epoch)
-        self.trn_writer.flush()
 
         # Save model Checkpoint
         torch.save(self.model.state_dict(), self.checkpoints / f'{self.epoch:02d}.pt')
@@ -275,11 +277,10 @@ class Engine:
                 with logfile.open('a') as f:
                     print(logstr, file=f)
             for key, val in m.items():
-                self.val_writer.add_scalar(key, val, self.board_idx)
                 safe_append(self.val_metrics, key, val)
             safe_append(self.val_metrics, 'step', self.board_idx)
             safe_append(self.val_metrics, 'epoch', self.epoch)
-            self.val_writer.flush()
+            wandb.log({'val/{k}': v for k, v in metrics_vals.items()}, step=self.board_idx)
 
     def log_images(self):
         self.logger.debug(f'Epoch {self.epoch} - Image Logging')
@@ -296,13 +297,12 @@ class Engine:
         for i, tile in enumerate(self.vis_names):
             filename = self.log_dir / 'tile_predictions' / f'{tile}.jpg'
             showexample(self.vis_loader.dataset[i], self.vis_predictions[i],
-                        filename, self.data_sources, self.val_writer)
+                        filename, self.data_sources, step=self.board_idx)
 
         outdir = self.log_dir / 'metrics_plots'
         outdir.mkdir(exist_ok=True)
         plot_metrics(self.trn_metrics, self.val_metrics, outdir=outdir)
         plot_precision_recall(self.trn_metrics, self.val_metrics, outdir=outdir)
-        self.val_writer.flush()
 
     def setup_lr_scheduler(self):
         # Scheduler

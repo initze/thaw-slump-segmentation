@@ -28,6 +28,7 @@ plugins:
       handlers:
         python:
           options:
+            paths: [src]  # search packages in the src folder
             show_if_no_docstring: true
   - search
   - awesome-pages

@@ -56,7 +56,6 @@ def create_loss(
         losses.JaccardLoss,
         losses.DiceLoss,
         losses.FocalLoss,
-        losses.LovaszLoss,
         losses.SoftBCEWithLogitsLoss,
         losses.SoftCrossEntropyLoss
     ]

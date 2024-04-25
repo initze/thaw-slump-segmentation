@@ -15,7 +15,8 @@ from ..postprocessing import *
 
 # ### Settings 
 # Add argument definitions
-parser = argparse.ArgumentParser(description="Script to run auto inference for RTS")
+parser = argparse.ArgumentParser(description="Script to run auto inference for RTS", 
+                    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument("--code_dir", type=Path, default=Path('/isipd/projects/p_aicore_pf/initze/code/aicore_inference'),
                     help="Local code directory")
 parser.add_argument("--raw_data_dir", type=Path, default=Path('/isipd/projects/p_aicore_pf/initze/data/planet/planet_data_inference_grid/scenes'),
@@ -34,7 +35,8 @@ parser.add_argument("--runs_per_gpu", type=int, default=5,
                     help="Number of runs per GPU")
 parser.add_argument("--max_images", type=int, default=None,
                     help="Maximum number of images to process (optional)")
-parser.add_argument("--skip_vrt", action="store_false", help="set to skip DEM vrt creation")
+parser.add_argument("--skip_vrt", action="store_false", 
+                    help="set to skip DEM vrt creation")
 
 # TODO, make flag to skip vrt
 args = parser.parse_args()

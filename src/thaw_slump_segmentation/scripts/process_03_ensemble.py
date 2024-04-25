@@ -12,7 +12,8 @@ from datetime import datetime
 import argparse
 
 # Add argument definitions
-parser = argparse.ArgumentParser(description="Script to run auto inference for RTS")
+parser = argparse.ArgumentParser(description="Script to run auto inference for RTS", 
+                    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument("--raw_data_dir", type=Path, default=Path('/isipd/projects/p_aicore_pf/initze/data/planet/planet_data_inference_grid/tiles'),
                     help="Location of raw data")
 parser.add_argument("--processing_dir", type=Path, default=Path('/isipd/projects/p_aicore_pf/initze/processing'),

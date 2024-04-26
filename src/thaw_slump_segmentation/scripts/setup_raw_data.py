@@ -34,7 +34,7 @@ STATUS = {0: 'failed', 1: 'success', 2: 'skipped'}
 SUCCESS_STATES = ['rename', 'label', 'ndvi', 'tcvis', 'rel_dem', 'slope', 'mask', 'move']
 
 
-def preprocess_directory(image_dir, data_dir, aux_dir, backup_dir_full, args, log_path, label_required=True):
+def preprocess_directory(image_dir, data_dir, aux_dir, backup_dir, args, log_path, label_required=True):
     gdal.initialize(args)
     init_logging(log_path)
     image_name = os.path.basename(image_dir)
@@ -86,7 +86,8 @@ def preprocess_directory(image_dir, data_dir, aux_dir, backup_dir_full, args, lo
 
     success_state['mask'] = mask_input_data(image_dir, data_dir)
 
-    backup_dir_full = os.path.join(backup_dir, os.path.basename(image_dir))
+    #backup_dir_full = os.path.join(backup_dir, os.path.basename(image_dir))
+    backup_dir_full = backup_dir / image_dir.name
     success_state['move'] = move_files(image_dir, backup_dir_full)
 
     for status in SUCCESS_STATES:

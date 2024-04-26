@@ -64,7 +64,7 @@ def main():
     print(f'Number of preprocessed images: {preprocessed_images}')
     print(f'Number of preprocessed images for preprocessing: {preprocessing_images}')
     print(f'Number of finished images: {finished_images}')
-    print(f'Number of image to process: {preprocessed_images - finished_images}')
+    print(f'Number of image to process: {finished_images - preprocessed_images}')
     # TODO: images with processing status True but Inference False are crappy
     
     if total_images == finished_images:

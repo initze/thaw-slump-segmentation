@@ -46,11 +46,12 @@ args = parser.parse_args()
 def main():
     # ### List all files with properties
     # TODO: run double for both paths
+    print("Checking processing status!")
     df_processing_status = get_processing_status(args.raw_data_dir, args.processing_dir, args.inference_dir, args.model)
     # find non-completed preprocessing
-    df_delete = df_processing_status[df_processing_status['preprocessed'] & ~df_processing_status['preprocessing_valid'] & ~df_processing_status['inference_finished']]
+    #df_delete = df_processing_status[df_processing_status['preprocessed'] & ~df_processing_status['preprocessing_valid'] & ~df_processing_status['inference_finished']]
     # reset preprocessed status for incomplete files
-    df_processing_status.loc[df_delete.index, 'preprocessed'] = False
+    #df_processing_status.loc[df_delete.index, 'preprocessed'] = False
     # set final processing df
     df_final = df_processing_status
 
@@ -84,20 +85,21 @@ def main():
     # #### Copy data for Preprocessing 
     # make better documentation
 
-    df_preprocess = df_final[~(df_final.preprocessed & df_final.preprocessing_valid)]
+    df_preprocess = df_final[~(df_final.preprocessed)]
     print(f'Number of images to preprocess: {len(df_preprocess)}')
 
     # Cleanup processing directories to avoid incomplete processing
     input_dir_dslist = list((args.processing_dir / 'input').glob('*'))
     if len(input_dir_dslist) > 0:
-        print(input_dir_dslist)
+        
+        print(f"Cleaning up {(args.processing_dir / 'input')}")
         for d in input_dir_dslist:
             print('Delete', d)
             shutil.rmtree(d)
     else:
         print('Processing directory is ready, nothing to do!')
 
-    # TODO: check for empty processign status
+    # TODO: check for empty processing status
     # Copy Data
     _ = df_preprocess.swifter.apply(lambda x: copy_unprocessed_files(x, args.processing_dir), axis=1)
 

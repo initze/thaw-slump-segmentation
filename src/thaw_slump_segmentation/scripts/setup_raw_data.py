@@ -34,7 +34,7 @@ STATUS = {0: 'failed', 1: 'success', 2: 'skipped'}
 SUCCESS_STATES = ['rename', 'label', 'ndvi', 'tcvis', 'rel_dem', 'slope', 'mask', 'move']
 
 
-def preprocess_directory(image_dir, args, log_path, label_required=True):
+def preprocess_directory(image_dir, data_dir, aux_dir, backup_dir, args, log_path, label_required=True):
     gdal.initialize(args)
     init_logging(log_path)
     image_name = os.path.basename(image_dir)
@@ -77,17 +77,18 @@ def preprocess_directory(image_dir, args, log_path, label_required=True):
                                                 resolution=3)
 
     success_state['rel_dem'] = aux_data_to_tiles(image_dir,
-                                                 AUX_DIR / 'ArcticDEM' / 'elevation.vrt',
+                                                 aux_dir / 'ArcticDEM' / 'elevation.vrt',
                                                  'relative_elevation.tif')
 
     success_state['slope'] = aux_data_to_tiles(image_dir,
-                                               AUX_DIR / 'ArcticDEM' / 'slope.vrt',
+                                               aux_dir / 'ArcticDEM' / 'slope.vrt',
                                                'slope.tif')
 
-    success_state['mask'] = mask_input_data(image_dir, DATA_DIR)
+    success_state['mask'] = mask_input_data(image_dir, data_dir)
 
-    backup_dir = os.path.join(BACKUP_DIR, os.path.basename(image_dir))
-    success_state['move'] = move_files(image_dir, backup_dir)
+    #backup_dir_full = os.path.join(backup_dir, os.path.basename(image_dir))
+    backup_dir_full = backup_dir / image_dir.name
+    success_state['move'] = move_files(image_dir, backup_dir_full)
 
     for status in SUCCESS_STATES:
         thread_logger.info(status + ': ' + STATUS[success_state[status]])
@@ -117,7 +118,7 @@ def main():
 
     dir_list = check_input_data(INPUT_DATA_DIR)
     if len(dir_list) > 0:
-        Parallel(n_jobs=args.n_jobs)(delayed(preprocess_directory)(image_dir, args, log_path, args.nolabel) for image_dir in dir_list)
+        Parallel(n_jobs=args.n_jobs)(delayed(preprocess_directory)(image_dir, DATA_DIR, AUX_DIR, BACKUP_DIR, args, log_path, args.nolabel) for image_dir in dir_list)
     else:
         logger.error("Empty Input Data Directory! No Data available to process!")
 

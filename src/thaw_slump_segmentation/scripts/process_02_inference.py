@@ -35,7 +35,7 @@ parser.add_argument("--runs_per_gpu", type=int, default=5,
                     help="Number of runs per GPU")
 parser.add_argument("--max_images", type=int, default=None,
                     help="Maximum number of images to process (optional)")
-parser.add_argument("--skip_vrt", action="store_false", 
+parser.add_argument("--skip_vrt", action="store_true", 
                     help="set to skip DEM vrt creation")
 parser.add_argument("--skip_vector_save", action="store_true", 
                     help="set to skip output vector creation")
@@ -45,47 +45,56 @@ args = parser.parse_args()
 
 def main():
     # ### List all files with properties
+    # TODO: run double for both paths
+    print("Checking processing status!")
     df_processing_status = get_processing_status(args.raw_data_dir, args.processing_dir, args.inference_dir, args.model)
-
+    # get df for preprocessing
     df_final = df_processing_status
 
+    # print basic information
     total_images = len(df_final)
     preprocessed_images = df_final.preprocessed.sum()
+    preprocessing_images = total_images - preprocessed_images
     finished_images = df_final.inference_finished.sum()
     print(f'Number of images: {total_images}')
     print(f'Number of preprocessed images: {preprocessed_images}')
+    print(f'Number of preprocessed images for preprocessing: {preprocessing_images}')
     print(f'Number of finished images: {finished_images}')
-    print(f'Number of image to process: {preprocessed_images - finished_images}')
-
+    print(f'Number of images to process: {preprocessed_images - finished_images}')
+    # TODO: images with processing status True but Inference False are crappy
+    
+    if total_images == finished_images:
+        print('No processing needed: all images are already processed!')
+        return 0
+    
     ## Preprocessing
-
     # #### Update Arctic DEM data
-    if args.skip_vrt == False:
+    if args.skip_vrt == True:
+        print('Skipping Elevation VRT creation!')
+    else:
         print('Updating Elevation VRTs!')
         dem_data_dir = Path('/isipd/projects/p_aicore_pf/initze/data/ArcticDEM')
         vrt_target_dir = Path('/isipd/projects/p_aicore_pf/initze/processing/auxiliary/ArcticDEM')
-        #update_DEM(vrt_target_dir)
         update_DEM2(dem_data_dir=dem_data_dir, vrt_target_dir=vrt_target_dir)
-    else:
-        print('Skipping Elevation VRT creation!')
 
 
     # #### Copy data for Preprocessing 
     # make better documentation
 
-    df_preprocess = df_final[~df_final.preprocessed]
+    df_preprocess = df_final[~(df_final.preprocessed)]
     print(f'Number of images to preprocess: {len(df_preprocess)}')
 
     # Cleanup processing directories to avoid incomplete processing
     input_dir_dslist = list((args.processing_dir / 'input').glob('*'))
     if len(input_dir_dslist) > 0:
-        print(input_dir_dslist)
+        print(f"Cleaning up {(args.processing_dir / 'input')}")
         for d in input_dir_dslist:
             print('Delete', d)
             shutil.rmtree(d)
     else:
         print('Processing directory is ready, nothing to do!')
 
+    # TODO: check for empty processing status
     # Copy Data
     _ = df_preprocess.swifter.apply(lambda x: copy_unprocessed_files(x, args.processing_dir), axis=1)
 
@@ -112,6 +121,7 @@ def main():
     # final filtering process to remove incorrectly preprocessed data
     df_process_final = df_process_final[df_process_final['preprocessing_valid']]
 
+    # TODO: check for empty files and processing
     print(f'Number of images:', len(df_process_final))
 
     # #### Parallel runs 

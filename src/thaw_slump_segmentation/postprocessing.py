@@ -77,6 +77,19 @@ def get_datasets(path, depth=0, preprocessed=False):
     return df
 
 def copy_unprocessed_files(row, processing_dir, quiet=True):
+    """
+    Copies unprocessed files from a source directory to a target directory.
+
+    This function checks if a file exists in the target directory. If the file does not exist, it copies the file from the source to the target directory. If the file already exists in the target directory, it skips the copying process. 
+
+    Parameters:
+    row (dict): A dictionary containing file information. It should have a key 'path' which corresponds to the file's path.
+    processing_dir (Path): The target directory where the files should be copied to. It should be a pathlib.Path object.
+    quiet (bool, optional): If set to True, the function will not print any output during its execution. If set to False, the function will print the status of the file copying process. Default is True.
+
+    Returns:
+    None
+    """
     inpath = row['path']
     outpath = processing_dir / 'input' / inpath.name
 
@@ -142,12 +155,17 @@ def get_processing_status(raw_data_dir, processing_dir, inference_dir, model):
     except:
         df_raw = get_datasets(raw_data_dir, depth=0)
     # get processed
-    # TODO: check here for both options - make 2 runs 
+    # TODO: make validation steps if files are alright 
     df_processed = get_datasets(processing_dir / 'tiles', depth=0, preprocessed=True)
-    # calculate prperties
+    # check if all files are available
+    df_processed = df_processed[df_processed.apply(lambda x: len(list(x['path'].glob('*')))>=4, axis=1)]
+
+    # get all non preprocessed raw images
     diff = df_raw[~df_raw['name'].isin(df_processed['name'])]
+    # TODO: issue here
     df_merged = pd.concat([df_processed, diff]).reset_index()
-    
+
+
     products_list = [prod.name for prod in list((inference_dir / model).glob('*'))]
     df_merged['inference_finished'] = df_merged.apply(lambda x: x['name'] in (products_list), axis=1)
     

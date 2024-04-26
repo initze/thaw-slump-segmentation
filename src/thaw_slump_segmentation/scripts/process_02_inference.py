@@ -48,11 +48,7 @@ def main():
     # TODO: run double for both paths
     print("Checking processing status!")
     df_processing_status = get_processing_status(args.raw_data_dir, args.processing_dir, args.inference_dir, args.model)
-    # find non-completed preprocessing
-    #df_delete = df_processing_status[df_processing_status['preprocessed'] & ~df_processing_status['preprocessing_valid'] & ~df_processing_status['inference_finished']]
-    # reset preprocessed status for incomplete files
-    #df_processing_status.loc[df_delete.index, 'preprocessed'] = False
-    # set final processing df
+    # get df for preprocessing
     df_final = df_processing_status
 
     # print basic information
@@ -64,7 +60,7 @@ def main():
     print(f'Number of preprocessed images: {preprocessed_images}')
     print(f'Number of preprocessed images for preprocessing: {preprocessing_images}')
     print(f'Number of finished images: {finished_images}')
-    print(f'Number of image to process: {finished_images - preprocessed_images}')
+    print(f'Number of images to process: {preprocessed_images - finished_images}')
     # TODO: images with processing status True but Inference False are crappy
     
     if total_images == finished_images:
@@ -91,7 +87,6 @@ def main():
     # Cleanup processing directories to avoid incomplete processing
     input_dir_dslist = list((args.processing_dir / 'input').glob('*'))
     if len(input_dir_dslist) > 0:
-        
         print(f"Cleaning up {(args.processing_dir / 'input')}")
         for d in input_dir_dslist:
             print('Delete', d)

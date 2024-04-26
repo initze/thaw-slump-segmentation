@@ -35,7 +35,7 @@ parser.add_argument("--runs_per_gpu", type=int, default=5,
                     help="Number of runs per GPU")
 parser.add_argument("--max_images", type=int, default=None,
                     help="Maximum number of images to process (optional)")
-parser.add_argument("--skip_vrt", action="store_false", 
+parser.add_argument("--skip_vrt", action="store_true", 
                     help="set to skip DEM vrt creation")
 parser.add_argument("--skip_vector_save", action="store_true", 
                     help="set to skip output vector creation")
@@ -45,6 +45,7 @@ args = parser.parse_args()
 
 def main():
     # ### List all files with properties
+    # TODO: run double for both paths
     df_processing_status = get_processing_status(args.raw_data_dir, args.processing_dir, args.inference_dir, args.model)
     # find non-completed preprocessing
     df_delete = df_processing_status[df_processing_status['preprocessed'] & ~df_processing_status['preprocessing_valid'] & ~df_processing_status['inference_finished']]
@@ -56,9 +57,11 @@ def main():
     # print basic information
     total_images = len(df_final)
     preprocessed_images = df_final.preprocessed.sum()
+    preprocessing_images = total_images - preprocessed_images
     finished_images = df_final.inference_finished.sum()
     print(f'Number of images: {total_images}')
     print(f'Number of preprocessed images: {preprocessed_images}')
+    print(f'Number of preprocessed images for preprocessing: {preprocessing_images}')
     print(f'Number of finished images: {finished_images}')
     print(f'Number of image to process: {preprocessed_images - finished_images}')
     # TODO: images with processing status True but Inference False are crappy
@@ -69,13 +72,13 @@ def main():
     
     ## Preprocessing
     # #### Update Arctic DEM data
-    if args.skip_vrt == False:
+    if args.skip_vrt == True:
+        print('Skipping Elevation VRT creation!')
+    else:
         print('Updating Elevation VRTs!')
         dem_data_dir = Path('/isipd/projects/p_aicore_pf/initze/data/ArcticDEM')
         vrt_target_dir = Path('/isipd/projects/p_aicore_pf/initze/processing/auxiliary/ArcticDEM')
         update_DEM2(dem_data_dir=dem_data_dir, vrt_target_dir=vrt_target_dir)
-    else:
-        print('Skipping Elevation VRT creation!')
 
 
     # #### Copy data for Preprocessing 

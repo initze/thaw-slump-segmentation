@@ -142,12 +142,15 @@ def get_processing_status(raw_data_dir, processing_dir, inference_dir, model):
     except:
         df_raw = get_datasets(raw_data_dir, depth=0)
     # get processed
-    # TODO: check here for both options - make 2 runs 
+    # TODO: make validation steps if files are alright 
     df_processed = get_datasets(processing_dir / 'tiles', depth=0, preprocessed=True)
-    # calculate prperties
+    
+    # calculate pr0perties
     diff = df_raw[~df_raw['name'].isin(df_processed['name'])]
     df_merged = pd.concat([df_processed, diff]).reset_index()
-    
+    # check if all files are available
+    df_merged['preprocessing_valid'] = df_merged.apply(lambda x: len(list(x['path'].glob('*')))>=4, axis=1)
+
     products_list = [prod.name for prod in list((inference_dir / model).glob('*'))]
     df_merged['inference_finished'] = df_merged.apply(lambda x: x['name'] in (products_list), axis=1)
     

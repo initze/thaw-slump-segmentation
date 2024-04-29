@@ -148,7 +148,7 @@ def update_DEM2(dem_data_dir, vrt_target_dir):
     os.remove(file_list_text)
     
 
-def get_processing_status(raw_data_dir, processing_dir, inference_dir, model):
+def get_processing_status(raw_data_dir, processing_dir, inference_dir, model, reduce_to_raw=False):
     # get raw tiles
     try:
         df_raw = get_datasets(raw_data_dir, depth=1)
@@ -158,12 +158,16 @@ def get_processing_status(raw_data_dir, processing_dir, inference_dir, model):
     # TODO: make validation steps if files are alright 
     df_processed = get_datasets(processing_dir / 'tiles', depth=0, preprocessed=True)
     # check if all files are available
-    df_processed = df_processed[df_processed.apply(lambda x: len(list(x['path'].glob('*')))>=4, axis=1)]
+    df_processed = df_processed[df_processed.apply(lambda x: len(list(x['path'].glob('*')))>=5, axis=1)]
 
     # get all non preprocessed raw images
     diff = df_raw[~df_raw['name'].isin(df_processed['name'])]
     # TODO: issue here
-    df_merged = pd.concat([df_processed, diff]).reset_index()
+    if reduce_to_raw == True:
+        # TODO: check 
+        df_merged = diff
+    else:
+        df_merged = pd.concat([df_processed, diff]).reset_index()
 
 
     products_list = [prod.name for prod in list((inference_dir / model).glob('*'))]

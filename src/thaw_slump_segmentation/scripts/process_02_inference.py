@@ -19,7 +19,11 @@ parser = argparse.ArgumentParser(description="Script to run auto inference for R
                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument("--code_dir", type=Path, default=Path('/isipd/projects/p_aicore_pf/initze/code/aicore_inference'),
                     help="Local code directory")
-parser.add_argument("--raw_data_dir", type=Path, default=Path('/isipd/projects/p_aicore_pf/initze/data/planet/planet_data_inference_grid/scenes'),
+parser.add_argument("--raw_data_dir", type=Path, nargs='+', 
+                    default=[
+                        Path('/isipd/projects/p_aicore_pf/initze/data/planet/planet_data_inference_grid/scenes'),
+                        Path('/isipd/projects/p_aicore_pf/initze/data/planet/planet_data_inference_grid/tiles')
+                        ],
                     help="Location of raw data")
 parser.add_argument("--processing_dir", type=Path, default=Path('/isipd/projects/p_aicore_pf/initze/processing'),
                     help="Location for data processing")
@@ -47,10 +51,14 @@ def main():
     # ### List all files with properties
     # TODO: run double for both paths
     print("Checking processing status!")
-    df_processing_status = get_processing_status(args.raw_data_dir, args.processing_dir, args.inference_dir, args.model)
+    # read processing status for raw data list
+    # TODO: check here - produces very large output when double checking
+    df_processing_status_list = [get_processing_status(raw_data_dir, args.processing_dir, args.inference_dir, args.model) for raw_data_dir in args.raw_data_dir]
+    
     # get df for preprocessing
-    df_final = df_processing_status
+    df_final = pd.concat(df_processing_status_list).drop_duplicates()
 
+    # TODO: move to function
     # print basic information
     total_images = len(df_final)
     preprocessed_images = df_final.preprocessed.sum()
@@ -58,9 +66,10 @@ def main():
     finished_images = df_final.inference_finished.sum()
     print(f'Number of images: {total_images}')
     print(f'Number of preprocessed images: {preprocessed_images}')
-    print(f'Number of preprocessed images for preprocessing: {preprocessing_images}')
+    print(f'Number of images for preprocessing: {preprocessing_images}')
+    print(f'Number of images for inference: {preprocessed_images - finished_images}')
     print(f'Number of finished images: {finished_images}')
-    print(f'Number of images to process: {preprocessed_images - finished_images}')
+    
     # TODO: images with processing status True but Inference False are crappy
     
     if total_images == finished_images:
@@ -110,8 +119,7 @@ def main():
 
     # ## Processing/Inference
     # rerun processing status
-    df_processing_status2 = get_processing_status(args.raw_data_dir, args.processing_dir, args.inference_dir, args.model)
-
+    df_processing_status2 = pd.concat([get_processing_status(raw_data_dir, args.processing_dir, args.inference_dir, args.model) for raw_data_dir in args.raw_data_dir]).drop_duplicates()
     # Filter to images that are not preprocessed yet
     df_process = df_final[~df_final.inference_finished]
     # update overview and filter accordingly - really necessary?
@@ -139,11 +147,13 @@ def main():
     # #### Merge output files
 
     if not args.skip_vector_save:
-    # read all files which following the above defined threshold
-        flist = list((args.inference_dir / args.model).glob(f'*/*pred_binarized.shp'))
-        len(flist)
-        # TODO:uncomment here
         if len(df_process_final) > 0:
+            
+            # read all files which following the above defined threshold
+            flist = list((args.inference_dir / args.model).glob(f'*/*pred_binarized.shp'))
+            len(flist)
+        
+            # Save output vectors to merged file
             # load them in parallel
             out = Parallel(n_jobs=6)(delayed(load_and_parse_vector)(f) for f in tqdm(flist[:]))
             

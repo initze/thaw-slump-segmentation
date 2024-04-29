@@ -8,6 +8,7 @@
 """
 Usecase 2 Training Script
 """
+
 import argparse
 import re
 import subprocess
@@ -18,33 +19,40 @@ from pathlib import Path
 import torch
 import torch.nn as nn
 import yaml
+from rich import pretty, traceback
 from tqdm import tqdm
 
-from ..data_loading import get_loader, get_vis_loader, get_slump_loader, DataSources
-from ..metrics import Metrics, Accuracy, Precision, Recall, F1, IoU
-from ..models import create_model, create_loss
-from ..utils import showexample, plot_metrics, plot_precision_recall, init_logging, get_logger, yaml_custom
+import wandb
 
-parser = argparse.ArgumentParser(description='Training script',
-                                 formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-parser.add_argument('-s', '--summary', action='store_true',
-                    help='Only print model summary and return.')
-parser.add_argument("--data_dir", default='data', type=Path, help="Path to data processing dir")
-parser.add_argument("--log_dir", default='logs', type=Path, help="Path to log dir")
-parser.add_argument('-n', '--name', default='',
-                    help='Give this run a name, so that it will be logged into logs/<NAME>_<timestamp>.')
-parser.add_argument('-c', '--config', default='config.yml', type=Path,
-                    help='Specify run config to use.')
-parser.add_argument('-r', '--resume', default='',
-                    help='Resume from the specified checkpoint.'
-                         'Can be either a run-id (e.g. "2020-06-29_18-12-03") to select the last'
-                         'checkpoint of that run, or a direct path to a checkpoint to be loaded.'
-                         'Overrides the resume option in the config file if given.'
-                    )
-parser.add_argument('-wp', '--wandb_project', default='thaw-slump-segmentation',
-                    help='Set a project name for weights and biases')
-parser.add_argument('-wn', '--wandb_name', default=None,
-                    help='Set a run name for weights and biases')
+from ..data_loading import DataSources, get_loader, get_slump_loader, get_vis_loader
+from ..metrics import F1, Accuracy, IoU, Metrics, Precision, Recall
+from ..models import create_loss, create_model
+from ..utils import get_logger, init_logging, plot_metrics, plot_precision_recall, showexample, yaml_custom
+
+traceback.install(show_locals=True)
+pretty.install()
+
+parser = argparse.ArgumentParser(description='Training script', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+parser.add_argument('-s', '--summary', action='store_true', help='Only print model summary and return.')
+parser.add_argument('--data_dir', default='data', type=Path, help='Path to data processing dir')
+parser.add_argument('--log_dir', default='logs', type=Path, help='Path to log dir')
+parser.add_argument(
+    '-n', '--name', default='', help='Give this run a name, so that it will be logged into logs/<NAME>_<timestamp>.'
+)
+parser.add_argument('-c', '--config', default='config.yml', type=Path, help='Specify run config to use.')
+parser.add_argument(
+    '-r',
+    '--resume',
+    default='',
+    help='Resume from the specified checkpoint.'
+    'Can be either a run-id (e.g. "2020-06-29_18-12-03") to select the last'
+    'checkpoint of that run, or a direct path to a checkpoint to be loaded.'
+    'Overrides the resume option in the config file if given.',
+)
+parser.add_argument(
+    '-wp', '--wandb_project', default='thaw-slump-segmentation', help='Set a project name for weights and biases'
+)
+parser.add_argument('-wn', '--wandb_name', default=None, help='Set a run name for weights and biases')
 
 
 class Engine:
@@ -73,7 +81,7 @@ class Engine:
             encoder_name=m['encoder'],
             encoder_weights=None if m['encoder_weights'] == 'random' else m['encoder_weights'],
             classes=1,
-            in_channels=m['input_channels']
+            in_channels=m['input_channels'],
         )
 
         # make parallel
@@ -94,7 +102,7 @@ class Engine:
             self.logger.info(f"Resuming training from checkpoint {self.config['resume']}")
             self.model.load_state_dict(torch.load(self.config['resume']))
 
-        self.dev = torch.device("cpu") if not torch.cuda.is_available() else torch.device("cuda")
+        self.dev = torch.device('cpu') if not torch.cuda.is_available() else torch.device('cuda')
         self.logger.info(f'Training on {self.dev} device')
 
         self.model = self.model.to(self.dev)
@@ -109,21 +117,23 @@ class Engine:
 
         if args.summary:
             from torchsummary import summary
+
             summary(self.model, [(self.config['model']['input_channels'], 256, 256)])
             sys.exit(0)
 
         self.dataset_cache = {}
 
         self.vis_predictions = None
-        self.vis_loader, self.vis_names = get_vis_loader(self.config['visualization_tiles'],
-                                                         batch_size=self.config['batch_size'],
-                                                         data_sources=self.data_sources,
-                                                         data_root=self.DATA_ROOT)
+        self.vis_loader, self.vis_names = get_vis_loader(
+            self.config['visualization_tiles'],
+            batch_size=self.config['batch_size'],
+            data_sources=self.data_sources,
+            data_root=self.DATA_ROOT,
+        )
 
         # Write the config YML to the run-folder
         self.config['run_info'] = dict(
-            timestamp=timestamp,
-            git_head=subprocess.check_output(["git", "describe"], encoding='utf8').strip()
+            timestamp=timestamp, git_head=subprocess.check_output(['git', 'describe'], encoding='utf8').strip()
         )
         with open(self.log_dir / 'config.yml', 'w') as f:
             yaml.dump(self.config, f)
@@ -134,7 +144,11 @@ class Engine:
         # Metrics and Weights and Biases initialization
         self.trn_metrics = {}
         self.val_metrics = {}
-        wandb.init(project=args.wandb_project, name=args.wandb_name, config=self.config, entity='ml4earth')
+        print('wandb project:', args.wandb_project)
+        print('wandb name:', args.wandb_name)
+        print('config:', self.config)
+        print('entity:', 'ml4earth')
+        wandb.init(project=args.wandb_project, name=args.wandb_name, config=self.config, entity='ingmarnitze_team')
 
     def run(self):
         for phase in self.config['schedule']:
@@ -144,9 +158,9 @@ class Engine:
                 self.loss_function = create_loss(scoped_get('loss_function', phase, self.config)).to(self.dev)
 
                 for step in phase['steps']:
-                    if type(step) is dict:
+                    if isinstance(step, dict):
                         assert len(step) == 1
-                        (command, key), = step.items()
+                        ((command, key),) = step.items()
                     else:
                         command = step
 
@@ -161,9 +175,9 @@ class Engine:
                     elif command == 'log_images':
                         self.log_images()
                 if self.scheduler:
-                    print("before step:", self.scheduler.get_last_lr())
+                    print('before step:', self.scheduler.get_last_lr())
                     self.scheduler.step()
-                    print("after step:", self.scheduler.get_last_lr())
+                    print('after step:', self.scheduler.get_last_lr())
 
     def get_dataloader(self, name):
         if name in self.dataset_cache:
@@ -207,15 +221,15 @@ class Engine:
 
             metrics_terms = {}
             if isinstance(y_hat, (tuple, list)):
-              # Deep Supervision
-              deep_super_losses = [self.loss_function(pred.squeeze(1), target) for pred in y_hat]
-              y_hat = y_hat[0].squeeze(1)
-              loss = sum(deep_super_losses)
-              metrics_terms['Loss'] = deep_super_losses[0].detach()
-              metrics_terms['Deep Supervision Loss'] = loss.detach()
+                # Deep Supervision
+                deep_super_losses = [self.loss_function(pred.squeeze(1), target) for pred in y_hat]
+                y_hat = y_hat[0].squeeze(1)
+                loss = sum(deep_super_losses)
+                metrics_terms['Loss'] = deep_super_losses[0].detach()
+                metrics_terms['Deep Supervision Loss'] = loss.detach()
             else:
-              loss = self.loss_function(y_hat, target)
-              metrics_terms['Loss'] = loss.detach()
+                loss = self.loss_function(y_hat, target)
+                metrics_terms['Loss'] = loss.detach()
 
             loss.backward()
             self.opt.step()
@@ -280,7 +294,7 @@ class Engine:
                 safe_append(self.val_metrics, key, val)
             safe_append(self.val_metrics, 'step', self.board_idx)
             safe_append(self.val_metrics, 'epoch', self.epoch)
-            wandb.log({'val/{k}': v for k, v in metrics_vals.items()}, step=self.board_idx)
+            wandb.log({'val/{k}': v for k, v in self.val_metrics.items()}, step=self.board_idx)
 
     def log_images(self):
         self.logger.debug(f'Epoch {self.epoch} - Image Logging')
@@ -296,8 +310,9 @@ class Engine:
         (self.log_dir / 'tile_predictions').mkdir(exist_ok=True)
         for i, tile in enumerate(self.vis_names):
             filename = self.log_dir / 'tile_predictions' / f'{tile}.jpg'
-            showexample(self.vis_loader.dataset[i], self.vis_predictions[i],
-                        filename, self.data_sources, step=self.board_idx)
+            showexample(
+                self.vis_loader.dataset[i], self.vis_predictions[i], filename, self.data_sources, step=self.board_idx
+            )
 
         outdir = self.log_dir / 'metrics_plots'
         outdir.mkdir(exist_ok=True)
@@ -307,7 +322,7 @@ class Engine:
     def setup_lr_scheduler(self):
         # Scheduler
         if 'learning_rate_scheduler' not in self.config.keys():
-            print("running without learning rate scheduler")
+            print('running without learning rate scheduler')
             self.scheduler = None
         elif self.config['learning_rate_scheduler'] == 'StepLR':
             if 'lr_step_size' not in self.config.keys():
@@ -345,8 +360,8 @@ def safe_append(dictionary, key, value):
 
 
 def main():
-    args = parser.parse_args()
     Engine().run()
 
-if __name__ == "__main__":
-  main()
+
+if __name__ == '__main__':
+    main()

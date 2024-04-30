@@ -3,34 +3,39 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import os
+
 import matplotlib.pyplot as plt
 import numpy as np
-import os
 import pandas as pd
 import torch
-from matplotlib.ticker import MaxNLocator
 from matplotlib.colors import LinearSegmentedColormap
+from matplotlib.ticker import MaxNLocator
 
-FLATUI = {'Turquoise': (0.10196078431372549, 0.7372549019607844, 0.611764705882353),
-          'Emerald': (0.1803921568627451, 0.8, 0.44313725490196076),
-          'Peter River': (0.20392156862745098, 0.596078431372549, 0.8588235294117647),
-          'Amethyst': (0.6078431372549019, 0.34901960784313724, 0.7137254901960784),
-          'Wet Asphalt': (0.20392156862745098, 0.28627450980392155, 0.3686274509803922),
-          'Green Sea': (0.08627450980392157, 0.6274509803921569, 0.5215686274509804),
-          'Nephritis': (0.15294117647058825, 0.6823529411764706, 0.3764705882352941),
-          'Belize Hole': (0.1607843137254902, 0.5019607843137255, 0.7254901960784313),
-          'Wisteria': (0.5568627450980392, 0.26666666666666666, 0.6784313725490196),
-          'Midnight Blue': (0.17254901960784313, 0.24313725490196078, 0.3137254901960784),
-          'Sun Flower': (0.9450980392156862, 0.7686274509803922, 0.058823529411764705),
-          'Carrot': (0.9019607843137255, 0.49411764705882355, 0.13333333333333333),
-          'Alizarin': (0.9058823529411765, 0.2980392156862745, 0.23529411764705882),
-          'Clouds': (0.9254901960784314, 0.9411764705882353, 0.9450980392156862),
-          'Concrete': (0.5843137254901961, 0.6470588235294118, 0.6509803921568628),
-          'Orange': (0.9529411764705882, 0.611764705882353, 0.07058823529411765),
-          'Pumpkin': (0.8274509803921568, 0.32941176470588235, 0.0),
-          'Pomegranate': (0.7529411764705882, 0.2235294117647059, 0.16862745098039217),
-          'Silver': (0.7411764705882353, 0.7647058823529411, 0.7803921568627451),
-          'Asbestos': (0.4980392156862745, 0.5490196078431373, 0.5529411764705883)}
+import wandb
+
+FLATUI = {
+    'Turquoise': (0.10196078431372549, 0.7372549019607844, 0.611764705882353),
+    'Emerald': (0.1803921568627451, 0.8, 0.44313725490196076),
+    'Peter River': (0.20392156862745098, 0.596078431372549, 0.8588235294117647),
+    'Amethyst': (0.6078431372549019, 0.34901960784313724, 0.7137254901960784),
+    'Wet Asphalt': (0.20392156862745098, 0.28627450980392155, 0.3686274509803922),
+    'Green Sea': (0.08627450980392157, 0.6274509803921569, 0.5215686274509804),
+    'Nephritis': (0.15294117647058825, 0.6823529411764706, 0.3764705882352941),
+    'Belize Hole': (0.1607843137254902, 0.5019607843137255, 0.7254901960784313),
+    'Wisteria': (0.5568627450980392, 0.26666666666666666, 0.6784313725490196),
+    'Midnight Blue': (0.17254901960784313, 0.24313725490196078, 0.3137254901960784),
+    'Sun Flower': (0.9450980392156862, 0.7686274509803922, 0.058823529411764705),
+    'Carrot': (0.9019607843137255, 0.49411764705882355, 0.13333333333333333),
+    'Alizarin': (0.9058823529411765, 0.2980392156862745, 0.23529411764705882),
+    'Clouds': (0.9254901960784314, 0.9411764705882353, 0.9450980392156862),
+    'Concrete': (0.5843137254901961, 0.6470588235294118, 0.6509803921568628),
+    'Orange': (0.9529411764705882, 0.611764705882353, 0.07058823529411765),
+    'Pumpkin': (0.8274509803921568, 0.32941176470588235, 0.0),
+    'Pomegranate': (0.7529411764705882, 0.2235294117647059, 0.16862745098039217),
+    'Silver': (0.7411764705882353, 0.7647058823529411, 0.7803921568627451),
+    'Asbestos': (0.4980392156862745, 0.5490196078431373, 0.5529411764705883),
+}
 
 
 def flatui_cmap(*colors):
@@ -62,8 +67,7 @@ def showexample(data, preds, filename, data_sources, step):
     # First plot
     ROWS = 6
     m = 0.02
-    gridspec_kw = dict(left=m, right=1 - m, top=1 - m, bottom=m,
-                       hspace=0.12, wspace=m)
+    gridspec_kw = dict(left=m, right=1 - m, top=1 - m, bottom=m, hspace=0.12, wspace=m)
     N = 1 + int(np.ceil(len(preds) / ROWS))
     fig, ax = plt.subplots(ROWS, N, figsize=(3 * N, 3 * ROWS), gridspec_kw=gridspec_kw)
     ax = ax.T.reshape(-1)
@@ -133,7 +137,7 @@ def showexample(data, preds, filename, data_sources, step):
     ax[2].imshow(pred, **heatmap_args)
     ax[2].set_title('Prediction')
     for axis in ax:
-      axis.axis('off')
+        axis.axis('off')
     wandb.log({filename.stem: wandb.Image(fig)}, step=step)
 
 
@@ -151,8 +155,7 @@ def read_metrics_file(file_path):
 
         data.append([int(epoch.replace('Epoch', '')), str(val_type), *acc_vals])
 
-    df = pd.DataFrame(columns=['epoch', 'val_type', 'accuracy', 'precision', 'recall', 'f1', 'iou', 'loss'],
-                      data=data)
+    df = pd.DataFrame(columns=['epoch', 'val_type', 'accuracy', 'precision', 'recall', 'f1', 'iou', 'loss'], data=data)
     return df
 
 
@@ -195,6 +198,6 @@ def plot_precision_recall(train_metrics, val_metrics, outdir='.'):
 
     fig.tight_layout()
 
-    outfile = os.path.join(outdir, f'precision_recall.png')
+    outfile = os.path.join(outdir, 'precision_recall.png')
     fig.savefig(outfile)
     fig.clear()

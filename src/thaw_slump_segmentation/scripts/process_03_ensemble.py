@@ -34,6 +34,8 @@ parser.add_argument("--n_vector_loaders", type=int, default=6,
                     help="number of parallel vector loaders for final merge")
 parser.add_argument("--max_images", type=int, default=None,
                     help="Maximum number of images to process (optional)")
+parser.add_argument("--vector_output_format", type=str, nargs='+', default=['gpkg', 'parquet'],
+                    help="Output format extension of ensembled vector files")
 parser.add_argument("--ensemble_thresholds", type=float, nargs='+', default=[0.4, 0.45, 0.5],
                     help="Thresholds for polygonized outputs of the ensemble, needs to be string, see examples")
 parser.add_argument("--ensemble_border_size", type=int, default=10,
@@ -119,21 +121,25 @@ if (len(process) > 0) or args.force_vector_merge:
         print ('Merging results')
         merged_gdf = gpd.pd.concat(out)
 
-        # Save output to vector
-        save_file = INFERENCE_DIR / ENSEMBLE_NAME / f'merged_{proba_string}.gpkg'    
-        
-        # make file backup if necessary
-        if save_file.exists():
-            # Get the current timestamp
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            # Create the backup file name
-            save_file_bk = INFERENCE_DIR / ENSEMBLE_NAME / f'merged_{proba_string}_bk_{timestamp}.gpkg'
-            print (f'Creating backup of file {save_file} to {save_file_bk}')
-            shutil.move(save_file, save_file_bk)
-        
-        # save to files
-        print(f'Saving vectors to {save_file}')
-        merged_gdf.to_file(save_file)
-        merged_gdf.to_file(INFERENCE_DIR / ENSEMBLE_NAME / f'merged_{proba_string}.gpkg')
-
-    
+        for vector_output_format in args.vector_output_format:
+            # Save output to vector
+            save_file = INFERENCE_DIR / ENSEMBLE_NAME / f'merged_{proba_string}.{vector_output_format}'    
+            
+            # make file backup if necessary
+            if save_file.exists():
+                # Get the current timestamp
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                # Create the backup file name
+                save_file_bk = INFERENCE_DIR / ENSEMBLE_NAME / f'merged_{proba_string}_bk_{timestamp}.{vector_output_format}'
+                print (f'Creating backup of file {save_file} to {save_file_bk}')
+                shutil.move(save_file, save_file_bk)
+            
+            # save to files
+            print(f'Saving vectors to {save_file}')
+            if vector_output_format in ['shp', 'gpkg']:
+                merged_gdf.to_file(save_file)
+            elif vector_output_format in ['parquet']:
+                merged_gdf.to_parquet(save_file)
+            else:
+                print(f'Unknown format {vector_output_format}!')
+            # merged_gdf.to_file(INFERENCE_DIR / ENSEMBLE_NAME / f'merged_{proba_string}.{vector_output_format}')

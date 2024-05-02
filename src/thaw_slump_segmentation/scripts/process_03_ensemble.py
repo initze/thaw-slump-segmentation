@@ -26,7 +26,7 @@ parser.add_argument("--ensemble_name", type=str, default='RTS_v6_ensemble_v2',
                     help="Target directory for models")
 parser.add_argument("--model_names", type=str, nargs='+', default=['RTS_v6_tcvis', 'RTS_v6_notcvis'],
                     help="Model name, examples ['RTS_v6_tcvis', 'RTS_v6_notcvis']")
-parser.add_argument("--use_gpu", type=int, default=0,
+parser.add_argument("--gpu", type=int, default=0,
                     help="GPU IDs to use for edge cleaning")
 parser.add_argument("--n_jobs", type=int, default=15,
                     help="number of CPU jobs for ensembling")
@@ -81,7 +81,7 @@ kwargs_ensemble = {
     'minimum_mapping_unit': args.ensemble_mmu,
     'delete_binary': True,
     'try_gpu': args.try_gpu, # currently default to CPU only
-    'gpu' : args.use_gpu,
+    'gpu' : args.gpu,
 }
 
 # Check for finalized products
@@ -95,7 +95,7 @@ if len(process) > 0:
     print(f'Start running ensemble with {N_JOBS} jobs!')
     print(f'Target ensemble name:', kwargs_ensemble['ensemblename'])
     print(f'Source model output', kwargs_ensemble['modelnames'])
-    #_ = Parallel(n_jobs=N_JOBS)(delayed(create_ensemble_v2)(image_id=process.iloc[row]['name'], **kwargs_ensemble) for row in tqdm(range(len(process.iloc[:N_IMAGES]))))
+    _ = Parallel(n_jobs=N_JOBS)(delayed(create_ensemble_v2)(image_id=process.iloc[row]['name'], **kwargs_ensemble) for row in tqdm(range(len(process.iloc[:N_IMAGES]))))
 else:
     print(f'Skipped ensembling, all files ready for {ENSEMBLE_NAME}!')
 

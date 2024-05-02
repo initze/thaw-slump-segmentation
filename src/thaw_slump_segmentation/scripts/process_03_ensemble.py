@@ -34,13 +34,15 @@ parser.add_argument("--n_vector_loaders", type=int, default=6,
                     help="number of parallel vector loaders for final merge")
 parser.add_argument("--max_images", type=int, default=None,
                     help="Maximum number of images to process (optional)")
-parser.add_argument("--ensemble_thresholds", type=str, nargs='+', default=[0.4, 0.45, 0.5],
-                    help="Thresholds for polygonized outputs of the ensemble")
+parser.add_argument("--ensemble_thresholds", type=str, nargs='+', default=['class_04', 'class_045', 'class_05'],
+                    help="Thresholds for polygonized outputs of the ensemble, needs to be string, see examples")
 parser.add_argument("--ensemble_border_size", type=int, default=10,
                     help="Number of pixels to remove around the border and no data")
 parser.add_argument("--ensemble_mmu", type=int, default=32,
                     help="Minimum mapping unit of output objects in pixels")
 parser.add_argument("--try_gpu", action="store_true", help="set to try image processing with gpu")
+parser.add_argument("--force_vector_merge", action="store_true", help="force merging of output vectors even if no new ensemble tiles were processed")
+
 args = parser.parse_args()
 
 # Location of raw data
@@ -89,44 +91,47 @@ df_ensemble_status = get_processing_status_ensemble(INFERENCE_DIR, model_input_n
 process = df_ensemble_status[df_ensemble_status['process']]
 
 # #### Run Ensemble Merging
-
-print(f'Start running ensemble with {N_JOBS} jobs!')
-print(f'Target ensemble name:', kwargs_ensemble['ensemblename'])
-print(f'Source model output', kwargs_ensemble['modelnames'])
-#_ = Parallel(n_jobs=N_JOBS)(delayed(create_ensemble_v2)(image_id=process.iloc[row]['name'], **kwargs_ensemble) for row in tqdm(range(len(process.iloc[:N_IMAGES]))))
+if len(process) > 0:
+    print(f'Start running ensemble with {N_JOBS} jobs!')
+    print(f'Target ensemble name:', kwargs_ensemble['ensemblename'])
+    print(f'Source model output', kwargs_ensemble['modelnames'])
+    _ = Parallel(n_jobs=N_JOBS)(delayed(create_ensemble_v2)(image_id=process.iloc[row]['name'], **kwargs_ensemble) for row in tqdm(range(len(process.iloc[:N_IMAGES]))))
+else:
+    print(f'Skipped ensembling, all files ready for {ENSEMBLE_NAME}!')
 
 # # #### run parallelized batch 
 
-# ### Merge vectors to complete dataset 
-ensemblename = ENSEMBLE_NAME
-# set probability levels: 'class_05' means 50%, 'class_045' means 45%. This is the regex to search for vector naming
-proba_strings = args.ensemble_thresholds
+if (len(process) > 0) or args.force_vector_merge:
+    # ### Merge vectors to complete dataset
+    # set probability levels: 'class_05' means 50%, 'class_045' means 45%. This is the regex to search for vector naming
+    proba_strings = args.ensemble_thresholds
 
-for proba_string in proba_strings:
-    # read all files which followiw the above defined threshold
-    flist = list((INFERENCE_DIR / ensemblename).glob(f'*/*_{proba_string}.gpkg'))
-    len(flist)
-    # load them in parallel
-    print (f'Loading results {proba_string}')
-    out = Parallel(n_jobs=6)(delayed(load_and_parse_vector)(f) for f in tqdm(flist[:N_IMAGES]))
-    # merge them and save to geopackage file
-    print ('Merging results')
-    merged_gdf = gpd.pd.concat(out)
+    for proba_string in proba_strings:
+        # read all files which follow the above defined threshold
+        flist = list((INFERENCE_DIR / ENSEMBLE_NAME).glob(f'*/*_{proba_string}.gpkg'))
+        len(flist)
+        # load them in parallel
+        print (f'Loading results {proba_string}')
+        out = Parallel(n_jobs=6)(delayed(load_and_parse_vector)(f) for f in tqdm(flist[:N_IMAGES]))
+        # merge them and save to geopackage file
+        print ('Merging results')
+        merged_gdf = gpd.pd.concat(out)
 
-    # Save output to vector
-    save_file = INFERENCE_DIR / ensemblename / f'merged_{proba_string}.gpkg'    
-    
-    # make file backup if necessary
-    if save_file.exists():
-        # Get the current timestamp
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        # Create the backup file name
-        save_file_bk = INFERENCE_DIR / ensemblename / f'merged_{proba_string}_bk_{timestamp}.gpkg'
-        print (f'Creating backup of file {save_file} to {save_file_bk}')
-        shutil.move(save_file, save_file_bk)
-    
-    # save to files
-    print(f'Saving vectors to {save_file}')
-    merged_gdf.to_file(save_file)
-    merged_gdf.to_file(INFERENCE_DIR / ensemblename / f'merged_{proba_string}.gpkg')
+        # Save output to vector
+        save_file = INFERENCE_DIR / ENSEMBLE_NAME / f'merged_{proba_string}.gpkg'    
+        
+        # make file backup if necessary
+        if save_file.exists():
+            # Get the current timestamp
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            # Create the backup file name
+            save_file_bk = INFERENCE_DIR / ENSEMBLE_NAME / f'merged_{proba_string}_bk_{timestamp}.gpkg'
+            print (f'Creating backup of file {save_file} to {save_file_bk}')
+            shutil.move(save_file, save_file_bk)
+        
+        # save to files
+        print(f'Saving vectors to {save_file}')
+        merged_gdf.to_file(save_file)
+        merged_gdf.to_file(INFERENCE_DIR / ENSEMBLE_NAME / f'merged_{proba_string}.gpkg')
+
     

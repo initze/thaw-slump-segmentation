@@ -9,6 +9,15 @@ This will pull the CUDA 12 version of pytorch. If you are running CUDA 11, you n
 
 gdal incl. gdal-utilities (preferably version >=3.6) need to be installed in your environment, e.g. with conda
 
+### Additional packages
+#### cucim
+You can install cucim to speed up the postprocessing process. cucim will use the gpu to perform binary erosion of edge artifacts, which runs alot faster than the standard CPU implementation of scikit-learn.
+
+`pip install --extra-index-url=https://pypi.nvidia.com cucim-cu11==24.4.*`
+
+Installation for other cuda versions see here: 
+
+https://docs.rapids.ai/install
 ## System and Data Setup
 
 ### Option 1 - Singularity container

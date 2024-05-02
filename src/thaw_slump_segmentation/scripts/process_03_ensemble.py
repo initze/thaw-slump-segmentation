@@ -79,7 +79,7 @@ kwargs_ensemble = {
     'minimum_mapping_unit': args.ensemble_mmu,
     'delete_binary': True,
     'try_gpu': args.try_gpu, # currently default to CPU only
-    'gpu' : 0,
+    'gpu' : args.use_gpu,
 }
 
 # Check for finalized products
@@ -93,7 +93,7 @@ process = df_ensemble_status[df_ensemble_status['process']]
 print(f'Start running ensemble with {N_JOBS} jobs!')
 print(f'Target ensemble name:', kwargs_ensemble['ensemblename'])
 print(f'Source model output', kwargs_ensemble['modelnames'])
-_ = Parallel(n_jobs=N_JOBS)(delayed(create_ensemble_v2)(image_id=process.iloc[row]['name'], **kwargs_ensemble) for row in tqdm(range(len(process.iloc[:N_IMAGES]))))
+#_ = Parallel(n_jobs=N_JOBS)(delayed(create_ensemble_v2)(image_id=process.iloc[row]['name'], **kwargs_ensemble) for row in tqdm(range(len(process.iloc[:N_IMAGES]))))
 
 # # #### run parallelized batch 
 

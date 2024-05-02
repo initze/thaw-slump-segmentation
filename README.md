@@ -58,12 +58,12 @@ python setup_raw_data.py --data_dir <DATA_DIR>
 
 #### Setting up required files for training 
 ```bash
-python download_s2_4band_planet_format.py --s2id <IMAGE_ID> --data_dir <DATA_DIR>
+python prepare_data.py --data_dir <DATA_DIR>
 ```
 
 ### Data Preprocessing for Sentinel 2 data to match planet format
 ```bash
-python prepare_data.py --data_dir <DATA_DIR>
+python download_s2_4band_planet_format.py --s2id <IMAGE_ID> --data_dir <DATA_DIR>
 ```
 
 

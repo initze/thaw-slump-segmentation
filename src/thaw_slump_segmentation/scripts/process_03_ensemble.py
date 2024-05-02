@@ -34,7 +34,7 @@ parser.add_argument("--n_vector_loaders", type=int, default=6,
                     help="number of parallel vector loaders for final merge")
 parser.add_argument("--max_images", type=int, default=None,
                     help="Maximum number of images to process (optional)")
-parser.add_argument("--ensemble_thresholds", type=str, nargs='+', default=['class_04', 'class_045', 'class_05'],
+parser.add_argument("--ensemble_thresholds", type=float, nargs='+', default=[0.4, 0.45, 0.5],
                     help="Thresholds for polygonized outputs of the ensemble, needs to be string, see examples")
 parser.add_argument("--ensemble_border_size", type=int, default=10,
                     help="Number of pixels to remove around the border and no data")
@@ -95,7 +95,7 @@ if len(process) > 0:
     print(f'Start running ensemble with {N_JOBS} jobs!')
     print(f'Target ensemble name:', kwargs_ensemble['ensemblename'])
     print(f'Source model output', kwargs_ensemble['modelnames'])
-    _ = Parallel(n_jobs=N_JOBS)(delayed(create_ensemble_v2)(image_id=process.iloc[row]['name'], **kwargs_ensemble) for row in tqdm(range(len(process.iloc[:N_IMAGES]))))
+    #_ = Parallel(n_jobs=N_JOBS)(delayed(create_ensemble_v2)(image_id=process.iloc[row]['name'], **kwargs_ensemble) for row in tqdm(range(len(process.iloc[:N_IMAGES]))))
 else:
     print(f'Skipped ensembling, all files ready for {ENSEMBLE_NAME}!')
 
@@ -104,7 +104,9 @@ else:
 if (len(process) > 0) or args.force_vector_merge:
     # ### Merge vectors to complete dataset
     # set probability levels: 'class_05' means 50%, 'class_045' means 45%. This is the regex to search for vector naming
-    proba_strings = args.ensemble_thresholds
+    #proba_strings = args.ensemble_thresholds
+    # TODO: needs to be 'class_04', 
+    proba_strings = [f'class_{thresh}'.replace('.','') for thresh in args.ensemble_thresholds]
 
     for proba_string in proba_strings:
         # read all files which follow the above defined threshold

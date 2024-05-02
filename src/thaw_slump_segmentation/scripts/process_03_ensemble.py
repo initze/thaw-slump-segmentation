@@ -26,7 +26,7 @@ parser.add_argument("--ensemble_name", type=str, default='RTS_v6_ensemble_v2',
                     help="Target directory for models")
 parser.add_argument("--model_names", type=str, nargs='+', default=['RTS_v6_tcvis', 'RTS_v6_notcvis'],
                     help="Model name, examples ['RTS_v6_tcvis', 'RTS_v6_notcvis']")
-parser.add_argument("--use_gpu", type=int, default=0,
+parser.add_argument("--gpu", type=int, default=0,
                     help="GPU IDs to use for edge cleaning")
 parser.add_argument("--n_jobs", type=int, default=15,
                     help="number of CPU jobs for ensembling")
@@ -34,7 +34,7 @@ parser.add_argument("--n_vector_loaders", type=int, default=6,
                     help="number of parallel vector loaders for final merge")
 parser.add_argument("--max_images", type=int, default=None,
                     help="Maximum number of images to process (optional)")
-parser.add_argument("--ensemble_thresholds", type=str, nargs='+', default=['class_04', 'class_045', 'class_05'],
+parser.add_argument("--ensemble_thresholds", type=float, nargs='+', default=[0.4, 0.45, 0.5],
                     help="Thresholds for polygonized outputs of the ensemble, needs to be string, see examples")
 parser.add_argument("--ensemble_border_size", type=int, default=10,
                     help="Number of pixels to remove around the border and no data")
@@ -81,7 +81,7 @@ kwargs_ensemble = {
     'minimum_mapping_unit': args.ensemble_mmu,
     'delete_binary': True,
     'try_gpu': args.try_gpu, # currently default to CPU only
-    'gpu' : args.use_gpu,
+    'gpu' : args.gpu,
 }
 
 # Check for finalized products
@@ -104,7 +104,9 @@ else:
 if (len(process) > 0) or args.force_vector_merge:
     # ### Merge vectors to complete dataset
     # set probability levels: 'class_05' means 50%, 'class_045' means 45%. This is the regex to search for vector naming
-    proba_strings = args.ensemble_thresholds
+    #proba_strings = args.ensemble_thresholds
+    # TODO: needs to be 'class_04', 
+    proba_strings = [f'class_{thresh}'.replace('.','') for thresh in args.ensemble_thresholds]
 
     for proba_string in proba_strings:
         # read all files which follow the above defined threshold

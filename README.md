@@ -47,6 +47,38 @@ gdal_path: '%CONDA_PREFIX%\Scripts' # must be single quote
 gdal_bin: '%CONDA_PREFIX%\Library\bin' # must be single quote
 ```
 
+## CLI
+
+Run in dev:
+
+```sh
+$ rye run thaw-slump-segmentation hello tobi
+Hello tobi
+```
+
+or run as python module:
+
+```sh
+$ rye run python -m thaw_slump_segmentation hello tobi
+Hello tobi
+```
+
+With activated env, e.g. after installation, just remove the `rye run`:
+
+```sh
+$ source .venv/bin/activate
+$ thaw-slump-segmentation hello tobi
+Hello tobi
+```
+
+or
+
+```sh
+$ source .venv/bin/activate
+$ python -m thaw_slump_segmentation hello tobi
+Hello tobi
+```
+
 ## Data Processing
 
 ### Data Preprocessing for Planet data

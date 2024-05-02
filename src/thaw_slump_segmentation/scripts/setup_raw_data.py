@@ -7,25 +7,35 @@
 """
 Usecase 2 Data Preprocessing Script
 """
+
 import argparse
-import yaml
+import os
+from collections import namedtuple
 from datetime import datetime
 from pathlib import Path
-import os
 
+import ee
+import typer
 from joblib import Parallel, delayed
+from typing_extensions import Annotated
 
 from .. import data_pre_processing
-from ..data_pre_processing import *
-from ..utils import init_logging, get_logger, yaml_custom
+from ..data_pre_processing import (
+    aux_data_to_tiles,
+    check_input_data,
+    gdal,
+    get_tcvis_from_gee,
+    has_projection,
+    make_ndvi_file,
+    mask_input_data,
+    move_files,
+    pre_cleanup,
+    rename_clip_to_standard,
+    vector_to_raster_mask,
+)
 
-parser = argparse.ArgumentParser()
-parser.add_argument("--gdal_bin", default=None, help="Path to gdal binaries (ignored if --skip_gdal is passed)")
-parser.add_argument("--gdal_path", default=None, help="Path to gdal scripts (ignored if --skip_gdal is passed)")
-parser.add_argument("--n_jobs", default=-1, type=int, help="number of parallel joblib jobs")
-parser.add_argument("--nolabel", action='store_false', help="Set flag to do preprocessing without label file")
-parser.add_argument("--data_dir", default='data', type=Path, help="Path to data processing dir")
-parser.add_argument("--log_dir", default='logs', type=Path, help="Path to log dir")
+# from ..data_pre_processing import *
+from ..utils import get_logger, init_logging
 
 is_ee_initialized = False  # Module-global flag to avoid calling ee.Initialize multiple times
 
@@ -34,8 +44,13 @@ STATUS = {0: 'failed', 1: 'success', 2: 'skipped'}
 SUCCESS_STATES = ['rename', 'label', 'ndvi', 'tcvis', 'rel_dem', 'slope', 'mask', 'move']
 
 
-def preprocess_directory(image_dir, data_dir, aux_dir, backup_dir, args, log_path, label_required=True):
-    gdal.initialize(args)
+def preprocess_directory(image_dir, data_dir, aux_dir, backup_dir, log_path, gdal_bin, gdal_path, label_required=True):
+    # TODO: let gdal.initialize take each argument separately
+    # Mock old args object
+    ARGS = namedtuple('gdalargs', ['gdal_bin', 'gdal_path'])
+    gdalargs = ARGS(gdal_bin, gdal_path)
+    gdal.initialize(gdalargs)
+
     init_logging(log_path)
     image_name = os.path.basename(image_dir)
     thread_logger = get_logger(f'setup_raw_data.{image_name}')
@@ -47,7 +62,7 @@ def preprocess_directory(image_dir, data_dir, aux_dir, backup_dir, args, log_pat
         try:
             thread_logger.debug('Initializing Earth Engine')
             ee.Initialize()
-        except:
+        except Exception:
             thread_logger.warn('Initializing Earth Engine failed, trying to authenticate')
             ee.Authenticate()
             ee.Initialize()
@@ -70,23 +85,18 @@ def preprocess_directory(image_dir, data_dir, aux_dir, backup_dir, args, log_pat
 
     success_state['ndvi'] = make_ndvi_file(image_dir)
 
-    ee_image_tcvis = ee.ImageCollection("users/ingmarnitze/TCTrend_SR_2000-2019_TCVIS").mosaic()
-    success_state['tcvis'] = get_tcvis_from_gee(image_dir,
-                                                ee_image_tcvis,
-                                                out_filename='tcvis.tif',
-                                                resolution=3)
+    ee_image_tcvis = ee.ImageCollection('users/ingmarnitze/TCTrend_SR_2000-2019_TCVIS').mosaic()
+    success_state['tcvis'] = get_tcvis_from_gee(image_dir, ee_image_tcvis, out_filename='tcvis.tif', resolution=3)
 
-    success_state['rel_dem'] = aux_data_to_tiles(image_dir,
-                                                 aux_dir / 'ArcticDEM' / 'elevation.vrt',
-                                                 'relative_elevation.tif')
+    success_state['rel_dem'] = aux_data_to_tiles(
+        image_dir, aux_dir / 'ArcticDEM' / 'elevation.vrt', 'relative_elevation.tif'
+    )
 
-    success_state['slope'] = aux_data_to_tiles(image_dir,
-                                               aux_dir / 'ArcticDEM' / 'slope.vrt',
-                                               'slope.tif')
+    success_state['slope'] = aux_data_to_tiles(image_dir, aux_dir / 'ArcticDEM' / 'slope.vrt', 'slope.tif')
 
     success_state['mask'] = mask_input_data(image_dir, data_dir)
 
-    #backup_dir_full = os.path.join(backup_dir, os.path.basename(image_dir))
+    # backup_dir_full = os.path.join(backup_dir, os.path.basename(image_dir))
     backup_dir_full = backup_dir / image_dir.name
     success_state['move'] = move_files(image_dir, backup_dir_full)
 
@@ -95,21 +105,23 @@ def preprocess_directory(image_dir, data_dir, aux_dir, backup_dir, args, log_pat
     return success_state
 
 
-def main():
-    args = parser.parse_args()
-    
-    global DATA_ROOT, INPUT_DATA_DIR, BACKUP_DIR, DATA_DIR, AUX_DIR
-
-    DATA_ROOT = Path(args.data_dir)
-    INPUT_DATA_DIR = DATA_ROOT / 'input'
-    BACKUP_DIR     = DATA_ROOT / 'backup'
-    DATA_DIR       = DATA_ROOT / 'tiles'
-    AUX_DIR        = DATA_ROOT / 'auxiliary'
+def setup_raw_data(
+    gdal_bin: Annotated[str, typer.Option(help='Path to gdal binaries')] = '',
+    gdal_path: Annotated[str, typer.Option(help='Path to gdal scripts')] = '',
+    n_jobs: Annotated[int, typer.Option(help='number of parallel joblib jobs')] = -1,
+    label: Annotated[bool, typer.Option(help='Set flag to do preprocessing with label file')] = False,
+    data_dir: Annotated[Path, typer.Option(help='Path to data processing dir')] = Path('data'),
+    log_dir: Annotated[Path, typer.Option(help='Path to log dir')] = Path('logs'),
+):
+    INPUT_DATA_DIR = data_dir / 'input'
+    BACKUP_DIR = data_dir / 'backup'
+    DATA_DIR = data_dir / 'tiles'
+    AUX_DIR = data_dir / 'auxiliary'
 
     timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-    log_path = Path(args.log_dir) / f'setup_raw_data-{timestamp}.log'
-    if not Path(args.log_dir).exists():
-	    os.mkdir(Path(args.log_dir))
+    log_path = Path(log_dir) / f'setup_raw_data-{timestamp}.log'
+    if not Path(log_dir).exists():
+        os.mkdir(Path(log_dir))
     init_logging(log_path)
     logger = get_logger('setup_raw_data')
     logger.info('###########################')
@@ -118,9 +130,57 @@ def main():
 
     dir_list = check_input_data(INPUT_DATA_DIR)
     if len(dir_list) > 0:
-        Parallel(n_jobs=args.n_jobs)(delayed(preprocess_directory)(image_dir, DATA_DIR, AUX_DIR, BACKUP_DIR, args, log_path, args.nolabel) for image_dir in dir_list)
+        Parallel(n_jobs=n_jobs)(
+            delayed(preprocess_directory)(
+                image_dir, DATA_DIR, AUX_DIR, BACKUP_DIR, gdal_bin, gdal_path, log_path, not label
+            )
+            for image_dir in dir_list
+        )
     else:
-        logger.error("Empty Input Data Directory! No Data available to process!")
+        logger.error('Empty Input Data Directory! No Data available to process!')
 
-if __name__ == "__main__":
-  main()
+
+# ! Moving legacy argparse cli to main to maintain compatibility with the original script
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--gdal_bin', default=None, help='Path to gdal binaries (ignored if --skip_gdal is passed)')
+    parser.add_argument('--gdal_path', default=None, help='Path to gdal scripts (ignored if --skip_gdal is passed)')
+    parser.add_argument('--n_jobs', default=-1, type=int, help='number of parallel joblib jobs')
+    parser.add_argument('--nolabel', action='store_false', help='Set flag to do preprocessing without label file')
+    parser.add_argument('--data_dir', default='data', type=Path, help='Path to data processing dir')
+    parser.add_argument('--log_dir', default='logs', type=Path, help='Path to log dir')
+
+    args = parser.parse_args()
+
+    global DATA_ROOT, INPUT_DATA_DIR, BACKUP_DIR, DATA_DIR, AUX_DIR
+
+    DATA_ROOT = Path(args.data_dir)
+    INPUT_DATA_DIR = DATA_ROOT / 'input'
+    BACKUP_DIR = DATA_ROOT / 'backup'
+    DATA_DIR = DATA_ROOT / 'tiles'
+    AUX_DIR = DATA_ROOT / 'auxiliary'
+
+    timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+    log_path = Path(args.log_dir) / f'setup_raw_data-{timestamp}.log'
+    if not Path(args.log_dir).exists():
+        os.mkdir(Path(args.log_dir))
+    init_logging(log_path)
+    logger = get_logger('setup_raw_data')
+    logger.info('###########################')
+    logger.info('# Starting Raw Data Setup #')
+    logger.info('###########################')
+
+    dir_list = check_input_data(INPUT_DATA_DIR)
+    if len(dir_list) > 0:
+        Parallel(n_jobs=args.n_jobs)(
+            delayed(preprocess_directory)(
+                image_dir, DATA_DIR, AUX_DIR, BACKUP_DIR, args.gdal_bin, args.gdal_path, log_path, args.nolabel
+            )
+            for image_dir in dir_list
+        )
+    else:
+        logger.error('Empty Input Data Directory! No Data available to process!')
+
+
+if __name__ == '__main__':
+    main()

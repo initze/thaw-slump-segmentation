@@ -52,8 +52,12 @@ def main():
     # check if cucim is available
     try:
         import cucim
-        try_gpu = True
-        print ('Running ensembling with GPU!')
+        if args.try_gpu:
+            try_gpu = True
+            print ('Running ensembling with GPU!')
+        else:
+            try_gpu = False
+            print ('Running ensembling with CPU!')            
     except:
         try_gpu = False
         print ('Cucim import failed')
@@ -67,7 +71,7 @@ def main():
         'border_size': args.ensemble_border_size,
         'minimum_mapping_unit': args.ensemble_mmu,
         'delete_binary': True,
-        'try_gpu': args.try_gpu, # currently default to CPU only
+        'try_gpu': try_gpu, # currently default to CPU only
         'gpu' : args.gpu,
     }
 
@@ -76,13 +80,13 @@ def main():
     df_ensemble_status = get_processing_status_ensemble(args.inference_dir, model_input_names=kwargs_ensemble['modelnames'], model_ensemble_name=kwargs_ensemble['ensemblename'])
     # Check which need to be process - check for already processed and invalid files
     process = df_ensemble_status[df_ensemble_status['process']]
-
+    n_images = len(process.iloc[:args.max_images])
     # #### Run Ensemble Merging
     if len(process) > 0:
-        print(f'Start running ensemble with {args.n_jobs} jobs!')
+        print(f'Start running ensemble for {n_images} images with {args.n_jobs} parallel jobs!')
         print(f'Target ensemble name:', kwargs_ensemble['ensemblename'])
         print(f'Source model output', kwargs_ensemble['modelnames'])
-        _ = Parallel(n_jobs=args.n_jobs)(delayed(create_ensemble_v2)(image_id=process.iloc[row]['name'], **kwargs_ensemble) for row in tqdm(range(len(process.iloc[:args.max_images]))))
+        _ = Parallel(n_jobs=args.n_jobs)(delayed(create_ensemble_v2)(image_id=process.iloc[row]['name'], **kwargs_ensemble) for row in tqdm(range(n_images)))
     else:
         print(f'Skipped ensembling, all files ready for {args.ensemble_name}!')
 

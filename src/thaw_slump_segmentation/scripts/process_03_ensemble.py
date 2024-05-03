@@ -48,21 +48,7 @@ parser.add_argument("--force_vector_merge", action="store_true", help="force mer
 args = parser.parse_args()
 
 def main():
-    # Location of raw data
-    # TODO: make support for multiple sources
-    RAW_DATA_DIR = args.raw_data_dir
-    # Location data processing
-    PROCESSING_DIR = args.processing_dir
-    # Target directory for
-    INFERENCE_DIR = args.inference_dir
-    # Ensemble Target
-    ENSEMBLE_NAME = args.ensemble_name
-    MODEL_NAMES = args.model_names
-    N_IMAGES = args.max_images# automatically run full set
-    N_JOBS = args.n_jobs # number of cpu jobs for ensembling
-    N_VECTOR_LOADERS = args.n_vector_loaders # number of parallel vector loaders for final merge
-
-    ### Select Data 
+    ### Start
     # check if cucim is available
     try:
         import cucim
@@ -74,9 +60,9 @@ def main():
 
     # setup all params
     kwargs_ensemble = {
-        'ensemblename': ENSEMBLE_NAME,
-        'inference_dir': INFERENCE_DIR,
-        'modelnames': MODEL_NAMES,
+        'ensemblename': args.ensemble_name,
+        'inference_dir': args.inference_dir,
+        'modelnames': args.model_names,
         'binary_threshold': args.ensemble_thresholds,
         'border_size': args.ensemble_border_size,
         'minimum_mapping_unit': args.ensemble_mmu,
@@ -86,19 +72,19 @@ def main():
     }
 
     # Check for finalized products
-    df_processing_status = get_processing_status(RAW_DATA_DIR, PROCESSING_DIR, INFERENCE_DIR, model=kwargs_ensemble['ensemblename'])
-    df_ensemble_status = get_processing_status_ensemble(INFERENCE_DIR, model_input_names=kwargs_ensemble['modelnames'], model_ensemble_name=kwargs_ensemble['ensemblename'])
+    df_processing_status = get_processing_status(args.raw_data_dir, args.processing_dir, args.inference_dir, model=kwargs_ensemble['ensemblename'])
+    df_ensemble_status = get_processing_status_ensemble(args.inference_dir, model_input_names=kwargs_ensemble['modelnames'], model_ensemble_name=kwargs_ensemble['ensemblename'])
     # Check which need to be process - check for already processed and invalid files
     process = df_ensemble_status[df_ensemble_status['process']]
 
     # #### Run Ensemble Merging
     if len(process) > 0:
-        print(f'Start running ensemble with {N_JOBS} jobs!')
+        print(f'Start running ensemble with {args.n_jobs} jobs!')
         print(f'Target ensemble name:', kwargs_ensemble['ensemblename'])
         print(f'Source model output', kwargs_ensemble['modelnames'])
-        _ = Parallel(n_jobs=N_JOBS)(delayed(create_ensemble_v2)(image_id=process.iloc[row]['name'], **kwargs_ensemble) for row in tqdm(range(len(process.iloc[:N_IMAGES]))))
+        _ = Parallel(n_jobs=args.n_jobs)(delayed(create_ensemble_v2)(image_id=process.iloc[row]['name'], **kwargs_ensemble) for row in tqdm(range(len(process.iloc[:args.max_images]))))
     else:
-        print(f'Skipped ensembling, all files ready for {ENSEMBLE_NAME}!')
+        print(f'Skipped ensembling, all files ready for {args.ensemble_name}!')
 
     # # #### run parallelized batch 
 
@@ -111,25 +97,25 @@ def main():
 
         for proba_string in proba_strings:
             # read all files which follow the above defined threshold
-            flist = list((INFERENCE_DIR / ENSEMBLE_NAME).glob(f'*/*_{proba_string}.gpkg'))
+            flist = list((args.inference_dir / args.ensemble_name).glob(f'*/*_{proba_string}.gpkg'))
             len(flist)
             # load them in parallel
             print (f'Loading results {proba_string}')
-            out = Parallel(n_jobs=6)(delayed(load_and_parse_vector)(f) for f in tqdm(flist[:N_IMAGES]))
+            out = Parallel(n_jobs=6)(delayed(load_and_parse_vector)(f) for f in tqdm(flist[:args.max_images]))
             # merge them and save to geopackage file
             print ('Merging results')
             merged_gdf = gpd.pd.concat(out)
 
             for vector_output_format in args.vector_output_format:
                 # Save output to vector
-                save_file = INFERENCE_DIR / ENSEMBLE_NAME / f'merged_{proba_string}.{vector_output_format}'    
+                save_file = args.inference_dir / args.ensemble_name / f'merged_{proba_string}.{vector_output_format}'    
                 
                 # make file backup if necessary
                 if save_file.exists():
                     # Get the current timestamp
                     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                     # Create the backup file name
-                    save_file_bk = INFERENCE_DIR / ENSEMBLE_NAME / f'merged_{proba_string}_bk_{timestamp}.{vector_output_format}'
+                    save_file_bk = args.inference_dir / args.ensemble_name / f'merged_{proba_string}_bk_{timestamp}.{vector_output_format}'
                     print (f'Creating backup of file {save_file} to {save_file_bk}')
                     shutil.move(save_file, save_file_bk)
                 

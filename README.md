@@ -2,13 +2,43 @@
 
 ## Installation
 
+### Environment setup
+
+#### Python / conda
+
+We recommend using a new conda environment from scratch
+
+```bash
+conda env create -n thaw_slump_segmentation python=3.10 mamba -c conda-forge
+conda activate thaw_slump_segmentation
+```
+
+#### gdal
+
+gdal incl. gdal-utilities (preferably version >=3.6) need to be installed in your environment, e.g. with conda/mamba
+
+```bash
+mamba install gdal>=3.6 -c conda-forge
+```
+
+### Package Installation
+
 * Latest development version: `pip install git+https://github.com/initze/thaw-slump-segmentation`
 * Latest release: `pip install https://github.com/initze/thaw-slump-segmentation/releases/download/untagged-f6739f56e0ee4c2c64fe/thaw_slump_segmentation-0.10.0-py3-none-any.whl`
 
 This will pull the CUDA 12 version of pytorch. If you are running CUDA 11, you need to manually switch to the corresponding Pytorch package afterwards by running `pip3 install torch==2.2.0+cu118 torchvision==0.17.0+cu118 --index-url https://download.pytorch.org/whl/cu118`
 
-gdal incl. gdal-utilities (preferably version >=3.6) need to be installed in your environment, e.g. with conda
 
+
+### Additional packages
+#### cucim
+You can install cucim to speed up the postprocessing process. cucim will use the gpu to perform binary erosion of edge artifacts, which runs alot faster than the standard CPU implementation of scikit-learn.
+
+`pip install --extra-index-url=https://pypi.nvidia.com cucim-cu11==24.4.*`
+
+Installation for other cuda versions see here: 
+
+https://docs.rapids.ai/install
 ## System and Data Setup
 
 ### Option 1 - Singularity container
@@ -20,9 +50,11 @@ The container contains all requirements to run the processing code, singularity 
 singularity pull library://initze/aicore/thaw_slump_segmentation
 singularity shell --nv --bind <your bind path> thaw_slump_segmentation.sif
 ```
+
 ### Option 2 - anaconda
 ### Environment setup
 We recommend using a new conda environment from the provided environment.yml file
+
 ```bash
 conda env create -n aicore -f environment.yml
 ```
@@ -84,27 +116,32 @@ Hello tobi
 ### Data Preprocessing for Planet data
 
 #### Setting up all required files for training and/or inference 
+
 ```bash
 python setup_raw_data.py --data_dir <DATA_DIR>
 ```
 
 #### Setting up required files for training 
-```bash
-python download_s2_4band_planet_format.py --s2id <IMAGE_ID> --data_dir <DATA_DIR>
-```
 
-### Data Preprocessing for Sentinel 2 data to match planet format
 ```bash
 python prepare_data.py --data_dir <DATA_DIR>
 ```
 
+### Data Preprocessing for Sentinel 2 data to match planet format
+
+```bash
+python download_s2_4band_planet_format.py --s2id <IMAGE_ID> --data_dir <DATA_DIR>
+```
+
 
 ### Training a model
+
 ```bash
 python train.py --data_dir <DATA_DIR> -n <MODEL_NAME>
 ```
 
 ### Running Inference
+
 ```bash
 python setup_raw_data.py --data_dir <DATA_DIR> --nolabel
 python inference.py --data_dir <DATA_DIR> --model_dir <MODEL_NAME> 20190727_160426_104e 20190709_042959_08_1057

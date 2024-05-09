@@ -26,7 +26,7 @@ parser.add_argument("--ensemble_name", type=str, default='RTS_v6_ensemble_v2',
                     help="Target directory for models")
 parser.add_argument("--model_names", type=str, nargs='+', default=['RTS_v6_tcvis', 'RTS_v6_notcvis'],
                     help="Model name, examples ['RTS_v6_tcvis', 'RTS_v6_notcvis']")
-parser.add_argument("--use_gpu", type=int, default=0,
+parser.add_argument("--gpu", type=int, default=0,
                     help="GPU IDs to use for edge cleaning")
 parser.add_argument("--n_jobs", type=int, default=15,
                     help="number of CPU jobs for ensembling")
@@ -34,99 +34,103 @@ parser.add_argument("--n_vector_loaders", type=int, default=6,
                     help="number of parallel vector loaders for final merge")
 parser.add_argument("--max_images", type=int, default=None,
                     help="Maximum number of images to process (optional)")
-parser.add_argument("--ensemble_thresholds", type=str, nargs='+', default=[0.4, 0.45, 0.5],
-                    help="Thresholds for polygonized outputs of the ensemble")
+parser.add_argument("--vector_output_format", type=str, nargs='+', default=['gpkg', 'parquet'],
+                    help="Output format extension of ensembled vector files")
+parser.add_argument("--ensemble_thresholds", type=float, nargs='+', default=[0.4, 0.45, 0.5],
+                    help="Thresholds for polygonized outputs of the ensemble, needs to be string, see examples")
 parser.add_argument("--ensemble_border_size", type=int, default=10,
                     help="Number of pixels to remove around the border and no data")
 parser.add_argument("--ensemble_mmu", type=int, default=32,
                     help="Minimum mapping unit of output objects in pixels")
 parser.add_argument("--try_gpu", action="store_true", help="set to try image processing with gpu")
+parser.add_argument("--force_vector_merge", action="store_true", help="force merging of output vectors even if no new ensemble tiles were processed")
+
 args = parser.parse_args()
 
-# Location of raw data
-# TODO: make support for multiple sources
-RAW_DATA_DIR = args.raw_data_dir
-# Location data processing
-PROCESSING_DIR = args.processing_dir
-# Target directory for
-INFERENCE_DIR = args.inference_dir
-# Target to models - RTS
-MODEL_DIR = args.model_dir
-# Ensemble Target
-ENSEMBLE_NAME = args.ensemble_name
-MODEL_NAMES = args.model_names
-N_IMAGES = args.max_images# automatically run full set
-N_JOBS = args.n_jobs # number of cpu jobs for ensembling
-N_VECTOR_LOADERS = args.n_vector_loaders # number of parallel vector loaders for final merge
+def main():
+    ### Start
+    # check if cucim is available
+    try:
+        import cucim
+        if args.try_gpu:
+            try_gpu = True
+            print ('Running ensembling with GPU!')
+        else:
+            try_gpu = False
+            print ('Running ensembling with CPU!')            
+    except:
+        try_gpu = False
+        print ('Cucim import failed')
 
-### Select Data 
-# check if cucim is available
-try:
-    import cucim
-    try_gpu = True
-    print ('Running ensembling with GPU!')
-except:
-    try_gpu = False
-    print ('Cucim import failed')
+    # setup all params
+    kwargs_ensemble = {
+        'ensemblename': args.ensemble_name,
+        'inference_dir': args.inference_dir,
+        'modelnames': args.model_names,
+        'binary_threshold': args.ensemble_thresholds,
+        'border_size': args.ensemble_border_size,
+        'minimum_mapping_unit': args.ensemble_mmu,
+        'delete_binary': True,
+        'try_gpu': try_gpu, # currently default to CPU only
+        'gpu' : args.gpu,
+    }
 
-# setup all params
-kwargs_ensemble = {
-    'ensemblename': ENSEMBLE_NAME,
-    'inference_dir': INFERENCE_DIR,
-    'modelnames': MODEL_NAMES,
-    'binary_threshold': args.ensemble_thresholds,
-    'border_size': args.ensemble_border_size,
-    'minimum_mapping_unit': args.ensemble_mmu,
-    'delete_binary': True,
-    'try_gpu': args.try_gpu, # currently default to CPU only
-    'gpu' : 0,
-}
+    # Check for finalized products
+    df_processing_status = get_processing_status(args.raw_data_dir, args.processing_dir, args.inference_dir, model=kwargs_ensemble['ensemblename'])
+    df_ensemble_status = get_processing_status_ensemble(args.inference_dir, model_input_names=kwargs_ensemble['modelnames'], model_ensemble_name=kwargs_ensemble['ensemblename'])
+    # Check which need to be process - check for already processed and invalid files
+    process = df_ensemble_status[df_ensemble_status['process']]
+    n_images = len(process.iloc[:args.max_images])
+    # #### Run Ensemble Merging
+    if len(process) > 0:
+        print(f'Start running ensemble for {n_images} images with {args.n_jobs} parallel jobs!')
+        print(f'Target ensemble name:', kwargs_ensemble['ensemblename'])
+        print(f'Source model output', kwargs_ensemble['modelnames'])
+        _ = Parallel(n_jobs=args.n_jobs)(delayed(create_ensemble_v2)(image_id=process.iloc[row]['name'], **kwargs_ensemble) for row in tqdm(range(n_images)))
+    else:
+        print(f'Skipped ensembling, all files ready for {args.ensemble_name}!')
 
-# Check for finalized products
-df_processing_status = get_processing_status(RAW_DATA_DIR, PROCESSING_DIR, INFERENCE_DIR, model=kwargs_ensemble['ensemblename'])
-df_ensemble_status = get_processing_status_ensemble(INFERENCE_DIR, model_input_names=kwargs_ensemble['modelnames'], model_ensemble_name=kwargs_ensemble['ensemblename'])
-# Check which need to be process - check for already processed and invalid files
-process = df_ensemble_status[df_ensemble_status['process']]
+    # # #### run parallelized batch 
 
-# #### Run Ensemble Merging
+    if (len(process) > 0) or args.force_vector_merge:
+        # ### Merge vectors to complete dataset
+        # set probability levels: 'class_05' means 50%, 'class_045' means 45%. This is the regex to search for vector naming
+        #proba_strings = args.ensemble_thresholds
+        # TODO: needs to be 'class_04', 
+        proba_strings = [f'class_{thresh}'.replace('.','') for thresh in args.ensemble_thresholds]
 
-print(f'Start running ensemble with {N_JOBS} jobs!')
-print(f'Target ensemble name:', kwargs_ensemble['ensemblename'])
-print(f'Source model output', kwargs_ensemble['modelnames'])
-_ = Parallel(n_jobs=N_JOBS)(delayed(create_ensemble_v2)(image_id=process.iloc[row]['name'], **kwargs_ensemble) for row in tqdm(range(len(process.iloc[:N_IMAGES]))))
+        for proba_string in proba_strings:
+            # read all files which follow the above defined threshold
+            flist = list((args.inference_dir / args.ensemble_name).glob(f'*/*_{proba_string}.gpkg'))
+            len(flist)
+            # load them in parallel
+            print (f'Loading results {proba_string}')
+            out = Parallel(n_jobs=6)(delayed(load_and_parse_vector)(f) for f in tqdm(flist[:args.max_images]))
+            # merge them and save to geopackage file
+            print ('Merging results')
+            merged_gdf = gpd.pd.concat(out)
 
-# # #### run parallelized batch 
+            for vector_output_format in args.vector_output_format:
+                # Save output to vector
+                save_file = args.inference_dir / args.ensemble_name / f'merged_{proba_string}.{vector_output_format}'    
+                
+                # make file backup if necessary
+                if save_file.exists():
+                    # Get the current timestamp
+                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                    # Create the backup file name
+                    save_file_bk = args.inference_dir / args.ensemble_name / f'merged_{proba_string}_bk_{timestamp}.{vector_output_format}'
+                    print (f'Creating backup of file {save_file} to {save_file_bk}')
+                    shutil.move(save_file, save_file_bk)
+                
+                # save to files
+                print(f'Saving vectors to {save_file}')
+                if vector_output_format in ['shp', 'gpkg']:
+                    merged_gdf.to_file(save_file)
+                elif vector_output_format in ['parquet']:
+                    merged_gdf.to_parquet(save_file)
+                else:
+                    print(f'Unknown format {vector_output_format}!')
 
-# ### Merge vectors to complete dataset 
-ensemblename = ENSEMBLE_NAME
-# set probability levels: 'class_05' means 50%, 'class_045' means 45%. This is the regex to search for vector naming
-proba_strings = args.ensemble_thresholds
-
-for proba_string in proba_strings:
-    # read all files which followiw the above defined threshold
-    flist = list((INFERENCE_DIR / ensemblename).glob(f'*/*_{proba_string}.gpkg'))
-    len(flist)
-    # load them in parallel
-    print (f'Loading results {proba_string}')
-    out = Parallel(n_jobs=6)(delayed(load_and_parse_vector)(f) for f in tqdm(flist[:N_IMAGES]))
-    # merge them and save to geopackage file
-    print ('Merging results')
-    merged_gdf = gpd.pd.concat(out)
-
-    # Save output to vector
-    save_file = INFERENCE_DIR / ensemblename / f'merged_{proba_string}.gpkg'    
-    
-    # make file backup if necessary
-    if save_file.exists():
-        # Get the current timestamp
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        # Create the backup file name
-        save_file_bk = INFERENCE_DIR / ensemblename / f'merged_{proba_string}_bk_{timestamp}.gpkg'
-        print (f'Creating backup of file {save_file} to {save_file_bk}')
-        shutil.move(save_file, save_file_bk)
-    
-    # save to files
-    print(f'Saving vectors to {save_file}')
-    merged_gdf.to_file(save_file)
-    merged_gdf.to_file(INFERENCE_DIR / ensemblename / f'merged_{proba_string}.gpkg')
-    
+if __name__ == "__main__":
+    main()

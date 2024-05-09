@@ -11,7 +11,6 @@ Usecase 2 Inference Script
 
 import argparse
 import os
-from collections import namedtuple
 from datetime import datetime
 from pathlib import Path
 from typing import List
@@ -256,9 +255,7 @@ def inference(
 
     # TODO: let gdal.initialize take each argument separately
     # Mock old args object
-    ARGS = namedtuple('gdalargs', ['gdal_bin', 'gdal_path'])
-    gdalargs = ARGS(gdal_bin, gdal_path)
-    gdal.initialize(gdalargs)
+    gdal.initialize(bin=gdal_bin, path=gdal_path)
 
     timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
     log_path = Path(log_dir) / f'inference-{timestamp}.log'

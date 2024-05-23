@@ -26,39 +26,59 @@ def process_03_ensemble(
     raw_data_dir: Annotated[Path, typer.Option(help='Location of raw data')] = Path(
         '/isipd/projects/p_aicore_pf/initze/data/planet/planet_data_inference_grid/tiles'
     ),
+    
     processing_dir: Annotated[Path, typer.Option(help='Location for data processing')] = Path(
         '/isipd/projects/p_aicore_pf/initze/processing'
     ),
+    
     inference_dir: Annotated[Path, typer.Option(help='Target directory for inference results')] = Path(
         '/isipd/projects/p_aicore_pf/initze/processed/inference'
     ),
+    
     model_dir: Annotated[Path, typer.Option(help='Target directory for models')] = Path(
         '/isipd/projects/p_aicore_pf/initze/models/thaw_slumps'
     ),
+    
     ensemble_name: Annotated[str, typer.Option(help='Target directory for models')] = 'RTS_v6_ensemble_v2',
+    
     model_names: Annotated[List[str], typer.Option(help="Model name, examples ['RTS_v6_tcvis', 'RTS_v6_notcvis']")] = [
         'RTS_v6_tcvis',
         'RTS_v6_notcvis',
     ],
+    
     gpu: Annotated[int, typer.Option(help='GPU IDs to use for edge cleaning')] = 0,
+    
     n_jobs: Annotated[int, typer.Option(help='number of CPU jobs for ensembling')] = 15,
+    
     n_vector_loaders: Annotated[int, typer.Option(help='number of parallel vector loaders for final merge')] = 6,
+    
     max_images: Annotated[int, typer.Option(help='Maximum number of images to process (optional)')] = None,
+    
     vector_output_format: Annotated[
         List[str], typer.Option(help='Output format extension of ensembled vector files')
     ] = ['gpkg', 'parquet'],
+    
     ensemble_thresholds: Annotated[
         List[float],
         typer.Option(help='Thresholds for polygonized outputs of the ensemble, needs to be string, see examples'),
     ] = [0.4, 0.45, 0.5],
+    
     ensemble_border_size: Annotated[
         int, typer.Option(help='Number of pixels to remove around the border and no data')
     ] = 10,
+    
     ensemble_mmu: Annotated[int, typer.Option(help='Minimum mapping unit of output objects in pixels')] = 32,
+    
     try_gpu: Annotated[bool, typer.Option(help='set to try image processing with gpu')] = False,
+    
     force_vector_merge: Annotated[
         bool, typer.Option(help='force merging of output vectors even if no new ensemble tiles were processed')
     ] = False,
+
+    save_binary: Annotated[bool, typer.Option(help='set to keep intermediate binary rasters')] = False,
+
+    save_probability: Annotated[bool, typer.Option(help='set to keep intermediate probility rasters')] = False,
+
 ):
     ### Start
     # check if cucim is available
@@ -83,7 +103,8 @@ def process_03_ensemble(
         'binary_threshold': ensemble_thresholds,
         'border_size': ensemble_border_size,
         'minimum_mapping_unit': ensemble_mmu,
-        'delete_binary': True,
+        'save_binary': save_binary,
+        'save_probability': save_probability,
         'try_gpu': try_gpu,  # currently default to CPU only
         'gpu': gpu,
     }
@@ -130,9 +151,9 @@ def process_03_ensemble(
             print('Merging results')
             merged_gdf = gpd.pd.concat(out)
 
-            for vector_output_format in vector_output_format:
+            for vector_format in vector_output_format:
                 # Save output to vector
-                save_file = inference_dir / ensemble_name / f'merged_{proba_string}.{vector_output_format}'
+                save_file = inference_dir / ensemble_name / f'merged_{proba_string}.{vector_format}'
 
                 # make file backup if necessary
                 if save_file.exists():
@@ -140,19 +161,19 @@ def process_03_ensemble(
                     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
                     # Create the backup file name
                     save_file_bk = (
-                        inference_dir / ensemble_name / f'merged_{proba_string}_bk_{timestamp}.{vector_output_format}'
+                        inference_dir / ensemble_name / f'merged_{proba_string}_bk_{timestamp}.{vector_format}'
                     )
                     print(f'Creating backup of file {save_file} to {save_file_bk}')
                     shutil.move(save_file, save_file_bk)
 
                 # save to files
                 print(f'Saving vectors to {save_file}')
-                if vector_output_format in ['shp', 'gpkg']:
+                if vector_format in ['shp', 'gpkg']:
                     merged_gdf.to_file(save_file)
-                elif vector_output_format in ['parquet']:
+                elif vector_format in ['parquet']:
                     merged_gdf.to_parquet(save_file)
                 else:
-                    print(f'Unknown format {vector_output_format}!')
+                    print(f'Unknown format {vector_format}!')
 
 
 def main():
@@ -216,6 +237,8 @@ def main():
         '--ensemble_border_size', type=int, default=10, help='Number of pixels to remove around the border and no data'
     )
     parser.add_argument('--ensemble_mmu', type=int, default=32, help='Minimum mapping unit of output objects in pixels')
+    parser.add_argument('--save_binary', action='store_true', help='set to keep intermediate binary rasters')
+    parser.add_argument('--save_probability', action='store_true', help='set to keep intermediate probability rasters')
     parser.add_argument('--try_gpu', action='store_true', help='set to try image processing with gpu')
     parser.add_argument(
         '--force_vector_merge',

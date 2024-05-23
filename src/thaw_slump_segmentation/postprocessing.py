@@ -294,7 +294,8 @@ def create_ensemble_v2(inference_dir: Path,
                         binary_threshold: list=[0.5], 
                         border_size: int=10,
                         minimum_mapping_unit: int=32,
-                        delete_binary: bool=True,
+                        save_binary: bool=False,
+                        save_probability: bool=False,
                         try_gpu: bool=True,
                         gpu: int=0):
     """
@@ -326,6 +327,9 @@ def create_ensemble_v2(inference_dir: Path,
     delete_binary : bool, optional
         Whether to delete the binary file after processing, by default True.
 
+    save_probability : bool, optional
+        Whether to save the probability file after processing, by default False.
+
     Returns:
     ------------
     None
@@ -346,7 +350,7 @@ def create_ensemble_v2(inference_dir: Path,
             ctr += 1
 
         mean_image = np.mean(list_data, axis=0)
-        return mean_image, out_meta_binary
+        return mean_image, out_meta_binary, out_meta
 
     def dilate_data_mask(mask, size=10):
         selem = disk(size)
@@ -371,11 +375,18 @@ def create_ensemble_v2(inference_dir: Path,
             return None
     
     try:
-        mean_image, out_meta_binary = calculate_mean_image(images)
+        mean_image, out_meta_binary, out_meta_probability = calculate_mean_image(images)
     except:
         print(f'Read error of files {images}')
         return None
     
+    # save probability layer, if specified
+    if save_probability:
+        outpath_proba = outpath = inference_dir / ensemblename / image_id / f'{image_id}_{ensemblename}_probability.tif'
+        os.makedirs(outpath_proba.parent, exist_ok=True)
+        with rasterio.open(outpath_proba, 'w', **out_meta_probability) as target:
+            target.write(mean_image)
+
     for threshold in binary_threshold:
 
         # get binary object mask
@@ -423,7 +434,7 @@ def create_ensemble_v2(inference_dir: Path,
         s_polygonize = f'gdal_polygonize.py {outpath} -q -mask {outpath} -f "GPKG" {outpath_shp}'
         os.system(s_polygonize)
         
-        if delete_binary:
+        if not save_binary:
             os.remove(outpath)
     
     

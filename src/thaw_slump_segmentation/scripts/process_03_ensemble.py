@@ -265,6 +265,8 @@ def main():
         ensemble_mmu=args.ensemble_mmu,
         try_gpu=args.try_gpu,
         force_vector_merge=args.force_vector_merge,
+        save_binary=args.save_binary,
+        save_probability=args.save_probability,
     )
 
 

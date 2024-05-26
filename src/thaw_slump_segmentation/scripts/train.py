@@ -16,19 +16,31 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 import typer
-import wandb
 import yaml
 from rich import pretty, traceback
+from torchmetrics import (
+    AUROC,
+    ROC,
+    Accuracy,
+    ConfusionMatrix,
+    F1Score,
+    JaccardIndex,
+    MetricCollection,
+    Precision,
+    Recall,
+)
 from tqdm import tqdm
 from typing_extensions import Annotated
 
+import wandb
+
 from ..data_loading import DataSources, get_loader, get_slump_loader, get_vis_loader
-from ..metrics import F1, Accuracy, IoU, Metrics, Precision, Recall
 from ..models import create_loss, create_model
-from ..utils import get_logger, init_logging, plot_metrics, plot_precision_recall, showexample, yaml_custom
+from ..utils import get_logger, init_logging, showexample, yaml_custom
 
 traceback.install(show_locals=True)
 pretty.install()
@@ -101,7 +113,6 @@ class Engine:
 
         self.board_idx = 0
         self.epoch = 0
-        self.metrics = Metrics(Accuracy, Precision, Recall, F1, IoU)
 
         if summary:
             from torchsummary import summary
@@ -130,8 +141,20 @@ class Engine:
         self.checkpoints.mkdir()
 
         # Metrics and Weights and Biases initialization
-        self.trn_metrics = {}
-        self.val_metrics = {}
+        metrics = MetricCollection(
+            Accuracy(task='binary'),
+            Precision(task='binary'),
+            Recall(task='binary'),
+            F1Score(task='binary'),
+            JaccardIndex(task='binary'),
+            AUROC(task='binary'),
+        )
+        self.train_metrics = metrics.clone('train/').to(self.dev)
+        self.val_metrics = metrics.clone('val/').to(self.dev)
+        # We don't want to log the confusion matrix and ROC curve for every step in the training loop
+        self.val_confmat = ConfusionMatrix(task='binary').to(self.dev)
+        self.val_roc = ROC(task='binary').to(self.dev)
+        self.metrics_tracker = {'train': [], 'val': []}
         print('wandb project:', wandb_project)
         print('wandb name:', wandb_name)
         print('config:', self.config)
@@ -198,6 +221,10 @@ class Engine:
         self.logger.info(f'Epoch {self.epoch} - Training Started')
         progress = tqdm(train_loader)
         self.model.train(True)
+        epoch_loss = {
+            'Loss': [],
+            'Deep Supervision Loss': [],
+        }
         for iteration, (img, target) in enumerate(progress):
             self.board_idx += img.shape[0]
 
@@ -207,33 +234,47 @@ class Engine:
             self.opt.zero_grad()
             y_hat = self.model(img)
 
-            metrics_terms = {}
             if isinstance(y_hat, (tuple, list)):
                 # Deep Supervision
                 deep_super_losses = [self.loss_function(pred.squeeze(1), target) for pred in y_hat]
                 y_hat = y_hat[0].squeeze(1)
                 loss = sum(deep_super_losses)
-                metrics_terms['Loss'] = deep_super_losses[0].detach()
-                metrics_terms['Deep Supervision Loss'] = loss.detach()
+                for dsl in deep_super_losses:
+                    epoch_loss['Loss'].append(dsl.detach())
+                epoch_loss['Deep Supervision Loss'].append(loss.detach())
             else:
                 loss = self.loss_function(y_hat, target)
-                metrics_terms['Loss'] = loss.detach()
+                epoch_loss['Loss'].append(loss.detach())
 
             loss.backward()
             self.opt.step()
 
             with torch.no_grad():
-                self.metrics.step(y_hat, target, **metrics_terms)
+                self.train_metrics.update(y_hat.squeeze(1), target)
 
-        metrics_vals = self.metrics.evaluate()
-        progress.set_postfix(metrics_vals)
-        self.metrics_vals_train = metrics_vals
-        logstr = f'{self.epoch},' + ','.join(f'{val}' for key, val in metrics_vals.items())
+        epoch_loss = {k: torch.stack(v).mean().item() for k, v in epoch_loss.items() if v}
+        epoch_metrics = self.train_metrics.compute()
+        self.metrics_tracker['train'].append(epoch_metrics)
+        wandb.log(epoch_metrics, step=self.board_idx)
+        wandb.log({'train/Loss': epoch_loss}, step=self.board_idx)
+        self.train_metrics.reset()
+        progress.set_postfix(epoch_metrics)
+        logstr = (
+            f'{self.epoch},'
+            + ','.join(f'{val}' for key, val in epoch_metrics.items())
+            + ','
+            + ','.join(f'{val}' for key, val in epoch_loss.items())
+        )
         logfile = self.log_dir / 'train.csv'
-        self.logger.info(f'Epoch {self.epoch} - Training Metrics: {metrics_vals}')
+        self.logger.info(f'Epoch {self.epoch} - Loss {epoch_loss} Training Metrics: {epoch_metrics}')
         if not logfile.exists():
             # Print header upon first log print
-            header = 'Epoch,' + ','.join(f'{key}' for key, val in metrics_vals.items())
+            header = (
+                'Epoch,'
+                + ','.join(f'{key}' for key, val in epoch_metrics.items())
+                + ','
+                + ','.join(f'{key}' for key, val in epoch_loss.items())
+            )
             with logfile.open('w') as f:
                 print(header, file=f)
                 print(logstr, file=f)
@@ -241,48 +282,45 @@ class Engine:
             with logfile.open('a') as f:
                 print(logstr, file=f)
 
-        for key, val in metrics_vals.items():
-            safe_append(self.trn_metrics, key, val)
-
-        wandb.log({'train/{k}': v for k, v in metrics_vals.items()}, step=self.board_idx)
-        safe_append(self.trn_metrics, 'step', self.board_idx)
-        safe_append(self.trn_metrics, 'epoch', self.epoch)
-
         # Save model Checkpoint
         torch.save(self.model.state_dict(), self.checkpoints / f'{self.epoch:02d}.pt')
 
     def val_epoch(self, val_loader):
         self.logger.info(f'Epoch {self.epoch} - Validation Started')
-        self.metrics.reset()
         self.model.train(False)
+        self.val_confmat.reset()
+        self.val_roc.reset()
         with torch.no_grad():
+            epoch_loss = []
             for iteration, (img, target) in enumerate(val_loader):
                 img = img.to(self.dev, torch.float)
                 target = target.to(self.dev, torch.long, non_blocking=True)
                 y_hat = self.model(img).squeeze(1)
 
                 loss = self.loss_function(y_hat, target)
-                self.metrics.step(y_hat, target, Loss=loss.detach())
+                epoch_loss.append(loss.detach())
+                self.val_metrics.update(y_hat, target)
+                self.val_confmat.update(y_hat, target)
+                self.val_roc.update(y_hat, target)
+            epoch_loss = torch.stack(epoch_loss).mean().item()
+            epoch_metrics = self.val_metrics.compute()
+            self.metrics_tracker['val'].append(epoch_metrics)
+            wandb.log(epoch_metrics, step=self.board_idx)
+            wandb.log({'val/Loss': epoch_loss}, step=self.board_idx)
+            self.val_metrics.reset()
 
-            m = self.metrics.evaluate()
-            self.metrics_vals_val = m
-            logstr = f'{self.epoch},' + ','.join(f'{val}' for key, val in m.items())
+            logstr = f'{self.epoch},' + ','.join(f'{val}' for key, val in epoch_metrics.items()) + f',{epoch_loss}'
             logfile = self.log_dir / 'val.csv'
-            self.logger.info(f'Epoch {self.epoch} - Validation Metrics: {m}')
+            self.logger.info(f'Epoch {self.epoch} - Loss {epoch_loss} Validation Metrics: {epoch_metrics}')
             if not logfile.exists():
                 # Print header upon first log print
-                header = 'Epoch,' + ','.join(f'{key}' for key, val in m.items())
+                header = 'Epoch,' + ','.join(f'{key}' for key, val in epoch_metrics.items()) + ',Loss'
                 with logfile.open('w') as f:
                     print(header, file=f)
                     print(logstr, file=f)
             else:
                 with logfile.open('a') as f:
                     print(logstr, file=f)
-            for key, val in m.items():
-                safe_append(self.val_metrics, key, val)
-            safe_append(self.val_metrics, 'step', self.board_idx)
-            safe_append(self.val_metrics, 'epoch', self.epoch)
-            wandb.log({'val/{k}': v for k, v in self.val_metrics.items()}, step=self.board_idx)
 
     def log_images(self):
         self.logger.debug(f'Epoch {self.epoch} - Image Logging')
@@ -304,8 +342,19 @@ class Engine:
 
         outdir = self.log_dir / 'metrics_plots'
         outdir.mkdir(exist_ok=True)
-        plot_metrics(self.trn_metrics, self.val_metrics, outdir=outdir)
-        plot_precision_recall(self.trn_metrics, self.val_metrics, outdir=outdir)
+        fig, axs = self.train_metrics.plot(self.metrics_tracker['train'], together=True)
+        fig.savefig(outdir / 'train_metrics.png')
+        fig, axs = self.val_metrics.plot(self.metrics_tracker['val'], together=True)
+        fig.savefig(outdir / 'val_metrics.png')
+
+        fig, axs = self.val_confmat.plot()
+        fig.savefig(outdir / 'confusion_matrix.png')
+        wandb.log({'confusion_matrix': fig}, step=self.board_idx)
+        fig, axs = self.val_roc.plot()
+        fig.savefig(outdir / 'roc_curve.png')
+        # Turning the ROC into a wandb image to save storage - idk why but it's huge (120MB+)
+        wandb.log({'roc_curve': wandb.Image(fig)}, step=self.board_idx)
+        plt.close('all')
 
     def setup_lr_scheduler(self):
         # Scheduler

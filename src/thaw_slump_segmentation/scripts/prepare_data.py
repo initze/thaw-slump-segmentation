@@ -10,7 +10,6 @@ Usecase 2 Data Preprocessing Script
 """
 
 import argparse
-import os
 import shutil
 import sys
 from datetime import datetime
@@ -264,19 +263,28 @@ def tile_size_callback(value: str):
 
 
 def prepare_data(
-    data_dir: Annotated[Path, typer.Option(help='Path to data processing dir')] = Path('data'),
-    log_dir: Annotated[Path, typer.Option(help='Path to log dir')] = Path('logs'),
+    data_dir: Annotated[Path, typer.Option('--data_dir', help='Path to data processing dir')] = Path('data'),
+    log_dir: Annotated[Path, typer.Option('--log_dir', help='Path to log dir')] = Path('logs'),
     skip_gdal: Annotated[
-        bool, typer.Option(help='Skip the Gdal conversion stage (if it has already been done)')
+        bool,
+        typer.Option('--skip_gdal/--use_gdal', help='Skip the Gdal conversion stage (if it has already been done)'),
     ] = False,
-    gdal_bin: Annotated[str, typer.Option(help='Path to gdal binaries (ignored if --skip_gdal is passed)')] = None,
-    gdal_path: Annotated[str, typer.Option(help='Path to gdal scripts (ignored if --skip_gdal is passed)')] = None,
-    n_jobs: Annotated[int, typer.Option(help='number of parallel joblib jobs')] = -1,
-    nodata_threshold: Annotated[float, typer.Option(help='Throw away data with at least this % of nodata pixels')] = 50,
+    gdal_bin: Annotated[
+        str,
+        typer.Option('--gdal_bin', help='Path to gdal binaries (ignored if --skip_gdal is passed)', envvar='GDAL_BIN'),
+    ] = '/usr/bin',
+    gdal_path: Annotated[
+        str,
+        typer.Option('--gdal_path', help='Path to gdal scripts (ignored if --skip_gdal is passed)', envvar='GDAL_PATH'),
+    ] = '/usr/bin',
+    n_jobs: Annotated[int, typer.Option('--n_jobs', help='number of parallel joblib jobs')] = -1,
+    nodata_threshold: Annotated[
+        float, typer.Option('--nodata_threshold', help='Throw away data with at least this % of nodata pixels')
+    ] = 50,
     tile_size: Annotated[
-        str, typer.Option(help="Tiling size in pixels e.g. '256x256'", callback=tile_size_callback)
+        str, typer.Option('--tile_size', help="Tiling size in pixels e.g. '256x256'", callback=tile_size_callback)
     ] = '256x256',
-    tile_overlap: Annotated[int, typer.Option(help='Overlap of the tiles in pixels')] = 25,
+    tile_overlap: Annotated[int, typer.Option('--tile_overlap', help='Overlap of the tiles in pixels')] = 25,
 ):
     """Make data ready for training"""
 
@@ -334,7 +342,8 @@ def prepare_data(
     )
 
 
-def main():
+# ! Moving legacy argparse cli to main to maintain compatibility with the original script
+if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Make data ready for training', formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
@@ -354,60 +363,14 @@ def main():
 
     args = parser.parse_args()
 
-    # Tiling Settings
-    xsize, ysize = map(int, args.tile_size.split('x'))
-    overlap = args.tile_overlap
-
-    timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-    log_path = Path(args.log_dir) / f'prepare_data-{timestamp}.log'
-    if not Path(args.log_dir).exists():
-        os.mkdir(Path(args.log_dir))
-    init_logging(log_path)
-    logger = get_logger('prepare_data')
-    logger.info('#############################')
-    logger.info('# Starting Data Preparation #')
-    logger.info('#############################')
-
-    threshold = args.nodata_threshold / 100
-
-    if not args.skip_gdal:
-        gdal.initialize(args)
-
-    DATA_ROOT = Path(args.data_dir)
-    DATA_DIR = DATA_ROOT / 'tiles'
-    h5dir = DATA_ROOT / 'h5'
-    h5dir.mkdir(exist_ok=True)
-
-    # All folders that contain the big raster (...AnalyticsML_SR.tif) are assumed to be a dataset
-    datasets = [raster.parent for raster in DATA_DIR.glob('*/' + RASTERFILTER)]
-
-    overwrite_conflicts = []
-    for dataset in datasets:
-        check_dir = h5dir / dataset.name
-        if check_dir.exists():
-            overwrite_conflicts.append(check_dir)
-
-    if overwrite_conflicts:
-        logger.warning(f"Found old data directories: {', '.join(dir.name for dir in overwrite_conflicts)}.")
-        decision = input('Delete and recreate them [d], skip them [s] or abort [a]? ').lower()
-        if decision == 'd':
-            logger.info('User chose to delete old directories.')
-            for old_dir in overwrite_conflicts:
-                shutil.rmtree(old_dir)
-        elif decision == 's':
-            logger.info('User chose to skip old directories.')
-            already_done = [d.name for d in overwrite_conflicts]
-            datasets = [d for d in datasets if d.name not in already_done]
-        else:
-            # When in doubt, don't overwrite/change anything to be safe
-            logger.error('Aborting due to conflicts with existing data directories.')
-            sys.exit(1)
-
-    Parallel(n_jobs=args.n_jobs)(
-        delayed(main_function)(dataset, log_path, h5dir, xsize, ysize, overlap, threshold, args.skip_gdal)
-        for dataset in datasets
+    prepare_data(
+        data_dir=args.data_dir,
+        log_dir=args.log_dir,
+        skip_gdal=args.skip_gdal,
+        gdal_bin=args.gdal_bin,
+        gdal_path=args.gdal_path,
+        n_jobs=args.n_jobs,
+        nodata_threshold=args.nodata_threshold,
+        tile_size=args.tile_size,
+        tile_overlap=args.tile_overlap,
     )
-
-
-if __name__ == '__main__':
-    main()

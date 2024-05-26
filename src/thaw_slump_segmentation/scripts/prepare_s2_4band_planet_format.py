@@ -180,17 +180,19 @@ def download_tcvis(image_path):
 
 
 def prepare_s2_4band_planet_format(
-    data_dir: Annotated[Path, typer.Argument(help='data directory (parent of download dir)')],
-    image_regex: Annotated[str, typer.Option(help='regex term to find image file')] = '*/*SR.tif',
-    n_jobs: Annotated[int, typer.Option(help='Number of parallel- images to prepare data for')] = 6,
+    data_dir: Annotated[Path, typer.Option('--data_dir', help='data directory (parent of download dir)')],
+    image_regex: Annotated[str, typer.Option('--image_regex', help='regex term to find image file')] = '*/*SR.tif',
+    n_jobs: Annotated[int, typer.Option('--n_jobs', help='Number of parallel- images to prepare data for')] = 6,
+    aux_dir: Annotated[
+        Path, typer.Option('--aux_dir', help='parent directory of auxilliary data')
+    ] = '/isipd/projects/p_aicore_pf/initze/processing/auxiliary/',
 ):
     input_dir = Path(data_dir)
     infiles = list(input_dir.glob(image_regex))
 
-    base_dir = Path('/isipd/projects/p_aicore_pf/initze/processing/auxiliary/')
     # make absolute paths
-    elevation = base_dir / 'elevation.vrt'
-    slope = base_dir / 'slope.vrt'
+    elevation = aux_dir / 'elevation.vrt'
+    slope = aux_dir / 'slope.vrt'
 
     # for image_path in infiles:
     Parallel(n_jobs=n_jobs)(delayed(process_local_data)(image_path, elevation, slope) for image_path in infiles)
@@ -199,7 +201,7 @@ def prepare_s2_4band_planet_format(
         download_tcvis(image_path)
 
 
-def main():
+if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Prepare aux data for downloaded S2 images.', formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
@@ -214,20 +216,6 @@ def main():
     )
     args = parser.parse_args()
 
-    input_dir = Path(args.data_dir)
-    infiles = list(input_dir.glob(args.image_regex))
-
-    base_dir = Path('/isipd/projects/p_aicore_pf/initze/processing/auxiliary/')
-    # make absolute paths
-    elevation = base_dir / 'elevation.vrt'
-    slope = base_dir / 'slope.vrt'
-
-    # for image_path in infiles:
-    Parallel(n_jobs=args.n_jobs)(delayed(process_local_data)(image_path, elevation, slope) for image_path in infiles)
-
-    for image_path in infiles:
-        download_tcvis(image_path)
-
-
-if __name__ == '__main__':
-    main()
+    prepare_s2_4band_planet_format(
+        data_dir=args.data_dir, image_regex=args.image_regex, n_jobs=args.n_jobs, aux_dir=args.aux_dir
+    )

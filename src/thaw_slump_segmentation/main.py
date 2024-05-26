@@ -9,7 +9,24 @@ from thaw_slump_segmentation.scripts.process_03_ensemble import process_03_ensem
 from thaw_slump_segmentation.scripts.setup_raw_data import setup_raw_data
 from thaw_slump_segmentation.scripts.train import train
 
-cli = typer.Typer()
+# TODO: Move this comment to docs
+# GEE is used for:
+# - Setup of raw data (init call inside function)
+# - download of S2 images (init call global at module level)
+# - prepare of S2 images (init call global at module level)
+# GDAL is used for:
+# - Setup of raw data (in threaded function)
+# - prepare data (in main function)
+# - inference (in main function)
+# - prepare of S2 images (but its not implemented via gdal module but hardcoded)
+
+cli = typer.Typer(pretty_exceptions_show_locals=False)
+
+
+@cli.command()
+def hello(name: str):
+    typer.echo(f'Hello {name}')
+
 
 cli.command()(train)
 cli.command()(inference)

@@ -64,7 +64,32 @@ def get_mask_from_udm(infile, nodata=1):
 
 # TODO: inconsistent application what the mask value is
 def burn_mask(file_src, file_dst, file_udm, file_udm2=None, mask_value=0):
-    """"
+    """
+    Apply a data mask to a raster file and save the result to a new file.
+
+    Args:
+        file_src (str): Path to the input raster file.
+        file_dst (str): Path to the output raster file.
+        file_udm (str): Path to the UDM file (not used in this function).
+        file_udm2 (str, optional): Path to the UDM2 V2 file. If provided, the data mask
+            will be derived from this file using the `get_mask_from_udm2_v2` function.
+        mask_value (int, optional): Value to use for masked (invalid) pixels in the output file.
+            Default is 0.
+
+    Returns:
+        int: Always returns 1 (for successful execution).
+
+    Raises:
+        ValueError: If `file_udm2` is not provided.
+
+    Notes:
+        - The function reads the input raster file using rasterio and applies the data mask
+        by multiplying the raster data with the mask.
+        - The masked raster data is then written to the output file with the same metadata
+        as the input file.
+        - If `file_udm2` is not provided, a `ValueError` is raised.
+        - The `file_udm` parameter is not used in this function.
+        - The function uses the rasterio library for reading and writing raster files.
     """
     with rio.Env(): 
         if file_udm2:

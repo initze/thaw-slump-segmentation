@@ -12,6 +12,7 @@ import typer
 from joblib import Parallel, delayed
 from tqdm import tqdm
 from typing_extensions import Annotated
+import swifter
 
 from ..postprocessing import (
     copy_unprocessed_files,
@@ -63,10 +64,10 @@ def process_02_inference(
 
     # TODO: move to function
     # print basic information
-    total_images = len(df_final)
-    preprocessed_images = df_final.preprocessed.sum()
-    preprocessing_images = total_images - preprocessed_images
-    finished_images = df_final.inference_finished.sum()
+    total_images = int(len(df_final))
+    preprocessed_images = int(df_final.preprocessed.sum())
+    preprocessing_images = int(total_images - preprocessed_images)
+    finished_images = int(df_final.inference_finished.sum())
     print(f'Number of images: {total_images}')
     print(f'Number of preprocessed images: {preprocessed_images}')
     print(f'Number of images for preprocessing: {preprocessing_images}')
@@ -92,7 +93,7 @@ def process_02_inference(
     # #### Copy data for Preprocessing
     # make better documentation
 
-    df_preprocess = df_final[~(df_final.preprocessed)]
+    df_preprocess = df_final[df_final.preprocessed == False]
     print(f'Number of images to preprocess: {len(df_preprocess)}')
 
     # Cleanup processing directories to avoid incomplete processing
@@ -105,7 +106,6 @@ def process_02_inference(
     else:
         print('Processing directory is ready, nothing to do!')
 
-    # TODO: check for empty processing status
     # Copy Data
     _ = df_preprocess.swifter.apply(lambda x: copy_unprocessed_files(x, processing_dir), axis=1)
 
@@ -126,7 +126,7 @@ def process_02_inference(
         [get_processing_status(rdd, processing_dir, inference_dir, model) for rdd in raw_data_dir]
     ).drop_duplicates()
     # Filter to images that are not preprocessed yet
-    df_process = df_final[~df_final.inference_finished]
+    df_process = df_final[df_final.inference_finished == False]
     # update overview and filter accordingly - really necessary?
     df_process_final = (
         df_process.set_index('name')
@@ -201,6 +201,7 @@ def process_02_inference(
 
 def main():
     # ### Settings
+
     # Add argument definitions
     parser = argparse.ArgumentParser(
         description='Script to run auto inference for RTS', formatter_class=argparse.ArgumentDefaultsHelpFormatter

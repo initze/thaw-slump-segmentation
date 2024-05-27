@@ -65,16 +65,19 @@ def get_date_from_PSfilename(name):
     return date
     
 
-# TODO: create empty dataframe if no files found
 def get_datasets(path, depth=0, preprocessed=False):
     dirs = listdirs2(path, depth=depth)
     df = pd.DataFrame(data=dirs, columns=['path'])
-    df['name'] = df.apply(lambda x: x['path'].name, axis=1)
-    df['preprocessed'] = preprocessed
-    df['PS_product_type'] = df.apply(lambda x: get_PS_products_type(x['name']), axis=1)
-    df['image_date'] = df.apply(lambda x: get_date_from_PSfilename(x['name']), axis=1)
-    df['tile_id'] = df.apply(lambda x: x['name'].split('_')[1], axis=1)
-    return df
+    if len(df) > 0:
+        df['name'] = df.apply(lambda x: x['path'].name, axis=1)
+        df['preprocessed'] = preprocessed
+        df['PS_product_type'] = df.apply(lambda x: get_PS_products_type(x['name']), axis=1)
+        df['image_date'] = df.apply(lambda x: get_date_from_PSfilename(x['name']), axis=1)
+        df['tile_id'] = df.apply(lambda x: x['name'].split('_')[1], axis=1)
+        return df
+    else:
+        return pd.DataFrame(columns=['path', 'name', 'preprocessed', 'PS_product_type', 'image_date', 'tile_id'])
+
 
 def copy_unprocessed_files(row, processing_dir, quiet=True):
     """
@@ -157,6 +160,7 @@ def get_processing_status(raw_data_dir, processing_dir, inference_dir, model, re
     # get processed
     # TODO: make validation steps if files are alright 
     df_processed = get_datasets(processing_dir / 'tiles', depth=0, preprocessed=True)
+
     # check if all files are available
     df_processed = df_processed[df_processed.apply(lambda x: len(list(x['path'].glob('*')))>=5, axis=1)]
 

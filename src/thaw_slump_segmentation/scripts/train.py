@@ -357,8 +357,8 @@ def train(
             help='Give this run a name, so that it will be logged into logs/<NAME>_<timestamp>.',
         ),
     ],
-    data_dir: Annotated[Path, typer.Option(help='Path to data processing dir')] = Path('data'),
-    log_dir: Annotated[Path, typer.Option(help='Path to log dir')] = Path('logs'),
+    data_dir: Annotated[Path, typer.Option('--data_dir', help='Path to data processing dir')] = Path('data'),
+    log_dir: Annotated[Path, typer.Option('--log_dir', help='Path to log dir')] = Path('logs'),
     config: Annotated[Path, typer.Option('--config', '-c', help='Specify run config to use.')] = Path('config.yml'),
     resume: Annotated[
         str,
@@ -382,7 +382,7 @@ def train(
 
 
 # ! Moving legacy argparse cli to main to maintain compatibility with the original script
-def main():
+if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Training script', formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
@@ -418,7 +418,3 @@ def main():
         args.wandb_project,
         args.wandb_name,
     ).run()
-
-
-if __name__ == '__main__':
-    main()

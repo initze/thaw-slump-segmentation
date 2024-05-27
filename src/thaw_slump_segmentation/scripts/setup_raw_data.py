@@ -44,7 +44,6 @@ SUCCESS_STATES = ['rename', 'label', 'ndvi', 'tcvis', 'rel_dem', 'slope', 'mask'
 
 
 def preprocess_directory(image_dir, data_dir, aux_dir, backup_dir, log_path, gdal_bin, gdal_path, label_required=True):
-    # TODO: let gdal.initialize take each argument separately
     # Mock old args object
     gdal.initialize(bin=gdal_bin, path=gdal_path)
 
@@ -103,12 +102,16 @@ def preprocess_directory(image_dir, data_dir, aux_dir, backup_dir, log_path, gda
 
 
 def setup_raw_data(
-    gdal_bin: Annotated[str, typer.Option(help='Path to gdal binaries')] = '',
-    gdal_path: Annotated[str, typer.Option(help='Path to gdal scripts')] = '',
-    n_jobs: Annotated[int, typer.Option(help='number of parallel joblib jobs')] = -1,
-    label: Annotated[bool, typer.Option(help='Set flag to do preprocessing with label file')] = False,
-    data_dir: Annotated[Path, typer.Option(help='Path to data processing dir')] = Path('data'),
-    log_dir: Annotated[Path, typer.Option(help='Path to log dir')] = Path('logs'),
+    gdal_bin: Annotated[str, typer.Option('--gdal_bin', help='Path to gdal binaries', envvar='GDAL_BIN')] = '/usr/bin',
+    gdal_path: Annotated[
+        str, typer.Option('--gdal_path', help='Path to gdal scripts', envvar='GDAL_PATH')
+    ] = '/usr/bin',
+    n_jobs: Annotated[int, typer.Option('--n_jobs', help='number of parallel joblib jobs')] = -1,
+    label: Annotated[
+        bool, typer.Option('--label/--nolabel', help='Set flag to do preprocessing with label file')
+    ] = False,
+    data_dir: Annotated[Path, typer.Option('--data_dir', help='Path to data processing dir')] = Path('data'),
+    log_dir: Annotated[Path, typer.Option('--log_dir', help='Path to log dir')] = Path('logs'),
 ):
     INPUT_DATA_DIR = data_dir / 'input'
     BACKUP_DIR = data_dir / 'backup'
@@ -126,10 +129,11 @@ def setup_raw_data(
     logger.info('###########################')
 
     dir_list = check_input_data(INPUT_DATA_DIR)
+    print(dir_list)
     if len(dir_list) > 0:
         Parallel(n_jobs=n_jobs)(
             delayed(preprocess_directory)(
-                image_dir, DATA_DIR, AUX_DIR, BACKUP_DIR, gdal_bin, gdal_path, log_path, not label
+                image_dir, DATA_DIR, AUX_DIR, BACKUP_DIR, log_path, gdal_bin, gdal_path, label
             )
             for image_dir in dir_list
         )
@@ -138,7 +142,7 @@ def setup_raw_data(
 
 
 # ! Moving legacy argparse cli to main to maintain compatibility with the original script
-def main():
+if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--gdal_bin', default=None, help='Path to gdal binaries (ignored if --skip_gdal is passed)')
     parser.add_argument('--gdal_path', default=None, help='Path to gdal scripts (ignored if --skip_gdal is passed)')
@@ -149,35 +153,11 @@ def main():
 
     args = parser.parse_args()
 
-    global DATA_ROOT, INPUT_DATA_DIR, BACKUP_DIR, DATA_DIR, AUX_DIR
-
-    DATA_ROOT = Path(args.data_dir)
-    INPUT_DATA_DIR = DATA_ROOT / 'input'
-    BACKUP_DIR = DATA_ROOT / 'backup'
-    DATA_DIR = DATA_ROOT / 'tiles'
-    AUX_DIR = DATA_ROOT / 'auxiliary'
-
-    timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-    log_path = Path(args.log_dir) / f'setup_raw_data-{timestamp}.log'
-    if not Path(args.log_dir).exists():
-        os.mkdir(Path(args.log_dir))
-    init_logging(log_path)
-    logger = get_logger('setup_raw_data')
-    logger.info('###########################')
-    logger.info('# Starting Raw Data Setup #')
-    logger.info('###########################')
-
-    dir_list = check_input_data(INPUT_DATA_DIR)
-    if len(dir_list) > 0:
-        Parallel(n_jobs=args.n_jobs)(
-            delayed(preprocess_directory)(
-                image_dir, DATA_DIR, AUX_DIR, BACKUP_DIR, args.gdal_bin, args.gdal_path, log_path, args.nolabel
-            )
-            for image_dir in dir_list
-        )
-    else:
-        logger.error('Empty Input Data Directory! No Data available to process!')
-
-
-if __name__ == '__main__':
-    main()
+    setup_raw_data(
+        gdal_bin=args.gdal_bin,
+        gdal_path=args.gdal_path,
+        n_jobs=args.n_jobs,
+        label=args.nolabel,
+        data_dir=args.data_dir,
+        log_dir=args.log_dir,
+    )

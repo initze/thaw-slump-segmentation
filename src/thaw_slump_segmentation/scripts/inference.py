@@ -241,19 +241,22 @@ def inference(
     ],
     model_path: Annotated[str, typer.Argument(help='path to model, use the model base path')],
     tile_to_predict: Annotated[List[str], typer.Argument(help='path to model')],
-    gdal_bin: Annotated[str, typer.Option(help='Path to gdal binaries')] = '',
-    gdal_path: Annotated[str, typer.Option(help='Path to gdal scripts')] = '',
-    n_jobs: Annotated[int, typer.Option(help='number of parallel joblib jobs')] = -1,
+    gdal_bin: Annotated[str, typer.Option('--gdal_bin', help='Path to gdal binaries', envvar='GDAL_BIN')] = '/usr/bin',
+    gdal_path: Annotated[
+        str, typer.Option('--gdal_path', help='Path to gdal scripts', envvar='GDAL_PATH')
+    ] = '/usr/bin',
+    n_jobs: Annotated[int, typer.Option('--n_jobs', help='number of parallel joblib jobs')] = -1,
     ckpt: Annotated[str, typer.Option(help='Checkpoint to use')] = 'latest',
-    data_dir: Annotated[Path, typer.Option(help='Path to data processing dir')] = Path('data'),
-    log_dir: Annotated[Path, typer.Option(help='Path to log dir')] = Path('logs'),
-    inference_dir: Annotated[Path, typer.Option(help='Main inference directory')] = Path('inference'),
+    data_dir: Annotated[Path, typer.Option('--data_dir', help='Path to data processing dir')] = Path('data'),
+    log_dir: Annotated[Path, typer.Option('--log_dir', help='Path to log dir')] = Path('logs'),
+    inference_dir: Annotated[Path, typer.Option('--inference_dir', help='Main inference directory')] = Path(
+        'inference'
+    ),
     margin_size: Annotated[int, typer.Option('--margin_size', '-n', help='Size of patch overlap')] = 256,
     patch_size: Annotated[int, typer.Option('--patch_size', '-p', help='Size of patches')] = 1024,
 ):
     """Inference Script"""
 
-    # TODO: let gdal.initialize take each argument separately
     # Mock old args object
     gdal.initialize(bin=gdal_bin, path=gdal_path)
 
@@ -321,7 +324,7 @@ def inference(
 
 
 # ! Moving legacy argparse cli to main to maintain compatibility with the original script
-def main():
+if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Inference Script', formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
@@ -341,68 +344,18 @@ def main():
     parser.add_argument('tile_to_predict', type=str, help='path to model', nargs='+')
 
     args = parser.parse_args()
-    gdal.initialize(args)
 
-    timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-    log_path = Path(args.log_dir) / f'inference-{timestamp}.log'
-    if not Path(args.log_dir).exists():
-        os.mkdir(Path(args.log_dir))
-    init_logging(log_path)
-    logger = get_logger('inference')
-
-    # ===== LOAD THE MODEL =====
-    cuda = True if torch.cuda.is_available() else False
-    dev = torch.device('cpu') if not cuda else torch.device('cuda')
-    logger.info(f'Running on {dev} device')
-
-    if not args.model_path:
-        last_modified = 0
-        last_modeldir = None
-
-        for config_file in Path(args.log_dir).glob('*/config.yml'):
-            modified = config_file.stat().st_mtime
-            if modified > last_modified:
-                last_modified = modified
-                last_modeldir = config_file.parent
-        args.model_path = last_modeldir
-
-    model_dir = Path(args.model_path)
-    config = yaml.load((model_dir / 'config.yml').open(), Loader=yaml.SafeLoader)
-
-    m = config['model']
-    # print(m['architecture'],m['encoder'], m['input_channels'])
-    model = create_model(
-        arch=m['architecture'],
-        encoder_name=m['encoder'],
-        encoder_weights=None if m['encoder_weights'] == 'random' else m['encoder_weights'],
-        classes=1,
-        in_channels=m['input_channels'],
+    inference(
+        name=args.name,
+        model_path=args.model_path,
+        tile_to_predict=args.tile_to_predict,
+        gdal_bin=args.gdal_bin,
+        gdal_path=args.gdal_path,
+        n_jobs=args.n_jobs,
+        ckpt=args.ckpt,
+        data_dir=args.data_dir,
+        log_dir=args.log_dir,
+        inference_dir=args.inference_dir,
+        margin_size=args.margin_size,
+        patch_size=args.patch_size,
     )
-
-    if args.ckpt == 'latest':
-        ckpt_nums = [int(ckpt.stem) for ckpt in model_dir.glob('checkpoints/*.pt')]
-        last_ckpt = max(ckpt_nums)
-    else:
-        last_ckpt = int(args.ckpt)
-    ckpt = model_dir / 'checkpoints' / f'{last_ckpt:02d}.pt'
-    logger.info(f'Loading checkpoint {ckpt}')
-
-    # Parallelized Model needs to be declared before loading
-    try:
-        model.load_state_dict(torch.load(ckpt, map_location=dev))
-    except Exception:
-        model = nn.DataParallel(model)
-        model.load_state_dict(torch.load(ckpt, map_location=dev))
-
-    model = model.to(dev)
-
-    sources = DataSources(config['data_sources'])
-
-    torch.set_grad_enabled(False)
-
-    for tilename in tqdm(args.tile_to_predict):
-        do_inference(tilename, sources, model, dev, logger, args, log_path)
-
-
-if __name__ == '__main__':
-    main()

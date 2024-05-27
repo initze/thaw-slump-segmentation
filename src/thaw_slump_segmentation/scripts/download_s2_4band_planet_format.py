@@ -25,8 +25,8 @@ def download_S2image_preprocessed(s2_image_id, outfile, outbands=['B2', 'B3', 'B
 
 
 def download_s2_4band_planet_format(
-    data_dir: Annotated[Path, typer.Argument(help='Output directory')],
-    s2ids: Annotated[List[str], typer.Argument(help='S2 image ID, you can use several separated by space')],
+    data_dir: Annotated[Path, typer.Option('--data_dir', help='Output directory')],
+    s2ids: Annotated[List[str], typer.Option(help='S2 image ID, you can use several separated by space')],
 ):
     """Download preprocessed S2 image."""
     for s2id in s2ids:
@@ -39,7 +39,7 @@ def download_s2_4band_planet_format(
 
 
 # ! Moving legacy argparse cli to main to maintain compatibility with the original script
-def main():
+if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Download preprocessed S2 image.', formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
@@ -47,17 +47,4 @@ def main():
     parser.add_argument('--data_dir', type=str, help='Output directory')
     args = parser.parse_args()
 
-    outdir = Path(args.data_dir)
-    s2id = args.s2id
-
-    for s2id in args.s2id:
-        # Call the function with the provided s2id
-        outfile = outdir / s2id / f'{s2id}_SR.tif'
-        if not outdir.exists():
-            print('Creating output directory', outdir)
-            outdir.mkdir()
-        download_S2image_preprocessed(s2id, outfile)
-
-
-if __name__ == '__main__':
-    main()
+    download_s2_4band_planet_format(args.data_dir, args.s2id)

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.3] - 2024-06-03
+
+### Changed
+
+- use typer for cli Tools
+- simplified udm application for planet data masking
+
 ## [0.10.2] - 2024-05-08
 
 ### Added

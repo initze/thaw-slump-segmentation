@@ -4,7 +4,7 @@ version = "0.10.2"
 description = "Thaw slump segmentation workflow using PlanetScope data and pytorch"
 authors = [
     { name = "Ingmar Nitze", email = "ingmar.nitze@awi.de" },
-    { name = "Konrad Heidler", email = "k.heidler@tum.de" }
+    { name = "Konrad Heidler", email = "k.heidler@tum.de" },
 ]
 dependencies = [
     "torch==2.2.0",
@@ -42,7 +42,11 @@ dependencies = [
     "opencv-python>=4.9.0.80",
     "swifter>=1.4.0",
     "mkdocs-awesome-pages-plugin>=2.9.2",
-    "rich"
+    "ruff>=0.4.2",
+    "ipykernel>=6.29.4",
+    "rich>=13.7.1",
+    "torchsummary>=1.5.1",
+    "typer>=0.12.3",
 ]
 readme = "README.md"
 requires-python = ">= 3.10"
@@ -56,6 +60,7 @@ process_02_inference = "thaw_slump_segmentation.scripts.process_02_inference:mai
 process_03_ensemble = "thaw_slump_segmentation.scripts.process_03_ensemble:main"
 setup_raw_data = "thaw_slump_segmentation.scripts.setup_raw_data:main"
 train = "thaw_slump_segmentation.scripts.train:main"
+thaw-slump-segmentation = "thaw_slump_segmentation.main:cli"
 
 [build-system]
 requires = ["hatchling"]
@@ -79,3 +84,10 @@ packages = ["src/thaw_slump_segmentation"]
 # [[tool.rye.sources]]
 # name = "pytorch"
 # url = "https://download.pytorch.org/whl/cu118"
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.format]
+quote-style = "single"
+docstring-code-format = true

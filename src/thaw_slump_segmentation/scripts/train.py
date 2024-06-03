@@ -18,11 +18,12 @@ from pathlib import Path
 
 import torch
 import torch.nn as nn
+import typer
+import wandb
 import yaml
 from rich import pretty, traceback
 from tqdm import tqdm
-
-import wandb
+from typing_extensions import Annotated
 
 from ..data_loading import DataSources, get_loader, get_slump_loader, get_vis_loader
 from ..metrics import F1, Accuracy, IoU, Metrics, Precision, Recall
@@ -32,41 +33,28 @@ from ..utils import get_logger, init_logging, plot_metrics, plot_precision_recal
 traceback.install(show_locals=True)
 pretty.install()
 
-parser = argparse.ArgumentParser(description='Training script', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-parser.add_argument('-s', '--summary', action='store_true', help='Only print model summary and return.')
-parser.add_argument('--data_dir', default='data', type=Path, help='Path to data processing dir')
-parser.add_argument('--log_dir', default='logs', type=Path, help='Path to log dir')
-parser.add_argument(
-    '-n', '--name', default='', help='Give this run a name, so that it will be logged into logs/<NAME>_<timestamp>.'
-)
-parser.add_argument('-c', '--config', default='config.yml', type=Path, help='Specify run config to use.')
-parser.add_argument(
-    '-r',
-    '--resume',
-    default='',
-    help='Resume from the specified checkpoint.'
-    'Can be either a run-id (e.g. "2020-06-29_18-12-03") to select the last'
-    'checkpoint of that run, or a direct path to a checkpoint to be loaded.'
-    'Overrides the resume option in the config file if given.',
-)
-parser.add_argument(
-    '-wp', '--wandb_project', default='thaw-slump-segmentation', help='Set a project name for weights and biases'
-)
-parser.add_argument('-wn', '--wandb_name', default=None, help='Set a run name for weights and biases')
-
 
 class Engine:
-    def __init__(self):
-        args = parser.parse_args()
-        self.config = yaml.load(args.config.open(), Loader=yaml_custom.SaneYAMLLoader)
-        self.DATA_ROOT = args.data_dir
+    def __init__(
+        self,
+        config: Path,
+        data_dir: Path,
+        name: str,
+        log_dir: Path,
+        resume: str,
+        summary: bool,
+        wandb_project: str,
+        wandb_name: str,
+    ):
+        self.config = yaml.load(config.open(), Loader=yaml_custom.SaneYAMLLoader)
+        self.DATA_ROOT = data_dir
         # Logging setup
         timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-        if args.name:
-            log_dir_name = f'{args.name}_{timestamp}'
+        if name:
+            log_dir_name = f'{name}_{timestamp}'
         else:
             log_dir_name = timestamp
-        self.log_dir = Path(args.log_dir) / log_dir_name
+        self.log_dir = Path(log_dir) / log_dir_name
         self.log_dir.mkdir(exist_ok=False)
 
         init_logging(self.log_dir / 'train.log')
@@ -87,8 +75,8 @@ class Engine:
         # make parallel
         self.model = nn.DataParallel(self.model)
 
-        if args.resume:
-            self.config['resume'] = args.resume
+        if resume:
+            self.config['resume'] = resume
 
         if 'resume' in self.config and self.config['resume']:
             checkpoint = Path(self.config['resume'])
@@ -115,7 +103,7 @@ class Engine:
         self.epoch = 0
         self.metrics = Metrics(Accuracy, Precision, Recall, F1, IoU)
 
-        if args.summary:
+        if summary:
             from torchsummary import summary
 
             summary(self.model, [(self.config['model']['input_channels'], 256, 256)])
@@ -144,11 +132,11 @@ class Engine:
         # Metrics and Weights and Biases initialization
         self.trn_metrics = {}
         self.val_metrics = {}
-        print('wandb project:', args.wandb_project)
-        print('wandb name:', args.wandb_name)
+        print('wandb project:', wandb_project)
+        print('wandb name:', wandb_name)
         print('config:', self.config)
         print('entity:', 'ml4earth')
-        wandb.init(project=args.wandb_project, name=args.wandb_name, config=self.config, entity='ingmarnitze_team')
+        wandb.init(project=wandb_project, name=wandb_name, config=self.config, entity='ingmarnitze_team')
 
     def run(self):
         for phase in self.config['schedule']:
@@ -359,9 +347,74 @@ def safe_append(dictionary, key, value):
         dictionary[key] = [value]
 
 
-def main():
-    Engine().run()
+def train(
+    name: Annotated[
+        str,
+        typer.Option(
+            '--name',
+            '-n',
+            prompt=True,
+            help='Give this run a name, so that it will be logged into logs/<NAME>_<timestamp>.',
+        ),
+    ],
+    data_dir: Annotated[Path, typer.Option('--data_dir', help='Path to data processing dir')] = Path('data'),
+    log_dir: Annotated[Path, typer.Option('--log_dir', help='Path to log dir')] = Path('logs'),
+    config: Annotated[Path, typer.Option('--config', '-c', help='Specify run config to use.')] = Path('config.yml'),
+    resume: Annotated[
+        str,
+        typer.Option(
+            '--resume',
+            '-r',
+            help='Resume from the specified checkpoint. Can be either a run-id (e.g. "2020-06-29_18-12-03") to select the last. Overrides the resume option in the config file if given.',
+        ),
+    ] = None,
+    summary: Annotated[bool, typer.Option('--summary', '-s', help='Only print model summary and return.')] = False,
+    wandb_project: Annotated[
+        str, typer.Option('--wandb_project', '-wp', help='Set a project name for weights and biases')
+    ] = 'thaw-slump-segmentation',
+    wandb_name: Annotated[
+        str, typer.Option('--wandb_name', '-wn', help='Set a run name for weights and biases')
+    ] = None,
+):
+    """Training script"""
+    engine = Engine(config, data_dir, name, log_dir, resume, summary, wandb_project, wandb_name)
+    engine.run()
 
 
+# ! Moving legacy argparse cli to main to maintain compatibility with the original script
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser(
+        description='Training script', formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
+    parser.add_argument('-s', '--summary', action='store_true', help='Only print model summary and return.')
+    parser.add_argument('--data_dir', default='data', type=Path, help='Path to data processing dir')
+    parser.add_argument('--log_dir', default='logs', type=Path, help='Path to log dir')
+    parser.add_argument(
+        '-n', '--name', default='', help='Give this run a name, so that it will be logged into logs/<NAME>_<timestamp>.'
+    )
+    parser.add_argument('-c', '--config', default='config.yml', type=Path, help='Specify run config to use.')
+    parser.add_argument(
+        '-r',
+        '--resume',
+        default='',
+        help='Resume from the specified checkpoint.'
+        'Can be either a run-id (e.g. "2020-06-29_18-12-03") to select the last'
+        'Can be either a run-id (e.g. "2020-06-29_18-12-03") to select the last'
+        'Overrides the resume option in the config file if given.',
+    )
+    parser.add_argument(
+        '-wp', '--wandb_project', default='thaw-slump-segmentation', help='Set a project name for weights and biases'
+    )
+    parser.add_argument('-wn', '--wandb_name', default=None, help='Set a run name for weights and biases')
+
+    args = parser.parse_args()
+    Engine(
+        args.config,
+        args.data_dir,
+        args.name,
+        args.log_dir,
+        args.resume,
+        args.summary,
+        args.wandb_project,
+        args.wandb_name,
+    ).run()

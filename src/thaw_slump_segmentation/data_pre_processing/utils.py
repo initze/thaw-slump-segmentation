@@ -85,6 +85,7 @@ def get_mask_images(image_directory, udm='udm.tif', udm2='udm2.tif', images=['_S
     image_files = []
     for im in images:
         image_files.extend([f for f in flist if im in f])
+    
     # check which udms are available, if not then set to None
     try:
         udm_file = [f for f in flist if udm in f][0]
@@ -94,6 +95,7 @@ def get_mask_images(image_directory, udm='udm.tif', udm2='udm2.tif', images=['_S
         udm2_file = [f for f in flist if udm2 in f][0]
     except:
         udm2_file = None
+    
     # raise error if no udms available
     if (udm_file == None) & (udm2_file == None):
         raise ValueError(f'There are no udm or udm2 files for image {image_directory.name}!')
@@ -161,13 +163,14 @@ def aux_data_to_tiles(image_directory, aux_data, outfile):
     # load template and get props
     images = get_mask_images(image_directory, udm='udm.tif', udm2='udm2.tif', images=['_SR.tif'])
     image = images['images'][0]
+    
     # prepare gdalwarp call
     xmin, xmax, ymin, ymax = geom_from_image_bounds(image)
     crs = crs_from_image(image)
     xres, yres = resolution_from_image(image)
+    
     # run gdalwarp call
     outfile = f'{image_directory}/{outfile}'#os.path.join(image_directory,outfile)
     s_run = f'{gdal.warp} -te {xmin} {ymin} {xmax} {ymax} -tr {xres} {yres} -r cubic -t_srs {crs} -co COMPRESS=DEFLATE {aux_data} {outfile}'
-    #s_run = f'{gdal.warp} -te {xmin} {ymin} {xmax} {ymax} -tr 3 3 -r cubic -t_srs {crs} -co COMPRESS=DEFLATE {aux_data} {outfile}'
     log_run(s_run, _logger)
     return 1

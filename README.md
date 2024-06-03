@@ -9,7 +9,7 @@
 We recommend using a new conda environment from scratch
 
 ```bash
-conda env create -n thaw_slump_segmentation python=3.10 mamba -c conda-forge
+conda create -n thaw_slump_segmentation python=3.10 mamba -c conda-forge
 conda activate thaw_slump_segmentation
 ```
 

@@ -292,24 +292,30 @@ class Engine:
 
         epoch_loss = {k: torch.stack(v).mean().item() for k, v in epoch_loss.items() if v}
         epoch_metrics = self.train_metrics.compute()
-        self.metrics_tracker['train'].append(epoch_metrics)
-        wandb.log(epoch_metrics, step=self.board_idx)
+        scalar_epoch_metrics = {
+            k: v.item() for k, v in epoch_metrics.items() if isinstance(v, torch.Tensor) and v.numel() == 1
+        }
+        scalar_epoch_metrics_tensor = {
+            k: v for k, v in epoch_metrics.items() if isinstance(v, torch.Tensor) and v.numel() == 1
+        }
+        self.metrics_tracker['train'].append(scalar_epoch_metrics_tensor)
+        wandb.log(scalar_epoch_metrics, step=self.board_idx)
         wandb.log({'train/Loss': epoch_loss}, step=self.board_idx)
         self.train_metrics.reset()
-        progress.set_postfix(epoch_metrics)
+        progress.set_postfix(scalar_epoch_metrics)
         logstr = (
             f'{self.epoch},'
-            + ','.join(f'{val}' for key, val in epoch_metrics.items())
+            + ','.join(f'{val}' for key, val in scalar_epoch_metrics.items())
             + ','
             + ','.join(f'{val}' for key, val in epoch_loss.items())
         )
         logfile = self.log_dir / 'train.csv'
-        self.logger.info(f'Epoch {self.epoch} - Loss {epoch_loss} Training Metrics: {epoch_metrics}')
+        self.logger.info(f'Epoch {self.epoch} - Loss {epoch_loss} Training Metrics: {scalar_epoch_metrics}')
         if not logfile.exists():
             # Print header upon first log print
             header = (
                 'Epoch,'
-                + ','.join(f'{key}' for key, val in epoch_metrics.items())
+                + ','.join(f'{key}' for key, val in scalar_epoch_metrics.items())
                 + ','
                 + ','.join(f'{key}' for key, val in epoch_loss.items())
             )

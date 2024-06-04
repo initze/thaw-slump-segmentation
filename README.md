@@ -9,7 +9,7 @@
 We recommend using a new conda environment from scratch
 
 ```bash
-conda env create -n thaw_slump_segmentation python=3.10 mamba -c conda-forge
+conda create -n thaw_slump_segmentation python=3.10 mamba -c conda-forge
 conda activate thaw_slump_segmentation
 ```
 
@@ -28,21 +28,23 @@ mamba install gdal>=3.6 -c conda-forge
 
 This will pull the CUDA 12 version of pytorch. If you are running CUDA 11, you need to manually switch to the corresponding Pytorch package afterwards by running `pip3 install torch==2.2.0+cu118 torchvision==0.17.0+cu118 --index-url https://download.pytorch.org/whl/cu118`
 
-
-
 ### Additional packages
+
 #### cucim
+
 You can install cucim to speed up the postprocessing process. cucim will use the gpu to perform binary erosion of edge artifacts, which runs alot faster than the standard CPU implementation of scikit-learn.
 
 `pip install --extra-index-url=https://pypi.nvidia.com cucim-cu11==24.4.*`
 
-Installation for other cuda versions see here: 
+Installation for other cuda versions see here:
 
-https://docs.rapids.ai/install
+<https://docs.rapids.ai/install>
+
 ## System and Data Setup
 
 ### Option 1 - Singularity container
-https://cloud.sylabs.io/library/initze/aicore/thaw_slump_segmentation
+
+<https://cloud.sylabs.io/library/initze/aicore/thaw_slump_segmentation>
 
 The container contains all requirements to run the processing code, singularity must be installed
 
@@ -52,7 +54,9 @@ singularity shell --nv --bind <your bind path> thaw_slump_segmentation.sif
 ```
 
 ### Option 2 - anaconda
+
 ### Environment setup
+
 We recommend using a new conda environment from the provided environment.yml file
 
 ```bash
@@ -65,6 +69,7 @@ conda env create -n aicore -f environment.yml
 2. copy/move data into <DATA_DIR>/auxiliary (e.g. prepared ArcticDEM data)
 
 ### Set gdal paths in system.yml file
+
 #### Linux
 
 ```yaml
@@ -115,13 +120,13 @@ Hello tobi
 
 ### Data Preprocessing for Planet data
 
-#### Setting up all required files for training and/or inference 
+#### Setting up all required files for training and/or inference
 
 ```bash
 python setup_raw_data.py --data_dir <DATA_DIR>
 ```
 
-#### Setting up required files for training 
+#### Setting up required files for training
 
 ```bash
 python prepare_data.py --data_dir <DATA_DIR>
@@ -132,7 +137,6 @@ python prepare_data.py --data_dir <DATA_DIR>
 ```bash
 python download_s2_4band_planet_format.py --s2id <IMAGE_ID> --data_dir <DATA_DIR>
 ```
-
 
 ### Training a model
 

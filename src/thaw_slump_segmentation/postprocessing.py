@@ -65,16 +65,19 @@ def get_date_from_PSfilename(name):
     return date
     
 
-# TODO: create empty dataframe if no files found
 def get_datasets(path, depth=0, preprocessed=False):
     dirs = listdirs2(path, depth=depth)
     df = pd.DataFrame(data=dirs, columns=['path'])
-    df['name'] = df.apply(lambda x: x['path'].name, axis=1)
-    df['preprocessed'] = preprocessed
-    df['PS_product_type'] = df.apply(lambda x: get_PS_products_type(x['name']), axis=1)
-    df['image_date'] = df.apply(lambda x: get_date_from_PSfilename(x['name']), axis=1)
-    df['tile_id'] = df.apply(lambda x: x['name'].split('_')[1], axis=1)
-    return df
+    if len(df) > 0:
+        df['name'] = df.apply(lambda x: x['path'].name, axis=1)
+        df['preprocessed'] = preprocessed
+        df['PS_product_type'] = df.apply(lambda x: get_PS_products_type(x['name']), axis=1)
+        df['image_date'] = df.apply(lambda x: get_date_from_PSfilename(x['name']), axis=1)
+        df['tile_id'] = df.apply(lambda x: x['name'].split('_')[1], axis=1)
+        return df
+    else:
+        return pd.DataFrame(columns=['path', 'name', 'preprocessed', 'PS_product_type', 'image_date', 'tile_id'])
+
 
 def copy_unprocessed_files(row, processing_dir, quiet=True):
     """
@@ -157,6 +160,7 @@ def get_processing_status(raw_data_dir, processing_dir, inference_dir, model, re
     # get processed
     # TODO: make validation steps if files are alright 
     df_processed = get_datasets(processing_dir / 'tiles', depth=0, preprocessed=True)
+
     # check if all files are available
     df_processed = df_processed[df_processed.apply(lambda x: len(list(x['path'].glob('*')))>=5, axis=1)]
 
@@ -294,7 +298,8 @@ def create_ensemble_v2(inference_dir: Path,
                         binary_threshold: list=[0.5], 
                         border_size: int=10,
                         minimum_mapping_unit: int=32,
-                        delete_binary: bool=True,
+                        save_binary: bool=False,
+                        save_probability: bool=False,
                         try_gpu: bool=True,
                         gpu: int=0):
     """
@@ -326,6 +331,9 @@ def create_ensemble_v2(inference_dir: Path,
     delete_binary : bool, optional
         Whether to delete the binary file after processing, by default True.
 
+    save_probability : bool, optional
+        Whether to save the probability file after processing, by default False.
+
     Returns:
     ------------
     None
@@ -346,7 +354,7 @@ def create_ensemble_v2(inference_dir: Path,
             ctr += 1
 
         mean_image = np.mean(list_data, axis=0)
-        return mean_image, out_meta_binary
+        return mean_image, out_meta_binary, out_meta
 
     def dilate_data_mask(mask, size=10):
         selem = disk(size)
@@ -371,11 +379,18 @@ def create_ensemble_v2(inference_dir: Path,
             return None
     
     try:
-        mean_image, out_meta_binary = calculate_mean_image(images)
+        mean_image, out_meta_binary, out_meta_probability = calculate_mean_image(images)
     except:
         print(f'Read error of files {images}')
         return None
     
+    # save probability layer, if specified
+    if save_probability:
+        outpath_proba = outpath = inference_dir / ensemblename / image_id / f'{image_id}_{ensemblename}_probability.tif'
+        os.makedirs(outpath_proba.parent, exist_ok=True)
+        with rasterio.open(outpath_proba, 'w', **out_meta_probability) as target:
+            target.write(mean_image)
+
     for threshold in binary_threshold:
 
         # get binary object mask
@@ -423,7 +438,7 @@ def create_ensemble_v2(inference_dir: Path,
         s_polygonize = f'gdal_polygonize.py {outpath} -q -mask {outpath} -f "GPKG" {outpath_shp}'
         os.system(s_polygonize)
         
-        if delete_binary:
+        if not save_binary:
             os.remove(outpath)
     
     

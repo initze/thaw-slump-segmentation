@@ -10,6 +10,7 @@ Usecase 2 Training Script
 """
 
 import argparse
+import gc
 import re
 import subprocess
 import sys
@@ -26,12 +27,20 @@ from torchmetrics import (
     AUROC,
     ROC,
     Accuracy,
+    AveragePrecision,
+    CalibrationError,
+    CohenKappa,
     ConfusionMatrix,
     F1Score,
+    HammingDistance,
+    HingeLoss,
     JaccardIndex,
+    MatthewsCorrCoef,
     MetricCollection,
     Precision,
+    PrecisionRecallCurve,
     Recall,
+    Specificity,
 )
 from tqdm import tqdm
 from typing_extensions import Annotated
@@ -141,20 +150,37 @@ class Engine:
         self.checkpoints.mkdir()
 
         # Metrics and Weights and Biases initialization
+        # TODO: Test Metrics -> Needs a complete rework of the phase / steps functionality
         metrics = MetricCollection(
-            Accuracy(task='binary'),
-            Precision(task='binary'),
-            Recall(task='binary'),
-            F1Score(task='binary'),
-            JaccardIndex(task='binary'),
-            AUROC(task='binary'),
+            {
+                'Accuracy': Accuracy(task='binary'),
+                'Precision': Precision(task='binary'),
+                'Specificity': Specificity(task='binary'),
+                'Recall': Recall(task='binary'),
+                'F1Score': F1Score(task='binary'),
+                'JaccardIndex': JaccardIndex(task='binary'),
+                'AUROC': AUROC(task='binary'),
+                'AveragePrecision': AveragePrecision(task='binary'),
+                # Calibration errors: https://arxiv.org/abs/1909.10155
+                'ExpectedCalibrationError': CalibrationError(task='binary', norm='l1'),
+                'RootMeanSquaredCalibrationError': CalibrationError(task='binary', norm='l2'),
+                'MaximumCalibrationError': CalibrationError(task='binary', norm='max'),
+                'CohenKappa': CohenKappa(task='binary'),
+                'HammingDistance': HammingDistance(task='binary'),
+                'HingeLoss': HingeLoss(task='binary'),
+                'MatthewsCorrCoef': MatthewsCorrCoef(task='binary'),
+            }
         )
         self.train_metrics = metrics.clone('train/').to(self.dev)
         self.val_metrics = metrics.clone('val/').to(self.dev)
-        # We don't want to log the confusion matrix and ROC curve for every step in the training loop
-        self.val_confmat = ConfusionMatrix(task='binary').to(self.dev)
+        # We don't want to log the confusion matrix, PRC and ROC curve for every step in the training loop
+        # We assign them seperately to have easy access to them in the log_images phase but still benefit from the MetricCollection in terms of compute_groups and update, compute & reset calls
         self.val_roc = ROC(task='binary').to(self.dev)
-        self.metrics_tracker = {'train': [], 'val': []}
+        self.val_prc = PrecisionRecallCurve(task='binary').to(self.dev)
+        self.val_confmat = ConfusionMatrix(task='binary').to(self.dev)
+        self.val_metrics.add_metrics({'ROC': self.val_roc, 'PRC': self.val_prc, 'ConfusionMatrix': self.val_confmat})
+        self.metrics_tracker = {'train': [], 'val': [], 'roc': None, 'prc': None, 'confmat': None}
+        self.phase_has_log_images_command = False
         print('wandb project:', wandb_project)
         print('wandb name:', wandb_name)
         print('config:', self.config)
@@ -164,6 +190,18 @@ class Engine:
     def run(self):
         for phase in self.config['schedule']:
             self.logger.info(f'Starting phase "{phase["phase"]}"')
+
+            # Check if the phase has a log_images command -> Relevant for memory management of metrics (PRC, ROC and Confusion Matrix)
+            self.phase_has_log_images_command = False
+            for step in phase['steps']:
+                if isinstance(step, dict):
+                    assert len(step) == 1
+                    ((command, key),) = step.items()
+                else:
+                    command = step
+                if command == 'log_images':
+                    self.phase_has_log_images_command = True
+
             for epoch in range(phase['epochs']):
                 # Epoch setup
                 self.loss_function = create_loss(scoped_get('loss_function', phase, self.config)).to(self.dev)
@@ -288,8 +326,7 @@ class Engine:
     def val_epoch(self, val_loader):
         self.logger.info(f'Epoch {self.epoch} - Validation Started')
         self.model.train(False)
-        self.val_confmat.reset()
-        self.val_roc.reset()
+        self.val_metrics.reset()
         with torch.no_grad():
             epoch_loss = []
             for iteration, (img, target) in enumerate(val_loader):
@@ -300,27 +337,45 @@ class Engine:
                 loss = self.loss_function(y_hat, target)
                 epoch_loss.append(loss.detach())
                 self.val_metrics.update(y_hat, target)
-                self.val_confmat.update(y_hat, target)
-                self.val_roc.update(y_hat, target)
             epoch_loss = torch.stack(epoch_loss).mean().item()
             epoch_metrics = self.val_metrics.compute()
-            self.metrics_tracker['val'].append(epoch_metrics)
-            wandb.log(epoch_metrics, step=self.board_idx)
-            wandb.log({'val/Loss': epoch_loss}, step=self.board_idx)
-            self.val_metrics.reset()
+            # We need to filter our ROC, PRC and Confusion Matrix from the metrics because they are not scalar metrics
+            scalar_epoch_metrics = {
+                k: v.item() for k, v in epoch_metrics.items() if isinstance(v, torch.Tensor) and v.numel() == 1
+            }
+            scalar_epoch_metrics_tensor = {
+                k: v for k, v in epoch_metrics.items() if isinstance(v, torch.Tensor) and v.numel() == 1
+            }
+            # The Metricks Tracker is only used by the log function -> This is a big workaround to not have to change the phase-step config system.
+            self.metrics_tracker['val'].append(scalar_epoch_metrics_tensor)
+            self.metrics_tracker['roc'] = epoch_metrics['val/ROC']
+            self.metrics_tracker['prc'] = epoch_metrics['val/PRC']
+            self.metrics_tracker['confmat'] = epoch_metrics['val/ConfusionMatrix']
 
-            logstr = f'{self.epoch},' + ','.join(f'{val}' for key, val in epoch_metrics.items()) + f',{epoch_loss}'
+            wandb.log(scalar_epoch_metrics, step=self.board_idx)
+            wandb.log({'val/Loss': epoch_loss}, step=self.board_idx)
+
+            logstr = (
+                f'{self.epoch},' + ','.join(f'{val}' for key, val in scalar_epoch_metrics.items()) + f',{epoch_loss}'
+            )
             logfile = self.log_dir / 'val.csv'
-            self.logger.info(f'Epoch {self.epoch} - Loss {epoch_loss} Validation Metrics: {epoch_metrics}')
+            self.logger.info(f'Epoch {self.epoch} - Loss {epoch_loss} Validation Metrics: {scalar_epoch_metrics}')
             if not logfile.exists():
                 # Print header upon first log print
-                header = 'Epoch,' + ','.join(f'{key}' for key, val in epoch_metrics.items()) + ',Loss'
+                header = 'Epoch,' + ','.join(f'{key}' for key, val in scalar_epoch_metrics.items()) + ',Loss'
                 with logfile.open('w') as f:
                     print(header, file=f)
                     print(logstr, file=f)
             else:
                 with logfile.open('a') as f:
                     print(logstr, file=f)
+
+            if not self.phase_has_log_images_command:
+                # Reset the metrics and clear the cache here
+                # If we would reset the metrics in either case we would not be able to plot ROC, PRC and Confusion Matrix in the log_images phase
+                self.val_metrics.reset()
+                gc.collect()
+                torch.cuda.empty_cache()
 
     def log_images(self):
         self.logger.debug(f'Epoch {self.epoch} - Image Logging')
@@ -342,19 +397,30 @@ class Engine:
 
         outdir = self.log_dir / 'metrics_plots'
         outdir.mkdir(exist_ok=True)
-        fig, axs = self.train_metrics.plot(self.metrics_tracker['train'], together=True)
+        fig, ax = plt.subplots(figsize=(20, 10))
+        self.train_metrics.plot(self.metrics_tracker['train'], together=True, ax=ax)
         fig.savefig(outdir / 'train_metrics.png')
-        fig, axs = self.val_metrics.plot(self.metrics_tracker['val'], together=True)
+        fig, ax = plt.subplots(figsize=(20, 10))
+        self.val_metrics.plot(self.metrics_tracker['val'], together=True, ax=ax)
         fig.savefig(outdir / 'val_metrics.png')
 
-        fig, axs = self.val_confmat.plot()
+        fig, axs = self.val_confmat.plot(self.metrics_tracker['confmat'])
         fig.savefig(outdir / 'confusion_matrix.png')
-        wandb.log({'confusion_matrix': fig}, step=self.board_idx)
-        fig, axs = self.val_roc.plot()
+        wandb.log({'Confusion Matrix': fig}, step=self.board_idx)
+        fig, axs = self.val_roc.plot(self.metrics_tracker['roc'])
         fig.savefig(outdir / 'roc_curve.png')
         # Turning the ROC into a wandb image to save storage - idk why but it's huge (120MB+)
-        wandb.log({'roc_curve': wandb.Image(fig)}, step=self.board_idx)
+        wandb.log({'ROC': wandb.Image(fig)}, step=self.board_idx)
+        fig, axs = self.val_prc.plot(self.metrics_tracker['prc'])
+        fig.savefig(outdir / 'precision_recall_curve.png')
+        wandb.log({'PRC': wandb.Image(fig)}, step=self.board_idx)
+
         plt.close('all')
+
+        # Reset the metrics and clear the cache here
+        self.val_metrics.reset()
+        gc.collect()
+        torch.cuda.empty_cache()
 
     def setup_lr_scheduler(self):
         # Scheduler

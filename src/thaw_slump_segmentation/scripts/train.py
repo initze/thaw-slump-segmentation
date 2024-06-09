@@ -14,6 +14,7 @@ import gc
 import re
 import subprocess
 import sys
+from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 
@@ -28,14 +29,12 @@ from torchmetrics import (
     ROC,
     Accuracy,
     AveragePrecision,
-    CalibrationError,
     CohenKappa,
     ConfusionMatrix,
     F1Score,
     HammingDistance,
     HingeLoss,
     JaccardIndex,
-    MatthewsCorrCoef,
     MetricCollection,
     Precision,
     PrecisionRecallCurve,
@@ -140,47 +139,17 @@ class Engine:
         )
 
         # Write the config YML to the run-folder
-        self.config['run_info'] = dict(
-            timestamp=timestamp, git_head=subprocess.check_output(['git', 'describe'], encoding='utf8').strip()
-        )
+        self.config['run_info'] = {
+            'timestamp': timestamp,
+            'git_head': subprocess.check_output(['git', 'describe'], encoding='utf8').strip(),
+        }
         with open(self.log_dir / 'config.yml', 'w') as f:
             yaml.dump(self.config, f)
 
         self.checkpoints = self.log_dir / 'checkpoints'
         self.checkpoints.mkdir()
 
-        # Metrics and Weights and Biases initialization
-        # TODO: Test Metrics -> Needs a complete rework of the phase / steps functionality
-        metrics = MetricCollection(
-            {
-                'Accuracy': Accuracy(task='binary'),
-                'Precision': Precision(task='binary'),
-                'Specificity': Specificity(task='binary'),
-                'Recall': Recall(task='binary'),
-                'F1Score': F1Score(task='binary'),
-                'JaccardIndex': JaccardIndex(task='binary'),
-                'AUROC': AUROC(task='binary'),
-                'AveragePrecision': AveragePrecision(task='binary'),
-                # Calibration errors: https://arxiv.org/abs/1909.10155
-                'ExpectedCalibrationError': CalibrationError(task='binary', norm='l1'),
-                'RootMeanSquaredCalibrationError': CalibrationError(task='binary', norm='l2'),
-                'MaximumCalibrationError': CalibrationError(task='binary', norm='max'),
-                'CohenKappa': CohenKappa(task='binary'),
-                'HammingDistance': HammingDistance(task='binary'),
-                'HingeLoss': HingeLoss(task='binary'),
-                'MatthewsCorrCoef': MatthewsCorrCoef(task='binary'),
-            }
-        )
-        self.train_metrics = metrics.clone('train/').to(self.dev)
-        self.val_metrics = metrics.clone('val/').to(self.dev)
-        # We don't want to log the confusion matrix, PRC and ROC curve for every step in the training loop
-        # We assign them seperately to have easy access to them in the log_images phase but still benefit from the MetricCollection in terms of compute_groups and update, compute & reset calls
-        self.val_roc = ROC(task='binary').to(self.dev)
-        self.val_prc = PrecisionRecallCurve(task='binary').to(self.dev)
-        self.val_confmat = ConfusionMatrix(task='binary').to(self.dev)
-        self.val_metrics.add_metrics({'ROC': self.val_roc, 'PRC': self.val_prc, 'ConfusionMatrix': self.val_confmat})
-        self.metrics_tracker = {'train': [], 'val': [], 'roc': None, 'prc': None, 'confmat': None}
-        self.phase_has_log_images_command = False
+        # Weights and Biases initialization
         print('wandb project:', wandb_project)
         print('wandb name:', wandb_name)
         print('config:', self.config)
@@ -191,27 +160,17 @@ class Engine:
         for phase in self.config['schedule']:
             self.logger.info(f'Starting phase "{phase["phase"]}"')
 
-            # Check if the phase has a log_images command -> Relevant for memory management of metrics (PRC, ROC and Confusion Matrix)
-            self.phase_has_log_images_command = False
-            for step in phase['steps']:
-                if isinstance(step, dict):
-                    assert len(step) == 1
-                    ((command, key),) = step.items()
-                else:
-                    command = step
-                if command == 'log_images':
-                    self.phase_has_log_images_command = True
-
+            self.phase_should_log_images = phase.get('log_images', False)
+            self.setup_metrics(phase)
+            self.current_key = None
             for epoch in range(phase['epochs']):
                 # Epoch setup
+                self.epoch = epoch
                 self.loss_function = create_loss(scoped_get('loss_function', phase, self.config)).to(self.dev)
 
                 for step in phase['steps']:
-                    if isinstance(step, dict):
-                        assert len(step) == 1
-                        ((command, key),) = step.items()
-                    else:
-                        command = step
+                    command, key = parse_step(step)
+                    self.current_key = key
 
                     if command == 'train_on':
                         # Training step
@@ -222,11 +181,83 @@ class Engine:
                         data_loader = self.get_dataloader(key)
                         self.val_epoch(data_loader)
                     elif command == 'log_images':
-                        self.log_images()
+                        self.logger.warn(
+                            "Step 'log_images' is deprecated. Please use 'log_images' in the phase instead."
+                        )
+                        continue
+                    else:
+                        raise ValueError(f"Unknown command '{command}'")
+
+                    # Reset the metrics after each step
+                    if self.current_key:
+                        self.metrics[self.current_key].reset()
+                        gc.collect()
+                        torch.cuda.empty_cache()
+
+                # Log images after each epoch
+                if self.phase_should_log_images:
+                    self.log_images()
+
                 if self.scheduler:
                     print('before step:', self.scheduler.get_last_lr())
                     self.scheduler.step()
                     print('after step:', self.scheduler.get_last_lr())
+
+    def setup_metrics(self, phase: dict):
+        # Setup Metrics for this phase
+        # Check if the phase has a log_images command -> Relevant for memory management of metrics (PRC, ROC and Confusion Matrix)
+        nthresholds = (
+            100  # Make sure that the thresholds for the PRC-based metrics are equal to benefit from grouped computing
+        )
+        metrics = MetricCollection(
+            {
+                'Accuracy': Accuracy(task='binary'),
+                'Precision': Precision(task='binary'),
+                'Specificity': Specificity(task='binary'),
+                'Recall': Recall(task='binary'),
+                'F1Score': F1Score(task='binary'),
+                'JaccardIndex': JaccardIndex(task='binary'),
+                'AUROC': AUROC(task='binary', thresholds=nthresholds),
+                'AveragePrecision': AveragePrecision(task='binary', thresholds=nthresholds),
+                # Calibration errors: https://arxiv.org/abs/1909.10155, they take a lot of memory!
+                #'ExpectedCalibrationError': CalibrationError(task='binary', norm='l1'),
+                #'RootMeanSquaredCalibrationError': CalibrationError(task='binary', norm='l2'),
+                #'MaximumCalibrationError': CalibrationError(task='binary', norm='max'),
+                'CohenKappa': CohenKappa(task='binary'),
+                'HammingDistance': HammingDistance(task='binary'),
+                'HingeLoss': HingeLoss(task='binary'),
+                # MCC raised a weired error one time, skipping to be save
+                # 'MatthewsCorrCoef': MatthewsCorrCoef(task='binary'),
+            }
+        )
+        self.metrics = {}
+        self.rocs = {}
+        self.prcs = {}
+        self.confmats = {}
+        if self.phase_should_log_images:
+            self.metric_tracker = defaultdict(list)
+
+        for step in phase['steps']:
+            command, key = parse_step(step)
+            if not key:
+                continue
+
+            self.metrics[key] = metrics.clone(f'{key}/').to(self.dev)
+            if command == 'validate_on':
+                # We don't want to log the confusion matrix, PRC and ROC curve for every step in the training loop
+                # We assign them seperately to have easy access to them in the log_images phase but still benefit from the MetricCollection in terms of compute_groups and update, compute & reset calls
+                self.rocs[key] = ROC(task='binary', thresholds=nthresholds).to(self.dev)
+                self.prcs[key] = PrecisionRecallCurve(task='binary', thresholds=nthresholds).to(self.dev)
+                self.confmats[key] = ConfusionMatrix(task='binary', normalize='true').to(self.dev)
+                self.metrics[key].add_metrics(
+                    {'ROC': self.rocs[key], 'PRC': self.prcs[key], 'ConfusionMatrix': self.confmats[key]}
+                )
+
+        # Create the plot directory
+        if self.phase_should_log_images:
+            phase_name = phase['phase'].lower()
+            self.metric_plot_dir = self.log_dir / f'metrics_plots_{phase_name}'
+            self.metric_plot_dir.mkdir(exist_ok=True)
 
     def get_dataloader(self, name):
         if name in self.dataset_cache:
@@ -255,7 +286,6 @@ class Engine:
         return self.dataset_cache[name]
 
     def train_epoch(self, train_loader):
-        self.epoch += 1
         self.logger.info(f'Epoch {self.epoch} - Training Started')
         progress = tqdm(train_loader)
         self.model.train(True)
@@ -288,51 +318,24 @@ class Engine:
             self.opt.step()
 
             with torch.no_grad():
-                self.train_metrics.update(y_hat.squeeze(1), target)
+                self.metrics[self.current_key].update(y_hat.squeeze(1), target)
 
+        # Compute epochs loss and metrics
         epoch_loss = {k: torch.stack(v).mean().item() for k, v in epoch_loss.items() if v}
-        epoch_metrics = self.train_metrics.compute()
-        scalar_epoch_metrics = {
-            k: v.item() for k, v in epoch_metrics.items() if isinstance(v, torch.Tensor) and v.numel() == 1
-        }
-        scalar_epoch_metrics_tensor = {
-            k: v for k, v in epoch_metrics.items() if isinstance(v, torch.Tensor) and v.numel() == 1
-        }
-        self.metrics_tracker['train'].append(scalar_epoch_metrics_tensor)
-        wandb.log(scalar_epoch_metrics, step=self.board_idx)
         wandb.log({'train/Loss': epoch_loss}, step=self.board_idx)
-        self.train_metrics.reset()
-        progress.set_postfix(scalar_epoch_metrics)
-        logstr = (
-            f'{self.epoch},'
-            + ','.join(f'{val}' for key, val in scalar_epoch_metrics.items())
-            + ','
-            + ','.join(f'{val}' for key, val in epoch_loss.items())
-        )
-        logfile = self.log_dir / 'train.csv'
-        self.logger.info(f'Epoch {self.epoch} - Loss {epoch_loss} Training Metrics: {scalar_epoch_metrics}')
-        if not logfile.exists():
-            # Print header upon first log print
-            header = (
-                'Epoch,'
-                + ','.join(f'{key}' for key, val in scalar_epoch_metrics.items())
-                + ','
-                + ','.join(f'{key}' for key, val in epoch_loss.items())
-            )
-            with logfile.open('w') as f:
-                print(header, file=f)
-                print(logstr, file=f)
-        else:
-            with logfile.open('a') as f:
-                print(logstr, file=f)
+        epoch_metrics = self.log_metrics()
+        self.logger.info(f'Epoch {self.epoch} - Loss {epoch_loss} Training Metrics: {epoch_metrics}')
+        self.log_csv(epoch_metrics, epoch_loss)
+
+        # Update progress bar
+        progress.set_postfix(epoch_metrics)
 
         # Save model Checkpoint
         torch.save(self.model.state_dict(), self.checkpoints / f'{self.epoch:02d}.pt')
 
     def val_epoch(self, val_loader):
-        self.logger.info(f'Epoch {self.epoch} - Validation Started')
+        self.logger.info(f'Epoch {self.epoch} - Validation of {self.current_key} Started')
         self.model.train(False)
-        self.val_metrics.reset()
         with torch.no_grad():
             epoch_loss = []
             for iteration, (img, target) in enumerate(val_loader):
@@ -342,49 +345,86 @@ class Engine:
 
                 loss = self.loss_function(y_hat, target)
                 epoch_loss.append(loss.detach())
-                self.val_metrics.update(y_hat, target)
+                self.metrics[self.current_key].update(y_hat, target)
+
+            # Compute epochs loss and metrics
             epoch_loss = torch.stack(epoch_loss).mean().item()
-            epoch_metrics = self.val_metrics.compute()
-            # We need to filter our ROC, PRC and Confusion Matrix from the metrics because they are not scalar metrics
-            scalar_epoch_metrics = {
-                k: v.item() for k, v in epoch_metrics.items() if isinstance(v, torch.Tensor) and v.numel() == 1
-            }
+            epoch_metrics = self.log_metrics()
+        wandb.log({'val/Loss': epoch_loss}, step=self.board_idx)
+        self.logger.info(f'Epoch {self.epoch} - Loss {epoch_loss} Validation Metrics: {epoch_metrics}')
+        self.log_csv(epoch_metrics, epoch_loss)
+
+        # Plot roc, prc and confusion matrix to disk and wandb
+        fig_roc, _ = self.rocs[self.current_key].plot(score=True)
+        fig_prc, _ = self.prcs[self.current_key].plot(score=True)
+        fig_confmat, _ = self.confmats[self.current_key].plot(cmap='Blues')
+
+        # We need to wrap the figures into a wandb.Image to save storage -> Maybe we can find a better solution in the future, e.g. using plotly
+        wandb.log({f'{self.current_key}/ROC': wandb.Image(fig_roc)}, step=self.board_idx)
+        wandb.log({f'{self.current_key}/PRC': wandb.Image(fig_prc)}, step=self.board_idx)
+        wandb.log({f'{self.current_key}/Confusion Matrix': wandb.Image(fig_confmat)}, step=self.board_idx)
+
+        if self.phase_should_log_images:
+            fig_roc.savefig(self.metric_plot_dir / f'{self.current_key}_roc_curve.png')
+            fig_prc.savefig(self.metric_plot_dir / f'{self.current_key}_precision_recall_curve.png')
+            fig_confmat.savefig(self.metric_plot_dir / f'{self.current_key}_confusion_matrix.png')
+        fig_roc.clear()
+        fig_prc.clear()
+        fig_confmat.clear()
+        plt.close('all')
+
+    def log_metrics(self) -> dict:
+        epoch_metrics = self.metrics[self.current_key].compute()
+        # We need to filter our ROC, PRC and Confusion Matrix from the metrics because they are not scalar metrics
+
+        scalar_epoch_metrics = {
+            k: v.item() for k, v in epoch_metrics.items() if isinstance(v, torch.Tensor) and v.numel() == 1
+        }
+
+        # Log to WandB
+        wandb.log(scalar_epoch_metrics, step=self.board_idx)
+
+        # Plot the metrics to disk
+        if self.phase_should_log_images:
             scalar_epoch_metrics_tensor = {
                 k: v for k, v in epoch_metrics.items() if isinstance(v, torch.Tensor) and v.numel() == 1
             }
-            # The Metricks Tracker is only used by the log function -> This is a big workaround to not have to change the phase-step config system.
-            self.metrics_tracker['val'].append(scalar_epoch_metrics_tensor)
-            self.metrics_tracker['roc'] = epoch_metrics['val/ROC']
-            self.metrics_tracker['prc'] = epoch_metrics['val/PRC']
-            self.metrics_tracker['confmat'] = epoch_metrics['val/ConfusionMatrix']
+            self.metric_tracker[self.current_key].append(scalar_epoch_metrics_tensor)
+            fig, ax = plt.subplots(figsize=(20, 10))
+            self.metrics[self.current_key].plot(self.metric_tracker[self.current_key], together=True, ax=ax)
+            fig.savefig(self.metric_plot_dir / f'{self.current_key}_metrics.png')
+            fig.clear()
+            plt.close('all')
 
-            wandb.log(scalar_epoch_metrics, step=self.board_idx)
-            wandb.log({'val/Loss': epoch_loss}, step=self.board_idx)
+        return scalar_epoch_metrics
 
+    def log_csv(self, epoch_metrics: dict, epoch_loss: int | dict):
+        # Log to CSV
+        logfile = self.log_dir / f'{self.current_key}.csv'
+
+        if isinstance(epoch_loss, dict):
             logstr = (
-                f'{self.epoch},' + ','.join(f'{val}' for key, val in scalar_epoch_metrics.items()) + f',{epoch_loss}'
+                f'{self.epoch},'
+                + ','.join(f'{val}' for key, val in epoch_metrics.items())
+                + ','
+                + ','.join(f'{val}' for key, val in epoch_loss.items())
             )
-            logfile = self.log_dir / 'val.csv'
-            self.logger.info(f'Epoch {self.epoch} - Loss {epoch_loss} Validation Metrics: {scalar_epoch_metrics}')
-            if not logfile.exists():
-                # Print header upon first log print
-                header = 'Epoch,' + ','.join(f'{key}' for key, val in scalar_epoch_metrics.items()) + ',Loss'
-                with logfile.open('w') as f:
-                    print(header, file=f)
-                    print(logstr, file=f)
-            else:
-                with logfile.open('a') as f:
-                    print(logstr, file=f)
+        else:
+            logstr = f'{self.epoch},' + ','.join(f'{val}' for key, val in epoch_metrics.items()) + f',{epoch_loss}'
 
-            if not self.phase_has_log_images_command:
-                # Reset the metrics and clear the cache here
-                # If we would reset the metrics in either case we would not be able to plot ROC, PRC and Confusion Matrix in the log_images phase
-                self.val_metrics.reset()
-                gc.collect()
-                torch.cuda.empty_cache()
+        if not logfile.exists():
+            # Print header upon first log print
+            header = 'Epoch,' + ','.join(f'{key}' for key, val in epoch_metrics.items()) + ',Loss'
+            with logfile.open('w') as f:
+                print(header, file=f)
+                print(logstr, file=f)
+        else:
+            with logfile.open('a') as f:
+                print(logstr, file=f)
 
     def log_images(self):
         self.logger.debug(f'Epoch {self.epoch} - Image Logging')
+        self.model.train(False)
         with torch.no_grad():
             preds = []
             for vis_imgs, vis_masks in self.vis_loader:
@@ -400,33 +440,7 @@ class Engine:
             showexample(
                 self.vis_loader.dataset[i], self.vis_predictions[i], filename, self.data_sources, step=self.board_idx
             )
-
-        outdir = self.log_dir / 'metrics_plots'
-        outdir.mkdir(exist_ok=True)
-        fig, ax = plt.subplots(figsize=(20, 10))
-        self.train_metrics.plot(self.metrics_tracker['train'], together=True, ax=ax)
-        fig.savefig(outdir / 'train_metrics.png')
-        fig, ax = plt.subplots(figsize=(20, 10))
-        self.val_metrics.plot(self.metrics_tracker['val'], together=True, ax=ax)
-        fig.savefig(outdir / 'val_metrics.png')
-
-        fig, axs = self.val_confmat.plot(self.metrics_tracker['confmat'])
-        fig.savefig(outdir / 'confusion_matrix.png')
-        wandb.log({'Confusion Matrix': fig}, step=self.board_idx)
-        fig, axs = self.val_roc.plot(self.metrics_tracker['roc'])
-        fig.savefig(outdir / 'roc_curve.png')
-        # Turning the ROC into a wandb image to save storage - idk why but it's huge (120MB+)
-        wandb.log({'ROC': wandb.Image(fig)}, step=self.board_idx)
-        fig, axs = self.val_prc.plot(self.metrics_tracker['prc'])
-        fig.savefig(outdir / 'precision_recall_curve.png')
-        wandb.log({'PRC': wandb.Image(fig)}, step=self.board_idx)
-
         plt.close('all')
-
-        # Reset the metrics and clear the cache here
-        self.val_metrics.reset()
-        gc.collect()
-        torch.cuda.empty_cache()
 
     def setup_lr_scheduler(self):
         # Scheduler
@@ -461,11 +475,13 @@ def scoped_get(key, *scopestack):
     raise ValueError(f'Could not find "{key}" in any scope.')
 
 
-def safe_append(dictionary, key, value):
-    try:
-        dictionary[key].append(value)
-    except KeyError:
-        dictionary[key] = [value]
+def parse_step(step) -> tuple[str, str | None]:
+    if isinstance(step, dict):
+        assert len(step) == 1
+        ((command, key),) = step.items()
+    else:
+        command, key = step, None
+    return command, key
 
 
 def train(

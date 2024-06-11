@@ -152,13 +152,42 @@ def update_DEM2(dem_data_dir, vrt_target_dir):
     
 
 def get_processing_status(raw_data_dir, processing_dir, inference_dir, model, reduce_to_raw=False):
-    # get raw tiles
-    try:
+    """
+    Get the processing status of raw data, intermediate data, and inference results.
+
+    Args:
+        raw_data_dir (Path): Path to the directory containing raw input data (tiles or scenes).
+        processing_dir (Path): Path to the directory containing processed intermediate data.
+        inference_dir (Path): Path to the directory containing inference results.
+        model (str): Name of the model used for inference.
+        reduce_to_raw (bool, optional): If True, return only the raw data that hasn't been processed yet.
+            Default is False.
+
+    Returns:
+        pandas.DataFrame: A DataFrame containing the processing status of each dataset, with columns:
+            - 'name': Name of the dataset.
+            - 'path': Path to the dataset.
+            - 'inference_finished': Boolean indicating if inference has been completed for the dataset.
+
+    Raises:
+        ValueError: If the provided raw_data_dir is not 'tiles' or 'scenes'.
+
+    Notes:
+        - The function assumes that the processed intermediate data is located in `processing_dir/tiles`.
+        - The function checks if at least 5 files are available for each processed dataset.
+        - The function assumes that the inference results are located in `inference_dir/model/*`.
+        - There are two TODO comments in the code that need to be addressed.
+    """
+    # get processing status for raw input data
+    if raw_data_dir.name == 'tiles':
         df_raw = get_datasets(raw_data_dir, depth=1)
-    except:
+    elif raw_data_dir.name == 'scenes':
         df_raw = get_datasets(raw_data_dir, depth=0)
+    else:
+        raise ValueError('Please point to tiles or scenes path!')
     # get processed
-    # TODO: make validation steps if files are alright 
+    
+    # get processing status for intermediate data
     df_processed = get_datasets(processing_dir / 'tiles', depth=0, preprocessed=True)
 
     # check if all files are available
@@ -173,7 +202,7 @@ def get_processing_status(raw_data_dir, processing_dir, inference_dir, model, re
     else:
         df_merged = pd.concat([df_processed, diff]).reset_index()
 
-
+    # make a dataframe with checks for processing status
     products_list = [prod.name for prod in list((inference_dir / model).glob('*'))]
     df_merged['inference_finished'] = df_merged.apply(lambda x: x['name'] in (products_list), axis=1)
     

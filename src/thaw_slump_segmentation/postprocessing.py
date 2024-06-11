@@ -625,3 +625,34 @@ def create_ensemble_with_negative(inference_dir: Path,
 
     except:
         return None
+    
+
+def print_processing_stats(df_final):
+    """
+    Print the processing statistics for a given DataFrame.
+
+    Args:
+        df_final (pandas.DataFrame): A DataFrame containing the processing status of each dataset,
+            with columns 'preprocessed' and 'inference_finished'.
+
+    Returns:
+        None
+
+    Prints:
+        - Number of total images
+        - Number of preprocessed images
+        - Number of images for preprocessing
+        - Number of images for inference
+        - Number of finished images
+    """
+    total_images = int(len(df_final))
+    preprocessed_images = int(df_final.preprocessed.sum())
+    preprocessing_images = int(total_images - preprocessed_images)
+    finished_images = int(df_final.inference_finished.sum())
+
+    print(f'Number of images: {total_images}')
+    print(f'Number of preprocessed images: {preprocessed_images}')
+    print(f'Number of images for preprocessing: {preprocessing_images}')
+    print(f'Number of images for inference: {preprocessed_images - finished_images}')
+    print(f'Number of finished images: {finished_images}')
+    return total_images, preprocessed_images, preprocessing_images, finished_images

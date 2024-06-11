@@ -20,6 +20,7 @@ from ..postprocessing import (
     load_and_parse_vector,
     run_inference,
     update_DEM2,
+    print_processing_stats
 )
 
 
@@ -62,17 +63,8 @@ def process_02_inference(
     # get df for preprocessing
     df_final = pd.concat(df_processing_status_list).drop_duplicates()
 
-    # TODO: move to function
-    # print basic information
-    total_images = int(len(df_final))
-    preprocessed_images = int(df_final.preprocessed.sum())
-    preprocessing_images = int(total_images - preprocessed_images)
-    finished_images = int(df_final.inference_finished.sum())
-    print(f'Number of images: {total_images}')
-    print(f'Number of preprocessed images: {preprocessed_images}')
-    print(f'Number of images for preprocessing: {preprocessing_images}')
-    print(f'Number of images for inference: {preprocessed_images - finished_images}')
-    print(f'Number of finished images: {finished_images}')
+    # print basic information and return numbers
+    total_images, preprocessed_images, preprocessing_images, finished_images = print_processing_stats(df_final)
 
     # TODO: images with processing status True but Inference False are crappy
 

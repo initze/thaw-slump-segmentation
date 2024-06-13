@@ -106,7 +106,7 @@ def setup_raw_data(
     gdal_path: Annotated[
         str, typer.Option('--gdal_path', help='Path to gdal scripts', envvar='GDAL_PATH')
     ] = '/usr/bin',
-    n_jobs: Annotated[int, typer.Option('--n_jobs', help='number of parallel joblib jobs')] = -1,
+    n_jobs: Annotated[int, typer.Option('--n_jobs', help='number of parallel joblib jobs, pass 0 to disable joblib')] = -1,
     label: Annotated[
         bool, typer.Option('--label/--nolabel', help='Set flag to do preprocessing with label file')
     ] = False,
@@ -131,11 +131,15 @@ def setup_raw_data(
     dir_list = check_input_data(INPUT_DATA_DIR)
     print(dir_list)
     if len(dir_list) > 0:
-        Parallel(n_jobs=n_jobs)(
-            delayed(preprocess_directory)(
-                image_dir, DATA_DIR, AUX_DIR, BACKUP_DIR, log_path, gdal_bin, gdal_path, label
-            )
-            for image_dir in dir_list
+        if n_jobs == 0:
+            for image_dir in dir_list:
+                preprocess_directory(image_dir, DATA_DIR, AUX_DIR, BACKUP_DIR, log_path, gdal_bin, gdal_path, label)
+        else:
+            Parallel(n_jobs=n_jobs)(
+                delayed(preprocess_directory)(
+                    image_dir, DATA_DIR, AUX_DIR, BACKUP_DIR, log_path, gdal_bin, gdal_path, label
+                )
+                for image_dir in dir_list
         )
     else:
         logger.error('Empty Input Data Directory! No Data available to process!')

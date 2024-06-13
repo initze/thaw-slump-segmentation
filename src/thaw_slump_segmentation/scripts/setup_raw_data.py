@@ -141,8 +141,7 @@ def setup_raw_data(
         logger.error('Empty Input Data Directory! No Data available to process!')
 
 
-# ! Moving legacy argparse cli to main to maintain compatibility with the original script
-if __name__ == '__main__':
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--gdal_bin', default=None, help='Path to gdal binaries (ignored if --skip_gdal is passed)')
     parser.add_argument('--gdal_path', default=None, help='Path to gdal scripts (ignored if --skip_gdal is passed)')
@@ -161,3 +160,7 @@ if __name__ == '__main__':
         data_dir=args.data_dir,
         log_dir=args.log_dir,
     )
+
+# ! Moving legacy argparse cli to main to maintain compatibility with the original script
+if __name__ == '__main__':
+    main()

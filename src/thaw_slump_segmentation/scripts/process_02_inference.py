@@ -96,13 +96,15 @@ def process_02_inference(
     df_preprocess = df_final[df_final.preprocessed == False]
     print(f'Number of images to preprocess: {len(df_preprocess)}')
 
+    # TODO make better check
     # Cleanup processing directories to avoid incomplete processing
     input_dir_dslist = list((processing_dir / 'input').glob('*'))
     if len(input_dir_dslist) > 0:
         print(f"Cleaning up {(processing_dir / 'input')}")
         for d in input_dir_dslist:
-            print('Delete', d)
-            shutil.rmtree(d)
+            if len(list(d.glob('*'))) < 4:
+                print('Delete', d)
+                shutil.rmtree(d)
     else:
         print('Processing directory is ready, nothing to do!')
 

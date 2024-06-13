@@ -323,8 +323,7 @@ def inference(
         )
 
 
-# ! Moving legacy argparse cli to main to maintain compatibility with the original script
-if __name__ == '__main__':
+def main():
     parser = argparse.ArgumentParser(
         description='Inference Script', formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
@@ -359,3 +358,7 @@ if __name__ == '__main__':
         margin_size=args.margin_size,
         patch_size=args.patch_size,
     )
+
+# ! Moving legacy argparse cli to main to maintain compatibility with the original script
+if __name__ == '__main__':
+    main()

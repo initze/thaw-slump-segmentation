@@ -59,7 +59,7 @@ def rename_clip_to_standard(image_directory):
 
 
 def make_ndvi_file(image_directory, nir_band=3, red_band=2):
-    images = get_mask_images(image_directory, images=['_SR.tif'])
+    images = get_mask_images(image_directory, images=['_SR.tif'], fail_on_missing_udm=False)
     file_src = images['images'][0]
     file_dst = os.path.join(os.path.dirname(file_src), 'ndvi.tif')
     with rio.Env():
@@ -70,6 +70,7 @@ def make_ndvi_file(image_directory, nir_band=3, red_band=2):
             ndvi = np.zeros_like(data[0])
             upper = (data[nir_band][mask] - data[red_band][mask])
             lower = (data[nir_band][mask] + data[red_band][mask])
+             # NDVI but transposed to 0..2 and scaled by 10000 to integer so data range 0..20000 
             ndvi[mask] = np.around((np.divide(upper, lower) + 1) * 1e4)
             ndvi = ndvi.astype(np.uint16)
             profile = ds_src.profile
@@ -80,7 +81,8 @@ def make_ndvi_file(image_directory, nir_band=3, red_band=2):
     return 1
 
 
-def get_mask_images(image_directory, udm='udm.tif', udm2='udm2.tif', images=['_SR.tif', 'tcvis.tif', '_mask.tif', 'relative_elevation.tif', 'slope.tif', 'ndvi.tif']):
+
+def get_mask_images(image_directory, udm='udm.tif', udm2='udm2.tif', images=['_SR.tif', 'tcvis.tif', '_mask.tif', 'relative_elevation.tif', 'slope.tif', 'ndvi.tif'], fail_on_missing_udm=True):
     flist = glob.glob(os.path.join(image_directory, '*'))
     image_files = []
     for im in images:
@@ -98,7 +100,10 @@ def get_mask_images(image_directory, udm='udm.tif', udm2='udm2.tif', images=['_S
     
     # raise error if no udms available
     if (udm_file == None) & (udm2_file == None):
-        raise ValueError(f'There are no udm or udm2 files for image {image_directory.name}!')
+        if fail_on_missing_udm:
+            raise ValueError(f'There are no udm or udm2 files for image {image_directory.name}!')
+        else:
+            _logger.warning("no UDM files found")
 
     remaining_files = [f for f in flist if f not in [udm_file, *image_files]]
 
@@ -114,7 +119,13 @@ def move_files(image_directory, backup_dir):
 
 
 def mask_input_data(image_directory, output_directory):
-    mask_image_paths = get_mask_images(image_directory)
+    try:
+        mask_image_paths = get_mask_images(image_directory)
+    except ValueError as e:
+        # probably no udm files found...
+        _logger.warn("found no datamask, skipping masking")
+        return 1
+    
     for image in mask_image_paths['images']:
         dir_out = os.path.join(output_directory, os.path.basename(image_directory))
         image_out = os.path.join(dir_out, os.path.basename(image))
@@ -167,7 +178,7 @@ def resolution_from_image(image_path):
 
 def aux_data_to_tiles(image_directory, aux_data, outfile):
     # load template and get props
-    images = get_mask_images(image_directory, udm='udm.tif', udm2='udm2.tif', images=['_SR.tif'])
+    images = get_mask_images(image_directory, udm='udm.tif', udm2='udm2.tif', images=['_SR.tif'], fail_on_missing_udm=False)
     image = images['images'][0]
     
     # prepare gdalwarp call

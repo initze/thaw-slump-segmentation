@@ -124,10 +124,16 @@ def mask_input_data(image_directory, output_directory):
 
 
 def vector_to_raster_mask(image_directory, delete_intermediate_files=True):
-    basename = os.path.basename(image_directory)
     vectorfile = glob.glob(os.path.join(image_directory, '*.shp'))[0]
+    layername = os.path.basename(vectorfile)[0:-4] # shapefile layer name is filename without suffix
     rasterfile = glob.glob(os.path.join(image_directory, r'*_SR.tif'))[0]
     maskfile = os.path.join(image_directory, 'mask.tif')
+
+    # use the image base name prefix as basename 
+    # should be the same as the folder for planet and sentinel inference, but is different for the sentinel training data
+    # because the folders are the id of the planet tile the sentinel data is associated with
+    basename = os.path.basename(rasterfile)[0:-7] # without _SR.tif
+
     maskfile2 = os.path.join(image_directory, f'{basename}_mask.tif')
 
     try:
@@ -138,7 +144,7 @@ def vector_to_raster_mask(image_directory, delete_intermediate_files=True):
         s_translate = f'{gdal.translate} -of GTiff -ot Byte -co COMPRESS=DEFLATE -b 1 {maskfile} {maskfile2}'
         log_run(s_translate, _logger)
         # Burn digitized polygons into mask
-        s_rasterize = f'{gdal.rasterize} -l {basename} -a label {vectorfile} {maskfile2}'
+        s_rasterize = f'{gdal.rasterize} -l {layername} -a label {vectorfile} {maskfile2}'
         log_run(s_rasterize, _logger)
     except:
         return 2

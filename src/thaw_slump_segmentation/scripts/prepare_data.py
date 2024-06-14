@@ -156,12 +156,13 @@ def make_info_picture(tile, filename):
 
 
 def main_function(
-    dataset, log_path, h5dir: Path, xsize: int, ysize: int, overlap: int, threshold: float, skip_gdal: bool
+    dataset, log_path, h5dir: Path, xsize: int, ysize: int, overlap: int, threshold: float, skip_gdal: bool, gdal_bin:str, gdal_path:str
 ):
     init_logging(log_path)
     thread_logger = get_logger(f'prepare_data.{dataset.name}')
     thread_logger.info(f'Starting preparation on dataset {dataset}')
     if not skip_gdal:
+        gdal.initialize(bin=gdal_bin, path=gdal_bin)
         thread_logger.info('Doing GDAL Calls')
         do_gdal_calls(dataset, xsize, ysize, overlap, logger=thread_logger)
     else:
@@ -303,9 +304,6 @@ def prepare_data(
 
     threshold = nodata_threshold / 100
 
-    if not skip_gdal:
-        gdal.initialize(bin=gdal_bin, path=gdal_path)
-
     DATA_ROOT = data_dir
     DATA_DIR = DATA_ROOT / 'tiles'
     h5dir = DATA_ROOT / 'h5'
@@ -337,7 +335,7 @@ def prepare_data(
             sys.exit(1)
 
     Parallel(n_jobs=n_jobs)(
-        delayed(main_function)(dataset, log_path, h5dir, xsize, ysize, overlap, threshold, skip_gdal)
+        delayed(main_function)(dataset, log_path, h5dir, xsize, ysize, overlap, threshold, skip_gdal, gdal_bin, gdal_path)
         for dataset in datasets
     )
 

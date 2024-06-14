@@ -53,10 +53,8 @@ readme = "README.md"
 requires-python = ">= 3.10"
 
 [project.scripts]
-download_s2_4band_planet_format = "thaw_slump_segmentation.scripts.download_s2_4band_planet_format:main"
 inference = "thaw_slump_segmentation.scripts.inference:main"
 prepare_data = "thaw_slump_segmentation.scripts.prepare_data:main"
-prepare_s2_4band_planet_format = "thaw_slump_segmentation.scripts.prepare_s2_4band_planet_format:main"
 # process_02_inference = "thaw_slump_segmentation.scripts.process_02_inference:main"
 # process_03_ensemble = "thaw_slump_segmentation.scripts.process_03_ensemble:main"
 setup_raw_data = "thaw_slump_segmentation.scripts.setup_raw_data:main"

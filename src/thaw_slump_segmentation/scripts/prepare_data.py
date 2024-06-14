@@ -290,7 +290,10 @@ def prepare_data(
     """Make data ready for training"""
 
     # Tiling Settings
-    xsize, ysize = map(int, tile_size.split('x'))
+    if isinstance(tile_size, tuple):
+        xsize, ysize = tile_size
+    else:
+        xsize, ysize = map(int, tile_size.split('x'))
     overlap = tile_overlap
 
     timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')

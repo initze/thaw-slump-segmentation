@@ -1,10 +1,12 @@
 [project]
 name = "thaw-slump-segmentation"
-version = "0.10.3"
+version = "0.10.4"
 description = "Thaw slump segmentation workflow using PlanetScope data and pytorch"
 authors = [
     { name = "Ingmar Nitze", email = "ingmar.nitze@awi.de" },
     { name = "Konrad Heidler", email = "k.heidler@tum.de" },
+    { name = "Jonas Küpper", email = "jonas.kuepper@awi.de" },
+    { name = "Tobias Hölzer", email = "tobias.hoelzer@awi.de" },
 ]
 dependencies = [
     "torch==2.2.0",

@@ -49,6 +49,8 @@ def get_planet_product_type(img_path):
     # check if 4th last imagename segment is BGRN
     if split[-4] == 'BGRN':
         pl_type = 'OrthoTile'
+    elif len(split) == 6 and len(split[2]) == 6:
+        pl_type = "Sentinel2"
     else:
         pl_type = 'Scene'
 
@@ -60,15 +62,18 @@ def mask_from_img(img_path):
     Given an image path, return path for the mask
     """
     # change for
-    if get_planet_product_type(img_path) == 'Scene':
+    product_type = get_planet_product_type(img_path)
+    base = img_path.parent.parent
+
+    if product_type == 'Scene':
         date, time, *block, platform, _, sr, row, col = img_path.stem.split('_')
         block = '_'.join(block)
-        base = img_path.parent.parent
         mask_path = base / 'mask' / f'{date}_{time}_{block}_mask_{row}_{col}.tif'
-
+    elif product_type == "Sentinel2":
+        date, processing_date, tile_id, _, row, col = img_path.stem.split('_')
+        mask_path = base / 'mask' / f'{date}_{processing_date}_{tile_id}_mask_{row}_{col}.tif'
     else:
         block, tile, date, sensor, bgrn, sr, row, col = img_path.stem.split('_')
-        base = img_path.parent.parent
         mask_path = base / 'mask' / f'{block}_{tile}_{date}_{sensor}_mask_{row}_{col}.tif'
 
     assert mask_path.exists()
@@ -80,9 +85,11 @@ def other_from_img(img_path, other):
     """
     Given an image path, return paths for mask and tcvis
     """
-    if get_planet_product_type(img_path) == 'Scene':
+    product_type = get_planet_product_type(img_path)
+    if product_type == 'Scene':
         date, time, *block, platform, _, sr, row, col = img_path.stem.split('_')
-        block = '_'.join(block)
+    elif product_type == "Sentinel2":
+        date, processing_date, tile_id, _, row, col = img_path.stem.split('_')
     else:
         block, tile, date, sensor, bgrn, sr, row, col = img_path.stem.split('_')
 
@@ -111,7 +118,10 @@ def do_gdal_calls(
     aux_data=['ndvi', 'tcvis', 'slope', 'relative_elevation'],
     logger=None,
 ):
-    maskfile = DATASET / f'{DATASET.name}_mask.tif'
+    rasterfile = glob_file(DATASET, RASTERFILTER, logger)
+    image_name = rasterfile.name[0:-7]
+
+    maskfile = DATASET / f'{image_name}_mask.tif'
 
     tile_dir_data = DATASET / 'tiles' / 'data'
     tile_dir_mask = DATASET / 'tiles' / 'mask'
@@ -120,7 +130,6 @@ def do_gdal_calls(
     tile_dir_data.mkdir(exist_ok=True, parents=True)
     tile_dir_mask.mkdir(exist_ok=True)
 
-    rasterfile = glob_file(DATASET, RASTERFILTER, logger)
 
     # Retile data, mask
     # log_run(f'python {gdal.retile} -ps {XSIZE} {YSIZE} -overlap {OVERLAP} -targetDir {tile_dir_data} {rasterfile}', logger)
@@ -134,7 +143,7 @@ def do_gdal_calls(
         tile_dir_aux = DATASET / 'tiles' / aux
         tile_dir_aux.mkdir(exist_ok=True)
         # log_run(f'python {gdal.retile} -ps {XSIZE} {YSIZE} -overlap {OVERLAP} -targetDir {tile_dir_aux} {auxfile}', logger)
-        log_run(f'{gdal.retile} -ps {xsize} {yield} -overlap {overlap} -targetDir {tile_dir_aux} {auxfile}', logger)
+        log_run(f'{gdal.retile} -ps {xsize} {ysize} -overlap {overlap} -targetDir {tile_dir_aux} {auxfile}', logger)
 
 
 def make_info_picture(tile, filename):

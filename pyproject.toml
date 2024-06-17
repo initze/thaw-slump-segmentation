@@ -57,7 +57,7 @@ inference = "thaw_slump_segmentation.scripts.inference:main"
 prepare_data = "thaw_slump_segmentation.scripts.prepare_data:main"
 # process_02_inference = "thaw_slump_segmentation.scripts.process_02_inference:main"
 # process_03_ensemble = "thaw_slump_segmentation.scripts.process_03_ensemble:main"
-setup_raw_data = "thaw_slump_segmentation.scripts.setup_raw_data:main"
+setup_raw_data = "thaw_slump_segmentation.scripts.setup_raw_data:setup_raw_data"
 train = "thaw_slump_segmentation.scripts.train:main"
 thaw-slump-segmentation = "thaw_slump_segmentation.main:cli"
 

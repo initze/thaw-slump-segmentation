@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.4] - 2024-06-14
+
+### Changed
+
+- fixed processing functions bug, moved into main() functions
+- better training accuracy metrics implementation using torchmetrics
+
 ## [0.10.3] - 2024-06-03
 
 ### Changed

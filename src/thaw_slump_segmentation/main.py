@@ -23,7 +23,8 @@ cli = typer.Typer(pretty_exceptions_show_locals=False)
 
 @cli.command()
 def hello(name: str):
-    typer.echo(f'Hello {name}')
+    typer.echo(f'Hello, {name}!')
+    return f'Hello, {name}!'
 
 
 cli.command()(train)

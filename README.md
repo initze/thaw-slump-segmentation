@@ -9,7 +9,7 @@
 We recommend using a new conda environment from scratch
 
 ```bash
-conda create -n thaw_slump_segmentation python=3.10 mamba -c conda-forge
+conda create -n thaw_slump_segmentation python=3.11 mamba -c conda-forge
 conda activate thaw_slump_segmentation
 ```
 
@@ -24,7 +24,6 @@ mamba install gdal>=3.6 -c conda-forge
 ### Package Installation
 
 * Latest development version: `pip install git+https://github.com/initze/thaw-slump-segmentation`
-* Latest release: `pip install https://github.com/initze/thaw-slump-segmentation/releases/download/untagged-f6739f56e0ee4c2c64fe/thaw_slump_segmentation-0.10.0-py3-none-any.whl`
 
 This will pull the CUDA 12 version of pytorch. If you are running CUDA 11, you need to manually switch to the corresponding Pytorch package afterwards by running `pip3 install torch==2.2.0+cu118 torchvision==0.17.0+cu118 --index-url https://download.pytorch.org/whl/cu118`
 
@@ -90,14 +89,14 @@ Run in dev:
 
 ```sh
 $ rye run thaw-slump-segmentation hello tobi
-Hello tobi
+Hello, tobi!
 ```
 
 or run as python module:
 
 ```sh
 $ rye run python -m thaw_slump_segmentation hello tobi
-Hello tobi
+Hello, tobi!
 ```
 
 With activated env, e.g. after installation, just remove the `rye run`:
@@ -105,7 +104,7 @@ With activated env, e.g. after installation, just remove the `rye run`:
 ```sh
 $ source .venv/bin/activate
 $ thaw-slump-segmentation hello tobi
-Hello tobi
+Hello, tobi!
 ```
 
 or
@@ -113,7 +112,7 @@ or
 ```sh
 $ source .venv/bin/activate
 $ python -m thaw_slump_segmentation hello tobi
-Hello tobi
+Hello, tobi!
 ```
 
 ## Data Processing
@@ -232,3 +231,39 @@ visualization_tiles:
   20190727_160426_104e: [5, 52, 75, 87, 113, 139, 239, 270, 277, 291, 305]
 
 ```
+
+### Tests
+
+We use [Pytest](https://pytest.org/) as testing library for unit tests.
+
+Run tests (via rye, for other environments activate the environment
+with `.venv/bin/activate` or similar and then simply remove the `rye run` before the command):
+
+```sh
+rye run pytest
+```
+
+Run all tests from a specific file:
+
+```sh
+rye run pytest tests/test_hello.py
+```
+
+Run a specific test from a specific file:
+
+```sh
+rye run pytest 
+```
+
+### Todos testing
+
+* [ ] Add GitHub Workflow for [Pytest](https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python#testing-your-code) and [Ruff](https://github.com/chartboost/ruff-action)
+* [ ] Add tests for data-related scripts (single and multiple files (for multiprocessing) each):
+  * [ ] Setup Raw Data
+  * [ ] Prepare data
+  * [ ] Inference
+  * [ ] (S2 related scripts)
+* [ ] Utilities
+  * [ ] GDAL init
+  * [ ] EE auth + init
+  * [ ] TBD

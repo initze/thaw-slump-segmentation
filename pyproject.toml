@@ -52,7 +52,7 @@ dependencies = [
     "torchmetrics @ git+https://github.com/Lightning-AI/torchmetrics",
 ]
 readme = "README.md"
-requires-python = "== 3.11"
+requires-python = "== 3.11.*"
 
 [project.scripts]
 download_s2_4band_planet_format = "thaw_slump_segmentation.scripts.download_s2_4band_planet_format:main"

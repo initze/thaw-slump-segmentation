@@ -2,16 +2,18 @@ import pytest
 from pathlib import Path
 import os, warnings, subprocess
 
-# adds a test parameter --data-dir to pass a directory where predefined testfiles reside
-# the testfiles will be configured as a fixture
-# tests which request this directory will be skipped if this parameter isn't passed.
 def pytest_addoption(parser):
+    # adds a test parameter --data-dir to pass a directory where predefined testfiles reside
+    # the testfiles will be configured as a fixture
+    # tests which request this directory will be skipped if this parameter isn't passed.
     parser.addoption(
         "--data_dir",
         action="store",
         default=None,
         help="Directory containing the predefined data files"
     )
+
+    # GDAL config :
     parser.addoption(
         "--gdal_bin",
         action="store",
@@ -22,7 +24,7 @@ def pytest_addoption(parser):
         "--gdal_path",
         action="store",
         default=None,
-        help='Path to gdal python scripts (e.g. gdal_retile.py)'
+        help='Path to gdal python scripts (e.g. gdal_retile.py), might be the same as --gdal_bin'
     )
     parser.addoption(
         "--proj_data_env",
@@ -52,6 +54,10 @@ def data_dir(request):
 
     return data_path_root
 
+# take note if we ought to test if GDAL is available:
+#  0  -> GDAL not tested
+#  1  -> GDAL tested and works
+#  -1 -> GDAL tested and does NOT work
 GDAL_TEST = 0
 
 @pytest.fixture
@@ -71,6 +77,7 @@ def gdal_bin(request, proj_data):
             pytest.skip( f"--gdal_bin is required to point to the folder of the gdal binaries (e.g. gdalwarp) " )
 
     if GDAL_TEST == 0:
+        # not tested yet
         # check if gdal via subprocess (as we do it in the scripts) works:
         gdaltransform = gdal_bin_path / "gdaltransform"
         shell_command = f'echo "12 34" | {gdaltransform} -s_srs EPSG:4326 -t_srs EPSG:3857'
@@ -85,7 +92,7 @@ def gdal_bin(request, proj_data):
             GDAL_TEST = 1
 
     if GDAL_TEST == -1:
-        pytest.skip( f"a working gdal is required for this test, but the testcommand {shell_command} failed"  )
+        pytest.skip( f"a working gdal is required for this test"  )
 
     return gdal_bin
 

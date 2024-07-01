@@ -5,7 +5,7 @@ import tempfile, shutil
 from thaw_slump_segmentation.scripts.setup_raw_data import preprocess_directory
 
 
-def testpre(data_dir:Path, gdal_bin, gdal_path):
+def testCompleteProcessing(data_dir:Path, gdal_bin, gdal_path):
 
     # check if data_dir this is just a basic image folder formatted from planet download
 

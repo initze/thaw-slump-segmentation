@@ -87,11 +87,14 @@ def gdal_bin(request, proj_data):
 
         gdaltransform = gdal_bin_path / "gdaltransform"
         shell_command = f'echo "12 34" | {gdaltransform} -s_srs EPSG:4326 -t_srs EPSG:3857'
-        proc = subprocess.run(shell_command, shell=True, capture_output=True)
+        proc = subprocess.run(shell_command, shell=True, capture_output=True, text=True)
 
         if proc.returncode > 0:
             GDAL_TEST = -1
-            warning_message = f"testing GDAL with {shell_command} failed: \n{str(proc.stderr)}\nYou might want to pass --proj_data_env pointing to the proj database folder"
+            warning_message = (f"testing GDAL with {shell_command} failed: \n"
+            f"{proc.stderr}\n"
+            "You might want to pass --proj_data_env to pytest pointing to the proj database folder"
+            )
             warnings.warn(warning_message)
         else:
             GDAL_TEST = 1

@@ -32,12 +32,7 @@ def pytest_addoption(parser):
         default=None,
         help='path to data of the proj library, will be set as PROJ_DATA environment variable'
     )
-
-@pytest.fixture()
-def proj_data(request):
-    proj_data = request.config.getoption("--proj_data_env")
-    if proj_data is not None:
-        os.environ["PROJ_DATA"] = proj_data        
+     
 
 # the fixture for the data dir:
 @pytest.fixture
@@ -54,11 +49,22 @@ def data_dir(request):
 
     return data_path_root
 
+
+#
+# ========== GDAL related fixtures =========================================
+#
 # take note if we ought to test if GDAL is available:
 #  0  -> GDAL not tested
 #  1  -> GDAL tested and works
 #  -1 -> GDAL tested and does NOT work
 GDAL_TEST = 0
+
+# the proj_data fixture will be imported by the gdal_{bin|path} fixtures
+@pytest.fixture()
+def proj_data(request):
+    proj_data = request.config.getoption("--proj_data_env")
+    if proj_data is not None:
+        os.environ["PROJ_DATA"] = proj_data   
 
 @pytest.fixture
 def gdal_bin(request, proj_data):
@@ -67,18 +73,18 @@ def gdal_bin(request, proj_data):
     if gdal_bin is None:
         pytest.skip( f"parameter --gdal_bin needed for this test" )
 
-
-    gdal_bin_path = Path(gdal_bin)
-
-    for bin_tool in [ 'gdal_rasterize', 'gdal_translate', 'gdalwarp' ]:
-        bin_tool_path = gdal_bin_path / bin_tool
-
-        if not bin_tool_path.exists():
-            pytest.skip( f"--gdal_bin is required to point to the folder of the gdal binaries (e.g. gdalwarp) " )
-
     if GDAL_TEST == 0:
         # not tested yet
         # check if gdal via subprocess (as we do it in the scripts) works:
+        gdal_bin_path = Path(gdal_bin)
+
+        for bin_tool in [ 'gdal_rasterize', 'gdal_translate', 'gdalwarp', 'gdaltransform' ]:
+            bin_tool_path = gdal_bin_path / bin_tool
+
+            if not bin_tool_path.exists():
+                pytest.skip( f"--gdal_bin is required to point to the folder of the gdal binaries (e.g. gdalwarp) " )
+
+
         gdaltransform = gdal_bin_path / "gdaltransform"
         shell_command = f'echo "12 34" | {gdaltransform} -s_srs EPSG:4326 -t_srs EPSG:3857'
         proc = subprocess.run(shell_command, shell=True, capture_output=True)
@@ -87,7 +93,6 @@ def gdal_bin(request, proj_data):
             GDAL_TEST = -1
             warning_message = f"testing GDAL with {shell_command} failed: \n{str(proc.stderr)}\nYou might want to pass --proj_data_env pointing to the proj database folder"
             warnings.warn(warning_message)
-
         else:
             GDAL_TEST = 1
 

@@ -257,19 +257,19 @@ rye run pytest
 
 #### Test Parameters
 
-Not all test parameters are supposed to be needed by all tests. Tests needing a parameter are skipped if the parameter is missing. In case the reason for skipping a test is of interest, [the argument `-rs`](https://docs.pytest.org/en/6.2.x/usage.html#detailed-summary-report) can be passed to pytest.
+Several arguments can be passed to pytest to configure the environment for the tests, but not all test parameters are needed by all tests. Tests needing a parameter are skipped if the parameter is missing. In case the reason for skipping a test is of interest, [the argument `-rs`](https://docs.pytest.org/en/6.2.x/usage.html#detailed-summary-report) can be passed to pytest.
 
 ##### `--data_dir`
 
 Most tests need input data which will be imported from a data directory as root. The tests expect a specific folder structure below the root. For now this is:
 * a folder `raw_data_dir` where the folders `scenes` and `tiles` exist for the planet source data
-* a folder `auxiliary` with the subfolder `ArcticDEM` wehere the virtual raster files reside pointing to the slope and relative elevation data.
+* a folder `auxiliary` with the subfolder `ArcticDEM` where the virtual raster files reside, which are pointing to the slope and relative elevation data.
 
 No files are changed within those directories. The data is copied to a temporary directory and the tests are run there.
 
 ##### `--gdal_bin`, `--gdal_path`
 
-path to the folders where the gdal executables (like `gdaltransform`, `--gdal_bin`) and gdal scripts like `gdal_retile.py` (`--gdal_path`).
+Paths to the folders where the gdal executables (like `gdaltransform`, `--gdal_bin`) and gdal scripts like `gdal_retile.py` (`--gdal_path`) reside.
 
 ##### `--proj_data_env`
 

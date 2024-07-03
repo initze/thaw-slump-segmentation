@@ -255,12 +255,32 @@ Run a specific test from a specific file:
 rye run pytest 
 ```
 
+#### Test Parameters
+
+Several arguments can be passed to pytest to configure the environment for the tests, but not all test parameters are needed by all tests. Tests needing a parameter are skipped if the parameter is missing. In case the reason for skipping a test is of interest, [the argument `-rs`](https://docs.pytest.org/en/6.2.x/usage.html#detailed-summary-report) can be passed to pytest.
+
+##### `--data_dir`
+
+Most tests need input data which will be imported from a data directory as root. The tests expect a specific folder structure below the root. For now this is:
+* a folder `raw_data_dir` where the folders `scenes` and `tiles` exist for the planet source data
+* a folder `auxiliary` with the subfolder `ArcticDEM` where the virtual raster files reside, which are pointing to the slope and relative elevation data.
+
+No files are changed within those directories. The data is copied to a temporary directory and the tests are run there.
+
+##### `--gdal_bin`, `--gdal_path`
+
+Paths to the folders where the gdal executables (like `gdaltransform`, `--gdal_bin`) and gdal scripts like `gdal_retile.py` (`--gdal_path`) reside.
+
+##### `--proj_data_env`
+
+The proj library is needed for some processes by the gdal binaries and scripts. In case it cannot find or open its data folder, the PROJ_DATA environment variable needs to be set. Passing the parameter `--proj_data_env` to pytest will set this environment variable during the tests. 
+
 ### Todos testing
 
 * [ ] Add GitHub Workflow for [Pytest](https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python#testing-your-code) and [Ruff](https://github.com/chartboost/ruff-action)
 * [ ] Add tests for data-related scripts (single and multiple files (for multiprocessing) each):
   * [ ] Setup Raw Data
-  * [ ] Prepare data
+  * [x] Prepare data
   * [ ] Inference
   * [ ] (S2 related scripts)
 * [ ] Utilities

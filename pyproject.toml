@@ -11,7 +11,7 @@ authors = [
 dependencies = [
     "torch==2.2.0",
     "torchvision",
-    "numpy>=1.26.3",
+    "numpy>=1.26.3, <2",
     "efficientnet-pytorch==0.7.1",
     "wandb>=0.16.6",
     "pretrainedmodels>=0.7.4",
@@ -50,7 +50,7 @@ dependencies = [
     "torchmetrics @ git+https://github.com/Lightning-AI/torchmetrics",
 ]
 readme = "README.md"
-requires-python = "== 3.11"
+requires-python = "== 3.11.*"
 
 [project.scripts]
 inference = "thaw_slump_segmentation.scripts.inference:main"

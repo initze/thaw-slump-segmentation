@@ -4,12 +4,17 @@ import tempfile, shutil
 
 from thaw_slump_segmentation.scripts.setup_raw_data import preprocess_directory
 
+test_subfolders = [
+    pytest.param("scenes/20230807_191420_44_241d", id="Scene01"),
+    pytest.param("s2_harmonized/tiles/1072116/20230807T202851_20230807T203151_T10WEE", id="Sentinel01"),
+]
 
-def testCompleteProcessing(data_dir:Path, gdal_bin, gdal_path):
+@pytest.mark.parametrize("subfolder", test_subfolders)
+def testProcessCompleteScene(data_dir:Path, subfolder, gdal_bin, gdal_path):
 
     # check if data_dir this is just a basic image folder formatted from planet download
 
-    image_dir = data_dir / "raw_data_dir" / "scenes" / "20230807_191420_44_241d"
+    image_dir = data_dir / "raw_data_dir" / subfolder
     aux_dir = data_dir / "auxiliary"
     if not image_dir.exists():
         pytest.skip(f"could not find predefined image dir {image_dir}")

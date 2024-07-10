@@ -114,6 +114,7 @@ class Engine:
         self.logger.info(f'Training on {self.dev} device')
 
         self.model = self.model.to(self.dev)
+        self.model = torch.compile(self.model, mode='max-autotune', fullgraph=True)
 
         self.learning_rate = self.config['learning_rate']
         self.opt = torch.optim.AdamW(self.model.parameters(), lr=self.learning_rate)

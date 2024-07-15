@@ -1,6 +1,6 @@
 [project]
 name = "thaw-slump-segmentation"
-version = "0.10.5"
+version = "0.10.6"
 description = "Thaw slump segmentation workflow using PlanetScope data and pytorch"
 authors = [
     { name = "Ingmar Nitze", email = "ingmar.nitze@awi.de" },

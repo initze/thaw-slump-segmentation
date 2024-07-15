@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.6] - 2024-07-15
+
+### Changed
+
+- extended water removal
+- moved away fom geemap dependency for water removal
+
 ## [0.10.5] - 2024-07-15
 
 ### Added

@@ -740,11 +740,14 @@ def filter_remove_water(gdf, threshold=0.2):
     # load gee layer
     esri_lulc2020 = ee.ImageCollection('projects/sat-io/open-datasets/landcover/ESRI_Global-LULC_10m')
     # filter to rts footprint
-    filtered = esri_lulc2020.filterBounds(rts_ee)
+    filtered = esri_lulc2020.filterBounds(rts_ee).mosaic()
     # get binary water mask
-    water_layer = filtered.mosaic().eq(1).unmask()
+    water_layer = filtered.eq(1)
+    data_mask = water_layer.mask().eq(0)
+    # create final water mask : either water or nodata (assumed that no data is over the sea)
+    water_mask = water_layer.unmask().Or(data_mask)
     # reduce regions and get value
-    reduced = ee.Image.reduceRegions(water_layer, rts_ee, reducer=ee.Reducer.mean(), scale=10)
+    reduced = ee.Image.reduceRegions(water_mask, rts_ee, reducer=ee.Reducer.mean(), scale=10)
     # convert to gdf
     gdf_out = ee.data.computeFeatures({'expression': reduced, 'fileFormat': 'GEOPANDAS_GEODATAFRAME'})
     # filter to no water

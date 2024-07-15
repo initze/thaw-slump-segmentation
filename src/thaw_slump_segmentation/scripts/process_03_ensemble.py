@@ -16,6 +16,7 @@ from typing_extensions import Annotated
 # from tqdm.notebook import tqdm
 from ..postprocessing import (
     create_ensemble_v2,
+    filter_remove_water,
     get_processing_status,
     get_processing_status_ensemble,
     load_and_parse_vector,
@@ -26,59 +27,42 @@ def process_03_ensemble(
     raw_data_dir: Annotated[Path, typer.Option(help='Location of raw data')] = Path(
         '/isipd/projects/p_aicore_pf/initze/data/planet/planet_data_inference_grid/tiles'
     ),
-    
     processing_dir: Annotated[Path, typer.Option(help='Location for data processing')] = Path(
         '/isipd/projects/p_aicore_pf/initze/processing'
     ),
-    
     inference_dir: Annotated[Path, typer.Option(help='Target directory for inference results')] = Path(
         '/isipd/projects/p_aicore_pf/initze/processed/inference'
     ),
-    
     model_dir: Annotated[Path, typer.Option(help='Target directory for models')] = Path(
         '/isipd/projects/p_aicore_pf/initze/models/thaw_slumps'
     ),
-    
     ensemble_name: Annotated[str, typer.Option(help='Target directory for models')] = 'RTS_v6_ensemble_v2',
-    
     model_names: Annotated[List[str], typer.Option(help="Model name, examples ['RTS_v6_tcvis', 'RTS_v6_notcvis']")] = [
         'RTS_v6_tcvis',
         'RTS_v6_notcvis',
     ],
-    
     gpu: Annotated[int, typer.Option(help='GPU IDs to use for edge cleaning')] = 0,
-    
     n_jobs: Annotated[int, typer.Option(help='number of CPU jobs for ensembling')] = 15,
-    
     n_vector_loaders: Annotated[int, typer.Option(help='number of parallel vector loaders for final merge')] = 6,
-    
     max_images: Annotated[int, typer.Option(help='Maximum number of images to process (optional)')] = None,
-    
     vector_output_format: Annotated[
         List[str], typer.Option(help='Output format extension of ensembled vector files')
     ] = ['gpkg', 'parquet'],
-    
     ensemble_thresholds: Annotated[
         List[float],
         typer.Option(help='Thresholds for polygonized outputs of the ensemble, needs to be string, see examples'),
     ] = [0.4, 0.45, 0.5],
-    
     ensemble_border_size: Annotated[
         int, typer.Option(help='Number of pixels to remove around the border and no data')
     ] = 10,
-    
     ensemble_mmu: Annotated[int, typer.Option(help='Minimum mapping unit of output objects in pixels')] = 32,
-    
     try_gpu: Annotated[bool, typer.Option(help='set to try image processing with gpu')] = False,
-    
     force_vector_merge: Annotated[
         bool, typer.Option(help='force merging of output vectors even if no new ensemble tiles were processed')
     ] = False,
-
     save_binary: Annotated[bool, typer.Option(help='set to keep intermediate binary rasters')] = False,
-
-    save_probability: Annotated[bool, typer.Option(help='set to keep intermediate probility rasters')] = False,
-
+    save_probability: Annotated[bool, typer.Option(help='set to keep intermediate probability rasters')] = False,
+    filter_water: Annotated[bool, typer.Option(help='set to remove polygons over water')] = False,
 ):
     ### Start
     # check if cucim is available
@@ -146,10 +130,14 @@ def process_03_ensemble(
             len(flist)
             # load them in parallel
             print(f'Loading results {proba_string}')
-            out = Parallel(n_jobs=6)(delayed(load_and_parse_vector)(f) for f in tqdm(flist[:max_images]))
+            out = Parallel(n_jobs=6)(delayed(load_and_parse_vector)(f, filter_water=filter_water) for f in tqdm(flist[:max_images]))
             # merge them and save to geopackage file
             print('Merging results')
             merged_gdf = gpd.pd.concat(out)
+
+            # if filter_water:
+            #     # water removal here
+            #     merged_gdf = filter_remove_water(merged_gdf)
 
             for vector_format in vector_output_format:
                 # Save output to vector
@@ -245,6 +233,7 @@ def main():
         action='store_true',
         help='force merging of output vectors even if no new ensemble tiles were processed',
     )
+    parser.add_argument('--filter_water', action='store_true', help='set to remove polygons over water')
 
     args = parser.parse_args()
 
@@ -267,6 +256,7 @@ def main():
         force_vector_merge=args.force_vector_merge,
         save_binary=args.save_binary,
         save_probability=args.save_probability,
+        filter_water=args.filter_water,
     )
 
 

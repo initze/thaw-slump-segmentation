@@ -1,25 +1,41 @@
-from typing import Union, List, Optional
-from pathlib import Path
-import geopandas as gpd
-import pandas as pd
-import shutil
-import numpy as np
-import rasterio
 import os
-from skimage.morphology import disk, binary_dilation, label, remove_small_objects
-from skimage.morphology import disk, dilation, remove_small_objects
+import shutil
+from pathlib import Path
+from typing import List, Optional, Union
+
+import ee
+import geemap
+import geopandas as gpd
+import numpy as np
+import pandas as pd
+import rasterio
+from skimage.morphology import binary_dilation, dilation, disk, label, remove_small_objects
 
 try:
-    from cucim.skimage.morphology import disk as disk_gpu
-    from cucim.skimage.morphology import binary_dilation as binary_dilation_gpu
     import cupy as cp
+    from cucim.skimage.morphology import binary_dilation as binary_dilation_gpu
+    from cucim.skimage.morphology import disk as disk_gpu
+
     CUCIM_AVAILABLE = True
-    #print('cuCIM is available for GPU image operations')
+    # print('cuCIM is available for GPU image operations')
 except:
     CUCIM_AVAILABLE = False
     print('Using standard skimage CPU implementation')
 
-def run_inference(df, model, processing_dir, inference_dir, model_dir=Path('/isipd/projects/p_aicore_pf/initze/models/thaw_slumps'), gpu=0, run=False, patch_size=1024, margin_size=256):
+ee.Initialize()
+
+
+def run_inference(
+    df,
+    model,
+    processing_dir,
+    inference_dir,
+    model_dir=Path('/isipd/projects/p_aicore_pf/initze/models/thaw_slumps'),
+    gpu=0,
+    run=False,
+    patch_size=1024,
+    margin_size=256,
+):
     if len(df) == 0:
         print('Empty dataframe')
     else:
@@ -29,13 +45,15 @@ def run_inference(df, model, processing_dir, inference_dir, model_dir=Path('/isi
         if run:
             os.system(run_string)
 
+
 def listdirs(rootdir):
     dirs = []
     for path in Path(rootdir).iterdir():
         if path.is_dir():
-            #print(path)
+            # print(path)
             dirs.append(path)
     return dirs
+
 
 def listdirs2(rootdir, depth=0):
     dirs = []
@@ -49,6 +67,7 @@ def listdirs2(rootdir, depth=0):
                 dirs.append(path)
     return dirs
 
+
 def get_PS_products_type(name):
     if len(name.split('_')) == 3:
         return 'PSScene'
@@ -59,11 +78,12 @@ def get_PS_products_type(name):
             return 'PSOrthoTile'
     else:
         None
-        
+
+
 def get_date_from_PSfilename(name):
     date = name.split('_')[2]
     return date
-    
+
 
 def get_datasets(path, depth=0, preprocessed=False):
     dirs = listdirs2(path, depth=depth)
@@ -83,7 +103,7 @@ def copy_unprocessed_files(row, processing_dir, quiet=True):
     """
     Copies unprocessed files from a source directory to a target directory.
 
-    This function checks if a file exists in the target directory. If the file does not exist, it copies the file from the source to the target directory. If the file already exists in the target directory, it skips the copying process. 
+    This function checks if a file exists in the target directory. If the file does not exist, it copies the file from the source to the target directory. If the file already exists in the target directory, it skips the copying process.
 
     Parameters:
     row (dict): A dictionary containing file information. It should have a key 'path' which corresponds to the file's path.
@@ -98,11 +118,12 @@ def copy_unprocessed_files(row, processing_dir, quiet=True):
 
     if not outpath.exists():
         if not quiet:
-            print (f'Start copying {inpath.name} to {outpath}')
+            print(f'Start copying {inpath.name} to {outpath}')
         shutil.copytree(inpath, outpath)
     else:
         if not quiet:
             print(f'Skipped copying {inpath.name}')
+
 
 def update_DEM(vrt_target_dir):
     """
@@ -149,7 +170,7 @@ def update_DEM2(dem_data_dir, vrt_target_dir):
     s = f'gdalbuildvrt -input_file_list {file_list_text} -srcnodata "0" -vrtnodata "0" {vrt_target}'
     os.system(s)
     os.remove(file_list_text)
-    
+
 
 def get_processing_status(raw_data_dir, processing_dir, inference_dir, model, reduce_to_raw=False):
     """
@@ -186,18 +207,18 @@ def get_processing_status(raw_data_dir, processing_dir, inference_dir, model, re
     else:
         raise ValueError('Please point to tiles or scenes path!')
     # get processed
-    
+
     # get processing status for intermediate data
     df_processed = get_datasets(processing_dir / 'tiles', depth=0, preprocessed=True)
 
     # check if all files are available
-    df_processed = df_processed[df_processed.apply(lambda x: len(list(x['path'].glob('*')))>=5, axis=1)]
+    df_processed = df_processed[df_processed.apply(lambda x: len(list(x['path'].glob('*'))) >= 5, axis=1)]
 
     # get all non preprocessed raw images
     diff = df_raw[~df_raw['name'].isin(df_processed['name'])]
     # TODO: issue here
     if reduce_to_raw == True:
-        # TODO: check 
+        # TODO: check
         df_merged = diff
     else:
         df_merged = pd.concat([df_processed, diff]).reset_index()
@@ -205,11 +226,13 @@ def get_processing_status(raw_data_dir, processing_dir, inference_dir, model, re
     # make a dataframe with checks for processing status
     products_list = [prod.name for prod in list((inference_dir / model).glob('*'))]
     df_merged['inference_finished'] = df_merged.apply(lambda x: x['name'] in (products_list), axis=1)
-    
+
     return df_merged
 
 
-def get_processing_status_ensemble(inference_dir, model_input_names=['RTS_v5_notcvis','RTS_v5_tcvis'], model_ensemble_name='RTS_v5_ensemble'):
+def get_processing_status_ensemble(
+    inference_dir, model_input_names=['RTS_v5_notcvis', 'RTS_v5_tcvis'], model_ensemble_name='RTS_v5_ensemble'
+):
     """
     Get processing status for a model ensemble and its individual models based on available data.
 
@@ -252,21 +275,35 @@ def get_processing_status_ensemble(inference_dir, model_input_names=['RTS_v5_not
 
     df_process['data_available'] = ~df_process['model_name'].isna().any(axis=1)
     df_process['proba_available'] = df_process['has_proba'].all(axis=1)
-    df_process['process'] = df_process['data_available'] & (df_process['ensemble_name'].isna() & df_process['proba_available'])
+    df_process['process'] = df_process['data_available'] & (
+        df_process['ensemble_name'].isna() & df_process['proba_available']
+    )
 
-    return df_process[['process', 'data_available', 'proba_available']].reset_index(drop=False).rename(columns={'index':'name'})
+    return (
+        df_process[['process', 'data_available', 'proba_available']]
+        .reset_index(drop=False)
+        .rename(columns={'index': 'name'})
+    )
 
-    
-def create_ensemble(inference_dir: Path, modelnames: List[str], ensemblename: str, image_id: str, binary_threshold: list=[0.3,0.4,0.5], delete_proba=True, delete_binary=True):
+
+def create_ensemble(
+    inference_dir: Path,
+    modelnames: List[str],
+    ensemblename: str,
+    image_id: str,
+    binary_threshold: list = [0.3, 0.4, 0.5],
+    delete_proba=True,
+    delete_binary=True,
+):
     """
     Calculate the mean of two model predictions and write the output to disk.
-    
+
     Args:
     modelnames (List[str]): A list of two model names.
     ensemblename (str): The name of the ensemble model.
     image_id (str): The ID of the image.
     binary_threshold (float): The binary threshold value.
-    
+
     Returns:
     None
     """
@@ -292,14 +329,13 @@ def create_ensemble(inference_dir: Path, modelnames: List[str], ensemblename: st
         with rasterio.open(outpath, 'w', **out_meta) as target:
             target.write(out)
 
-
         # write binary raster
         for threshold in binary_threshold:
-            thresh_str = str(threshold).replace('.','')
+            thresh_str = str(threshold).replace('.', '')
             outpath_class = Path(str(outpath).replace('proba', f'class_{thresh_str}'))
             outpath_shp = outpath_class.with_suffix('.gpkg')
 
-            out_binary = (out >= threshold)
+            out_binary = out >= threshold
 
             with rasterio.open(outpath_class, 'w', **out_meta_binary, compress='deflate') as target:
                 target.write(out_binary)
@@ -313,24 +349,26 @@ def create_ensemble(inference_dir: Path, modelnames: List[str], ensemblename: st
         # delete files
         if delete_proba:
             os.remove(outpath)
-            
+
         return 0
-    
+
     except:
         return 1
-    
-    
-def create_ensemble_v2(inference_dir: Path, 
-                        modelnames: List[str], 
-                        ensemblename: str, 
-                        image_id: str, 
-                        binary_threshold: list=[0.5], 
-                        border_size: int=10,
-                        minimum_mapping_unit: int=32,
-                        save_binary: bool=False,
-                        save_probability: bool=False,
-                        try_gpu: bool=True,
-                        gpu: int=0):
+
+
+def create_ensemble_v2(
+    inference_dir: Path,
+    modelnames: List[str],
+    ensemblename: str,
+    image_id: str,
+    binary_threshold: list = [0.5],
+    border_size: int = 10,
+    minimum_mapping_unit: int = 32,
+    save_binary: bool = False,
+    save_probability: bool = False,
+    try_gpu: bool = True,
+    gpu: int = 0,
+):
     """
     Create an ensemble result from multiple model predictions, generate binary masks, and process the output.
 
@@ -367,7 +405,7 @@ def create_ensemble_v2(inference_dir: Path,
     ------------
     None
     """
-    
+
     def calculate_mean_image(images):
         ctr = 0
         list_data = []
@@ -388,7 +426,7 @@ def create_ensemble_v2(inference_dir: Path,
     def dilate_data_mask(mask, size=10):
         selem = disk(size)
         return binary_dilation(mask, selem)
-    
+
     def dilate_data_mask_gpu(mask, size=10):
         mask = cp.array(mask)
         selem = disk_gpu(size)
@@ -400,19 +438,19 @@ def create_ensemble_v2(inference_dir: Path,
         input_mask[-size:, :] = True
         input_mask[:, -size:] = True
         return input_mask
-    
+
     images = [inference_dir / model / image_id / 'pred_probability.tif' for model in modelnames]
     for image in images:
         if not image.exists():
             print(f'{image.as_posix()} does not exist')
             return None
-    
+
     try:
         mean_image, out_meta_binary, out_meta_probability = calculate_mean_image(images)
     except:
         print(f'Read error of files {images}')
         return None
-    
+
     # save probability layer, if specified
     if save_probability:
         outpath_proba = outpath = inference_dir / ensemblename / image_id / f'{image_id}_{ensemblename}_probability.tif'
@@ -421,16 +459,15 @@ def create_ensemble_v2(inference_dir: Path,
             target.write(mean_image)
 
     for threshold in binary_threshold:
-
         # get binary object mask
-        objects = (mean_image[0] >= threshold)
-        
+        objects = mean_image[0] >= threshold
+
         # get individual numbered objects
         labels = label(objects, connectivity=2)
-        
+
         # retrieve noData mask from image
         mask = np.array(np.isnan(mean_image[0]), np.uint8)
-        #mask = np.array(np.isnan(mean_image), np.uint8)[0]
+        # mask = np.array(np.isnan(mean_image), np.uint8)[0]
         # grow nodata mask around no data
         if CUCIM_AVAILABLE and try_gpu:
             cp.cuda.Device(gpu).use()
@@ -439,39 +476,38 @@ def create_ensemble_v2(inference_dir: Path,
             dilated_mask = dilate_data_mask(mask, size=border_size)
         # remove fixed sizes along image edges
         final_mask = mask_edges(dilated_mask, size=border_size)
-        
+
         # get label ids which are in the edge region
         edge_labels = np.unique(labels * final_mask)
         # check which labels intersect with new mask
         isin_data_area = ~np.isin(labels, edge_labels)
         # remove labels intersecting new noData and create final binary mask
-        out_binary = np.expand_dims((labels*isin_data_area > 0), 0)
+        out_binary = np.expand_dims((labels * isin_data_area > 0), 0)
         # remove small objects 32 px ~ 100m²
         out_binary = remove_small_objects(out_binary, min_size=minimum_mapping_unit)
-        
+
         ### OUTPUTS
         # set paths
-        thresh_str = str(threshold).replace('.','')
-        
-        
+        thresh_str = str(threshold).replace('.', '')
+
         outpath = inference_dir / ensemblename / image_id / f'{image_id}_{ensemblename}_class_{thresh_str}.tif'
-        #outpath_class = Path(str(outpath).replace('proba', f'class_{thresh_str}'))
+        # outpath_class = Path(str(outpath).replace('proba', f'class_{thresh_str}'))
         outpath_shp = outpath.with_suffix('.gpkg')
-        
+
         # write binary file
         os.makedirs(outpath.parent, exist_ok=True)
         with rasterio.open(outpath, 'w', **out_meta_binary, compress='deflate') as target:
             target.write(out_binary)
-            
+
         # make vector
         s_polygonize = f'gdal_polygonize.py {outpath} -q -mask {outpath} -f "GPKG" {outpath_shp}'
         os.system(s_polygonize)
-        
+
         if not save_binary:
             os.remove(outpath)
-    
-    
-def load_and_parse_vector(file_path: Union[str, Path]) -> gpd.GeoDataFrame:
+
+
+def load_and_parse_vector(file_path: Union[str, Path], filter_water: bool = False) -> gpd.GeoDataFrame:
     """
     Load a GeoDataFrame from a given file path, reproject it to EPSG:4326,
     and parse image metadata from the file path to add as attributes.
@@ -495,6 +531,8 @@ def load_and_parse_vector(file_path: Union[str, Path]) -> gpd.GeoDataFrame:
     """
     try:
         gdf = gpd.read_file(file_path).to_crs('EPSG:4326')
+        if filter_water:
+            gdf = filter_remove_water(gdf)
     except:
         print(f'Error on File: {file_path}')
         return None
@@ -509,34 +547,35 @@ def load_and_parse_vector(file_path: Union[str, Path]) -> gpd.GeoDataFrame:
             date, take_id, _, satellite = image_id.split('_')
         else:
             date, take_id, satellite = image_id.split('_')
-        
+
         date = f'{date[:4]}-{date[4:6]}-{date[6:]}'
         tile_id = None
-        
+
     gdf['image_id'] = image_id
     gdf['take_id'] = take_id
     gdf['tile_id'] = tile_id
     gdf['date'] = date
     gdf['year'] = pd.to_datetime(gdf['date']).dt.year
     gdf['satellite'] = satellite
-    
+
     return gdf
 
 
-
-def create_ensemble_with_negative(inference_dir: Path, 
-                                  modelnames: List[str],
-                                  ensemblename: str, 
-                                  image_id: str, 
-                                  binary_threshold: list=[0.3,0.4,0.5], 
-                                  negative_modelname: Optional[str] = None, 
-                                  negative_binary_threshold: float=0.8,
-                                  delete_proba: bool = True, 
-                                  delete_binary: bool = True,
-                                  erode_pixels: Optional[int] = None):
+def create_ensemble_with_negative(
+    inference_dir: Path,
+    modelnames: List[str],
+    ensemblename: str,
+    image_id: str,
+    binary_threshold: list = [0.3, 0.4, 0.5],
+    negative_modelname: Optional[str] = None,
+    negative_binary_threshold: float = 0.8,
+    delete_proba: bool = True,
+    delete_binary: bool = True,
+    erode_pixels: Optional[int] = None,
+):
     """
     Calculate the ensemble prediction, including optional negative class, and write outputs to disk.
-    
+
     Args:
         inference_dir (Path): Directory path for inference results.
         modelnames (List[str]): List of two model names for ensemble.
@@ -548,7 +587,7 @@ def create_ensemble_with_negative(inference_dir: Path,
         delete_proba (bool, optional): Whether to delete the probability file after processing.
         delete_binary (bool, optional): Whether to delete binary files after creating vectors.
         erode_pixels (int, optional): Number of pixels for edge erosion.
-    
+
     Returns:
         out_binary (numpy.ndarray): Binary result array.
     """
@@ -570,20 +609,19 @@ def create_ensemble_with_negative(inference_dir: Path,
             out_meta_binary = out_meta.copy()
             out_meta_binary['dtype'] = 'uint8'
 
-    
         # calculate mean of all datasets
         out = np.mean([a1, a2], axis=0)
 
         if erode_pixels:
-            #get mask
+            # get mask
             mask = np.array(np.isnan(a1), np.uint8)[0]
             selem = disk(erode_pixels)
             # Apply erosion to the mask
             eroded_mask = dilation(mask, selem)
 
-            #apply eroded_mask
+            # apply eroded_mask
             r, c = np.where(eroded_mask)
-            out[0,r,c] = np.nan
+            out[0, r, c] = np.nan
 
             out[0, :erode_pixels, :] = np.nan
             out[0, -erode_pixels:, :] = np.nan
@@ -603,11 +641,11 @@ def create_ensemble_with_negative(inference_dir: Path,
 
         # write binary raster
         for threshold in binary_threshold:
-            thresh_str = str(threshold).replace('.','')
+            thresh_str = str(threshold).replace('.', '')
             outpath_class = Path(str(outpath).replace('proba', f'class_{thresh_str}'))
             outpath_shp = outpath_class.with_suffix('.gpkg')
 
-            out_binary = (out >= threshold)
+            out_binary = out >= threshold
             with rasterio.open(outpath_class, 'w', **out_meta_binary, compress='deflate') as target:
                 target.write(out_binary)
 
@@ -625,7 +663,7 @@ def create_ensemble_with_negative(inference_dir: Path,
 
     except:
         return None
-    
+
 
 def print_processing_stats(df_final):
     """
@@ -656,3 +694,61 @@ def print_processing_stats(df_final):
     print(f'Number of images for inference: {preprocessed_images - finished_images}')
     print(f'Number of finished images: {finished_images}')
     return total_images, preprocessed_images, preprocessing_images, finished_images
+
+
+def filter_remove_water(gdf, threshold=0.2):
+    """
+    Filter a GeoDataFrame to remove features with high water coverage based on ESRI Global Land Use Land Cover data.
+
+    This function converts the input GeoDataFrame to an Earth Engine FeatureCollection,
+    uses ESRI's Global LULC 10m dataset to create a binary water mask, calculates the
+    mean water coverage for each feature, and filters out features exceeding the specified
+    water coverage threshold.
+
+    Parameters:
+    -----------
+    gdf : geopandas.GeoDataFrame
+        Input GeoDataFrame containing the features to be filtered.
+    threshold : float, optional
+        The maximum allowable proportion of water coverage for a feature to be retained.
+        Features with mean water coverage exceeding this threshold will be removed.
+        Default is 0.2 (20% water coverage).
+
+    Returns:
+    --------
+    geopandas.GeoDataFrame
+        A filtered GeoDataFrame containing only the features with water coverage
+        below or equal to the specified threshold.
+
+    Notes:
+    ------
+    - This function requires Earth Engine to be initialized.
+    - It uses the ESRI Global Land Use Land Cover 10m dataset from Earth Engine.
+    - The water mask is created by identifying pixels with a value of 1 in the LULC dataset.
+    - The function assumes a scale of 10 meters for calculations, matching the LULC dataset resolution.
+
+    Example:
+    --------
+    >>> import geopandas as gpd
+    >>> import ee
+    >>> ee.Initialize()
+    >>> gdf = gpd.read_file('path/to/your/shapefile.shp')
+    >>> filtered_gdf = filter_remove_water(gdf, threshold=0.3)
+    """
+
+    # convert gdf to ee FC
+    rts_ee = geemap.gdf_to_ee(gdf)
+    # load gee layer
+    esri_lulc2020 = ee.ImageCollection('projects/sat-io/open-datasets/landcover/ESRI_Global-LULC_10m')
+    # filter to rts footprint
+    filtered = esri_lulc2020.filterBounds(rts_ee)
+    # get binary water mask
+    water_layer = filtered.mosaic().eq(1).unmask()
+    # reduce regions and get value
+    reduced = ee.Image.reduceRegions(water_layer, rts_ee, reducer=ee.Reducer.mean(), scale=10)
+    # convert to gdf
+    gdf_out = geemap.ee_to_gdf(reduced)
+    # filter to no water
+    gdf_filtered = gdf.loc[gdf_out.query(f'mean <= {threshold}').index]
+
+    return gdf_filtered

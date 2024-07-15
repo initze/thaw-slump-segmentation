@@ -184,7 +184,7 @@ def do_inference(
             dtype=rio.float32,
             count=1,
             compress='lzw',
-            driver='COG',
+            driver='GTiff',
             # tiled=True
         )
 

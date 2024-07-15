@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.10.5] - 2024-07-15
+
+### Added
+
+- added option to remove polygons within water for ensemble
+
 ## [0.10.4] - 2024-06-14
 
 ### Changed

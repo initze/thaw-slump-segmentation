@@ -16,7 +16,6 @@ from typing_extensions import Annotated
 # from tqdm.notebook import tqdm
 from ..postprocessing import (
     create_ensemble_v2,
-    filter_remove_water,
     get_processing_status,
     get_processing_status_ensemble,
     load_and_parse_vector,
@@ -130,7 +129,9 @@ def process_03_ensemble(
             len(flist)
             # load them in parallel
             print(f'Loading results {proba_string}')
-            out = Parallel(n_jobs=6)(delayed(load_and_parse_vector)(f, filter_water=filter_water) for f in tqdm(flist[:max_images]))
+            out = Parallel(n_jobs=6)(
+                delayed(load_and_parse_vector)(f, filter_water=filter_water) for f in tqdm(flist[:max_images])
+            )
             # merge them and save to geopackage file
             print('Merging results')
             merged_gdf = gpd.pd.concat(out)

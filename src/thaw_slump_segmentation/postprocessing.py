@@ -733,7 +733,7 @@ def filter_remove_water(gdf, threshold=0.2):
     >>> import ee
     >>> ee.Initialize()
     >>> gdf = gpd.read_file('path/to/your/shapefile.shp')
-    >>> filtered_gdf = filter_remove_water(gdf, threshold=0.3)
+    >>> filtered_gdf = filter_remove_water(gdf, threshold=0.2)
     """
 
     # convert gdf to ee FC

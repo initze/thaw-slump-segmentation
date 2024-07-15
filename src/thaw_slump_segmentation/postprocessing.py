@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import List, Optional, Union
 
 import ee
-import geemap
 import geopandas as gpd
 import numpy as np
 import pandas as pd
@@ -737,7 +736,7 @@ def filter_remove_water(gdf, threshold=0.2):
     """
 
     # convert gdf to ee FC
-    rts_ee = geemap.gdf_to_ee(gdf)
+    rts_ee = ee.FeatureCollection(gdf.__geo_interface__)
     # load gee layer
     esri_lulc2020 = ee.ImageCollection('projects/sat-io/open-datasets/landcover/ESRI_Global-LULC_10m')
     # filter to rts footprint
@@ -747,7 +746,7 @@ def filter_remove_water(gdf, threshold=0.2):
     # reduce regions and get value
     reduced = ee.Image.reduceRegions(water_layer, rts_ee, reducer=ee.Reducer.mean(), scale=10)
     # convert to gdf
-    gdf_out = geemap.ee_to_gdf(reduced)
+    gdf_out = ee.data.computeFeatures({'expression': reduced, 'fileFormat': 'GEOPANDAS_GEODATAFRAME'})
     # filter to no water
     gdf_filtered = gdf.loc[gdf_out.query(f'mean <= {threshold}').index]
 

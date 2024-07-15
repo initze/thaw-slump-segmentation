@@ -31,7 +31,7 @@ This will pull the CUDA 12 version of pytorch. If you are running CUDA 11, you n
 
 #### cucim
 
-You can install cucim to speed up the postprocessing process. cucim will use the gpu to perform binary erosion of edge artifacts, which runs alot faster than the standard CPU implementation of scikit-learn.
+You can install cucim to speed up the postprocessing process. cucim will use the gpu to perform binary erosion of edge artifacts, which runs a lot faster than the standard CPU implementation of scikit-learn.
 
 `pip install --extra-index-url=https://pypi.nvidia.com cucim-cu11==24.4.*`
 

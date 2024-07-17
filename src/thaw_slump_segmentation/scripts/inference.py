@@ -240,7 +240,10 @@ def inference(
         str, typer.Option('--name', '-n', help='Name of inference run, data will be stored in subdirectory')
     ],
     model_path: Annotated[str, typer.Argument(help='path to model, use the model base path')],
-    tile_to_predict: Annotated[List[str], typer.Argument(help='path to model')],
+    tile_to_predict: Annotated[
+        List[str], 
+        typer.Argument(help='one or multiple IDs of tiles/scenes, primarily the PLANET-IDs (e.g. "20230807_195407_62_248c")')
+        ],
     gdal_bin: Annotated[str, typer.Option('--gdal_bin', help='Path to gdal binaries', envvar='GDAL_BIN')] = '/usr/bin',
     gdal_path: Annotated[
         str, typer.Option('--gdal_path', help='Path to gdal scripts', envvar='GDAL_PATH')
@@ -340,7 +343,12 @@ def main():
     parser.add_argument('-m', '--margin_size', default=256, type=int, help='Size of patch overlap')
     parser.add_argument('-p', '--patch_size', default=1024, type=int, help='Size of patches')
     parser.add_argument('model_path', type=str, help='path to model, use the model base path')
-    parser.add_argument('tile_to_predict', type=str, help='path to model', nargs='+')
+    parser.add_argument(
+        'tile_to_predict', 
+        type=str, 
+        help='IDs of tiles/scenes, primarily the PLANET-IDs (e.g. "20230807_195407_62_248c" )',
+        nargs='+'
+        )
 
     args = parser.parse_args()
 

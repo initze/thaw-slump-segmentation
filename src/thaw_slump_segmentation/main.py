@@ -1,9 +1,7 @@
 import typer
 
-from thaw_slump_segmentation.scripts.download_s2_4band_planet_format import download_s2_4band_planet_format
 from thaw_slump_segmentation.scripts.inference import inference
 from thaw_slump_segmentation.scripts.prepare_data import prepare_data
-from thaw_slump_segmentation.scripts.prepare_s2_4band_planet_format import prepare_s2_4band_planet_format
 from thaw_slump_segmentation.scripts.process_02_inference import process_02_inference
 from thaw_slump_segmentation.scripts.process_03_ensemble import process_03_ensemble
 from thaw_slump_segmentation.scripts.setup_raw_data import setup_raw_data
@@ -35,8 +33,8 @@ cli.command()(inference)
 
 data_cli = typer.Typer()
 
-data_cli.command('download-planet')(download_s2_4band_planet_format)
-data_cli.command('prepare-planet')(prepare_s2_4band_planet_format)
+#data_cli.command('download-planet')(download_s2_4band_planet_format)
+#data_cli.command('prepare-planet')(prepare_s2_4band_planet_format)
 data_cli.command('setup-raw')(setup_raw_data)
 data_cli.command('prepare')(prepare_data)
 

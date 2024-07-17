@@ -44,8 +44,6 @@ dependencies = [
     "opencv-python>=4.9.0.80",
     "swifter>=1.4.0",
     "mkdocs-awesome-pages-plugin>=2.9.2",
-    "ruff>=0.4.8",
-    "ipykernel>=6.29.4",
     "rich>=13.7.1",
     "torchsummary>=1.5.1",
     "typer>=0.12.3",
@@ -72,10 +70,13 @@ build-backend = "hatchling.build"
 [tool.rye]
 managed = true
 dev-dependencies = [
+    "ruff>=0.4.2",
+    "ipykernel>=6.29.4",
     "ipython>=8.23.0",
     "mkdocs-material>=9.5.19",
     "mkdocstrings[python]>=0.24.3",
     "mkdocs-gen-files>=0.5.0",
+    "pytest>=8.2.2",
 ]
 
 [tool.hatch.metadata]
@@ -94,3 +95,6 @@ line-length = 120
 [tool.ruff.format]
 quote-style = "single"
 docstring-code-format = true
+
+[tool.pytest.ini_options]
+addopts = ["--import-mode=importlib"]

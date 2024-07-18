@@ -1,19 +1,19 @@
-from .unet import Unet
-from .unetplusplus import UnetPlusPlus
-from .unet3p.unet3p import Unet3Plus
-from .manet import MAnet
-from .linknet import Linknet
-from .fpn import FPN
-from .pspnet import PSPNet
-from .deeplabv3 import DeepLabV3, DeepLabV3Plus
-from .pan import PAN
+from thaw_slump_segmentation.models.unet import Unet
+from thaw_slump_segmentation.models.unetplusplus import UnetPlusPlus
+from thaw_slump_segmentation.models.unet3p.unet3p import Unet3Plus
+from thaw_slump_segmentation.models.manet import MAnet
+from thaw_slump_segmentation.models.linknet import Linknet
+from thaw_slump_segmentation.models.fpn import FPN
+from thaw_slump_segmentation.models.pspnet import PSPNet
+from thaw_slump_segmentation.models.deeplabv3 import DeepLabV3, DeepLabV3Plus
+from thaw_slump_segmentation.models.pan import PAN
 import torch.nn as nn
 
-from . import encoders
-from . import utils
-from . import losses
+from thaw_slump_segmentation.models import encoders
+from thaw_slump_segmentation.models import utils
+from thaw_slump_segmentation.models import losses
 
-from .__version__ import __version__
+from thaw_slump_segmentation.models.__version__ import __version__
 
 from typing import Optional
 import torch

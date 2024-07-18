@@ -25,12 +25,12 @@ import yaml
 from tqdm import tqdm
 from typing_extensions import Annotated
 
-from thaw_slump_segmentation.data_loading import DataSources
-from thaw_slump_segmentation.data_pre_processing import gdal
-from thaw_slump_segmentation.models import create_model
-from thaw_slump_segmentation.scripts.setup_raw_data import preprocess_directory
-from thaw_slump_segmentation.utils import get_logger, init_logging, log_run
-from thaw_slump_segmentation.utils.plot_info import flatui_cmap
+from ..data_loading import DataSources
+from ..data_pre_processing import gdal
+from ..models import create_model
+from ..scripts.setup_raw_data import preprocess_directory
+from ..utils import get_logger, init_logging, log_run
+from ..utils.plot_info import flatui_cmap
 
 cmap_prob = flatui_cmap('Midnight Blue', 'Alizarin')
 cmap_dem = flatui_cmap('Alizarin', 'Clouds', 'Peter River')

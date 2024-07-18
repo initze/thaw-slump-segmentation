@@ -4,7 +4,7 @@
 # LICENSE file in the root directory of this source tree.
 
 from . import utils, earthengine, gdal, udm
-from .utils import *
-from .earthengine import *
+from utils import *
+from earthengine import *
 
 _logger = get_logger('preprocessing.ee')

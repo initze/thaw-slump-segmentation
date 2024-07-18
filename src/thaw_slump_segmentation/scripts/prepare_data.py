@@ -23,8 +23,8 @@ from joblib import Parallel, delayed
 from skimage.io import imsave
 from typing_extensions import Annotated
 
-from ..data_pre_processing import gdal
-from ..utils import get_logger, init_logging, log_run
+from thaw_slump_segmentation.data_pre_processing import gdal
+from thaw_slump_segmentation.utils import get_logger, init_logging, log_run
 
 # Paths setup
 RASTERFILTER = '*_SR*.tif'

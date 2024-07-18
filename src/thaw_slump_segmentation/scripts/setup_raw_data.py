@@ -18,8 +18,8 @@ import typer
 from joblib import Parallel, delayed
 from typing_extensions import Annotated
 
-from .. import data_pre_processing
-from ..data_pre_processing import (
+from thaw_slump_segmentation import data_pre_processing
+from thaw_slump_segmentation.data_pre_processing import (
     aux_data_to_tiles,
     check_input_data,
     gdal,
@@ -33,8 +33,7 @@ from ..data_pre_processing import (
     vector_to_raster_mask,
 )
 
-# from ..data_pre_processing import *
-from ..utils import get_logger, init_logging
+from thaw_slump_segmentation.utils import get_logger, init_logging
 
 is_ee_initialized = False  # Module-global flag to avoid calling ee.Initialize multiple times
 

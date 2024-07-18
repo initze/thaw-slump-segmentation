@@ -14,7 +14,7 @@ from tqdm import tqdm
 from typing_extensions import Annotated
 import swifter
 
-from ..postprocessing import (
+from thaw_slump_segmentation.postprocessing import (
     copy_unprocessed_files,
     get_processing_status,
     load_and_parse_vector,

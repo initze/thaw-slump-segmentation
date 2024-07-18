@@ -46,9 +46,9 @@ from typing_extensions import Annotated
 
 import wandb
 
-from ..data_loading import DataSources, get_loader, get_slump_loader, get_vis_loader
-from ..models import create_loss, create_model
-from ..utils import get_logger, init_logging, showexample, yaml_custom
+from thaw_slump_segmentation.data_loading import DataSources, get_loader, get_slump_loader, get_vis_loader
+from thaw_slump_segmentation.models import create_loss, create_model
+from thaw_slump_segmentation.utils import get_logger, init_logging, showexample, yaml_custom
 
 traceback.install(show_locals=True)
 pretty.install()

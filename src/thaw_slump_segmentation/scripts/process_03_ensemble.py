@@ -14,7 +14,7 @@ from tqdm import tqdm
 from typing_extensions import Annotated
 
 # from tqdm.notebook import tqdm
-from ..postprocessing import (
+from thaw_slump_segmentation.postprocessing import (
     create_ensemble_v2,
     get_processing_status,
     get_processing_status_ensemble,

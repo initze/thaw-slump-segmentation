@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 import rasterio
 from skimage.morphology import binary_dilation, dilation, disk, label, remove_small_objects
+from thaw_slump_segmentation.scripts.inference import inference
 
 try:
     import cupy as cp
@@ -31,18 +32,28 @@ def run_inference(
     inference_dir,
     model_dir=Path('/isipd/projects/p_aicore_pf/initze/models/thaw_slumps'),
     gpu=0,
-    run=False,
     patch_size=1024,
     margin_size=256,
+    **kwargs # consume legacy args (run)
 ):
     if len(df) == 0:
         print('Empty dataframe')
     else:
-        tiles = ' '.join(df.name.values)
-        run_string = f"CUDA_VISIBLE_DEVICES='{gpu}' inference -n {model} --data_dir {processing_dir} --inference_dir {inference_dir}  --patch_size {patch_size} --margin_size {margin_size} {model_dir/model} {tiles}"
-        print(run_string)
-        if run:
-            os.system(run_string)
+        # CUDA_VISIBLE_DEVICES (see https://developer.nvidia.com/blog/cuda-pro-tip-control-gpu-visibility-cuda_visible_devices/)
+        # comma-separated list of device IDs 
+        try:
+            gpu_csv = ",".join(gpu)
+        except TypeError:
+            gpu_csv = gpu
+        os.environ["CUDA_VISIBLE_DEVICES"]=str(gpu_csv)
+        print(f" run_inference with GPU {gpu_csv}")
+        inference(
+            name=model,
+            data_dir=processing_dir, inference_dir=inference_dir, 
+            patch_size=patch_size, margin_size=margin_size, 
+            model_path=model_dir/model, 
+            tile_to_predict=df.name.values
+            )
 
 
 def listdirs(rootdir):

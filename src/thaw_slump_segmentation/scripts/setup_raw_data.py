@@ -127,8 +127,9 @@ def setup_raw_data(
     logger.info('# Starting Raw Data Setup #')
     logger.info('###########################')
 
+    logger.info(f"images to preprocess in {INPUT_DATA_DIR}")
     dir_list = check_input_data(INPUT_DATA_DIR)
-    print(dir_list)
+    [logger.info(f" * '{f.relative_to(INPUT_DATA_DIR)}'") for f in dir_list ]
     if len(dir_list) > 0:
         if n_jobs == 0:
             for image_dir in dir_list:

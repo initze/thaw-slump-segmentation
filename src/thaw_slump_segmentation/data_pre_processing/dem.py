@@ -75,8 +75,7 @@ def buildDemVrt(
 
         ds_path = dem_data_dir / subdir
         filelist = [ str(f.absolute().resolve()) for f in ds_path.glob("*.tif") ]
-        print(f"{len(filelist)} files for {name}")
-        print(f" --> '{output_file_path}'")
+        l.info(f"{len(filelist)} files for {name}\n --> '{output_file_path}'")
         src_nodata = "nan" if name=="slope" else 0
         gdal.BuildVRT( str(output_file_path.absolute()), filelist, options=gdal.BuildVRTOptions(srcNodata=src_nodata, VRTNodata=0) )
 

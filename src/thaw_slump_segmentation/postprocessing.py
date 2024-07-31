@@ -34,6 +34,8 @@ def run_inference(
     gpu=0,
     patch_size=1024,
     margin_size=256,
+    gdal_bin = "/usr/bin",
+    gdal_path = "/usr/bin",
     **kwargs # consume legacy args (run)
 ):
     if len(df) == 0:
@@ -52,7 +54,8 @@ def run_inference(
             data_dir=processing_dir, inference_dir=inference_dir, 
             patch_size=patch_size, margin_size=margin_size, 
             model_path=model_dir/model, 
-            tile_to_predict=df.name.values
+            tile_to_predict=df.name.values,
+            gdal_bin=gdal_bin, gdal_path=gdal_path
             )
 
 

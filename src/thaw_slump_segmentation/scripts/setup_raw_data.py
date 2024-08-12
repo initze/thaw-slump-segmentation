@@ -43,6 +43,46 @@ SUCCESS_STATES = ['rename', 'label', 'ndvi', 'tcvis', 'rel_dem', 'slope', 'mask'
 
 
 def preprocess_directory(image_dir, data_dir, aux_dir, backup_dir, log_path, gdal_bin, gdal_path, label_required=True):
+    """Preprocess a folder of a source imagery dataset to use in the inference processing.
+    Notably this method generates additional data files to be used as auxiliary input of the inference
+    model: DEM derived data (relative elevation and slope), NDVI and the landsat trend data (tcvis).
+
+    In particular, the extend of the imagery in image_dir is used to generate a regional excerpt of the
+    other data from the aux_dir as well as Google Earth Engine and the input data itself. The regional
+    excerpts are stored as GeoTIFF alongside the source data in the data_dir folder.
+
+    Additionally, some data is copied to `backup_dir`.
+
+    GDAL is heavily used in the preprocessing, so the paths to a working gdal environment are required, 
+    usually the platform binaries or installed via conda.
+
+    To accesss data in Google Earth Engine this method will authenticate with the Google Earth Engine API,
+    so an active account at GEE is required.
+
+    The method returns a dictionary describing the success states of each processing stage. The keys are:
+    * rename
+    * label
+    * ndvi
+    * tcvis
+    * rel_dem
+    * slope
+    * mask
+    * move
+
+    Args:
+        image_dir (Path): The source folder
+        data_dir (Path): The folder where to store the preprocessed dataset
+        aux_dir (Path): source of auxiliary data, for now the DEM VRT files
+        backup_dir (Path): path to a folder where to store backups of the input data
+        log_path (Path): path where to write logging
+        gdal_bin (Path): Path to a folder with the gdal_binaries (gdalwarp etc.)
+        gdal_path (_type_): Path to a folder with gdal_scripts (gdal_retile.py etc)
+        label_required (bool, optional): If label data should be baked into the source data. Defaults to True.
+
+    Returns:
+        dict: a dictionary with the results of the individual processing stages
+    """
+    
     # Mock old args object
     gdal.initialize(bin=gdal_bin, path=gdal_path)
 

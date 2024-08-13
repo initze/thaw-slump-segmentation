@@ -132,8 +132,9 @@ def preprocess_directory(image_dir, data_dir, aux_dir, backup_dir, log_path, gda
     success_state['mask'] = mask_input_data(image_dir, data_dir)
 
     # backup_dir_full = os.path.join(backup_dir, os.path.basename(image_dir))
-    backup_dir_full = backup_dir / image_dir.name
-    success_state['move'] = move_files(image_dir, backup_dir_full)
+    if backup_dir is not None:
+        backup_dir_full = backup_dir / image_dir.name
+        success_state['move'] = move_files(image_dir, backup_dir_full)
 
     for status in SUCCESS_STATES:
         thread_logger.info(status + ': ' + STATUS[success_state[status]])

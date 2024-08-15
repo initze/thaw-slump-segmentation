@@ -60,6 +60,7 @@ prepare_data = "thaw_slump_segmentation.scripts.prepare_data:main"
 setup_raw_data = "thaw_slump_segmentation.scripts.setup_raw_data:setup_raw_data"
 train = "thaw_slump_segmentation.scripts.train:main"
 thaw-slump-segmentation = "thaw_slump_segmentation.main:cli"
+build_dem_vrt = "thaw_slump_segmentation.data_pre_processing.dem:buildDemVrtMain"
 
 [build-system]
 requires = ["hatchling"]

@@ -3,7 +3,9 @@ from typing import Any, Literal, Optional, Sequence
 import torch
 import torchvision
 from torch import Tensor
+from torchmetrics import Metric
 from torchmetrics.classification.stat_scores import _AbstractStatScores
+from torchmetrics.functional.classification.f_beta import _binary_fbeta_score_arg_validation, _fbeta_reduce
 from torchmetrics.functional.classification.precision_recall import _precision_recall_reduce
 from torchmetrics.functional.classification.stat_scores import (
     _binary_stat_scores_arg_validation,
@@ -135,8 +137,6 @@ def erode_pytorch(mask: torch.Tensor, iterations: int = 1) -> torch.Tensor:
     assert mask.dim() == 3, f'Expected 3 dimensions, got {mask.dim()}'
     assert mask.dtype == torch.uint8, f'Expected torch.uint8, got {mask.dtype}'
     assert mask.min() >= 0 and mask.max() <= 1, f'Expected binary mask, got {mask.min()} and {mask.max()}'
-
-    n, h, w = mask.shape
 
     kernel = torch.ones(1, 1, 3, 3, device=mask.device)
     erode = torch.nn.functional.conv2d(mask.float().unsqueeze(1), kernel, padding=1, stride=1)
@@ -318,3 +318,135 @@ class BinaryInstanceRecall(BinaryInstanceStatScores):
         ax: Optional[_AX_TYPE] = None,  # type: ignore
     ) -> _PLOT_OUT_TYPE:  # type: ignore
         return self._plot(val, ax)
+
+
+class BinaryInstancePrecision(BinaryInstanceStatScores):
+    is_differentiable: bool = False
+    higher_is_better: Optional[bool] = True
+    full_state_update: bool = False
+    plot_lower_bound: float = 0.0
+    plot_upper_bound: float = 1.0
+
+    def compute(self) -> Tensor:
+        """Compute metric."""
+        tp, fp, tn, fn = self._final_state()
+        return _precision_recall_reduce(
+            'precision',
+            tp,
+            fp,
+            tn,
+            fn,
+            average='binary',
+            multidim_average=self.multidim_average,
+            zero_division=self.zero_division,
+        )
+
+    def plot(
+        self,
+        val: Optional[Tensor | Sequence[Tensor]] = None,
+        ax: Optional[_AX_TYPE] = None,  # type: ignore
+    ) -> _PLOT_OUT_TYPE:  # type: ignore
+        return self._plot(val, ax)
+
+
+class BinaryInstanceFBetaScore(BinaryInstanceStatScores):
+    is_differentiable: bool = False
+    higher_is_better: Optional[bool] = True
+    full_state_update: bool = False
+    plot_lower_bound: float = 0.0
+    plot_upper_bound: float = 1.0
+
+    def __init__(
+        self,
+        beta: float,
+        threshold: float = 0.5,
+        multidim_average: Literal['global', 'samplewise'] = 'global',
+        ignore_index: Optional[int] = None,
+        validate_args: bool = True,
+        zero_division: float = 0,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(
+            threshold=threshold,
+            multidim_average=multidim_average,
+            ignore_index=ignore_index,
+            validate_args=False,
+            **kwargs,
+        )
+        if validate_args:
+            _binary_fbeta_score_arg_validation(beta, threshold, multidim_average, ignore_index, zero_division)
+        self.validate_args = validate_args
+        self.zero_division = zero_division
+        self.beta = beta
+
+    def compute(self) -> Tensor:
+        """Compute metric."""
+        tp, fp, tn, fn = self._final_state()
+        return _fbeta_reduce(
+            tp,
+            fp,
+            tn,
+            fn,
+            self.beta,
+            average='binary',
+            multidim_average=self.multidim_average,
+            zero_division=self.zero_division,
+        )
+
+    def plot(
+        self,
+        val: Optional[Tensor | Sequence[Tensor]] = None,
+        ax: Optional[_AX_TYPE] = None,  # type: ignore
+    ) -> _PLOT_OUT_TYPE:  # type: ignore
+        return self._plot(val, ax)
+
+
+class BinaryInstanceF1Score(BinaryInstanceFBetaScore):
+    def __init__(
+        self,
+        threshold: float = 0.5,
+        multidim_average: Literal['global', 'samplewise'] = 'global',
+        ignore_index: Optional[int] = None,
+        validate_args: bool = True,
+        zero_division: float = 0,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(
+            beta=1.0,
+            threshold=threshold,
+            multidim_average=multidim_average,
+            ignore_index=ignore_index,
+            validate_args=validate_args,
+            zero_division=zero_division,
+            **kwargs,
+        )
+
+    def plot(
+        self,
+        val: Optional[Tensor | Sequence[Tensor]] = None,
+        ax: Optional[_AX_TYPE] = None,  # type: ignore
+    ) -> _PLOT_OUT_TYPE:  # type: ignore
+        return self._plot(val, ax)
+
+
+class BinaryBoundaryIoU(Metric):
+    intersection: Tensor
+    union: Tensor
+
+    is_differentiable: bool = False
+    higher_is_better: Optional[bool] = True
+    full_state_update: bool = False
+    plot_lower_bound: float = 0.0
+    plot_upper_bound: float = 1.0
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.add_state('intersection', default=torch.tensor(0), dist_reduce_fx='sum')
+        self.add_state('union', default=torch.tensor(0), dist_reduce_fx='sum')
+
+    def update(self, preds: Tensor, target: Tensor) -> None:
+        # TODO: Implement
+        pass
+
+    def compute(self) -> Tensor:
+        return self.intersection / self.union

@@ -1,5 +1,11 @@
 import torch
-from thaw_slump_segmentation.metrics import BinaryInstanceRecall, mask_to_instances, match_instances
+from thaw_slump_segmentation.metrics import (
+    BinaryInstanceF1Score,
+    BinaryInstancePrecision,
+    BinaryInstanceRecall,
+    mask_to_instances,
+    match_instances,
+)
 from torchmetrics.functional.classification.stat_scores import (
     _binary_stat_scores_tensor_validation,
 )
@@ -51,6 +57,20 @@ def create_test_images():
 def test_binary_instance_recall():
     preds, target = create_test_images()
     metric = BinaryInstanceRecall()
+    metric.update(preds, target)
+    print(metric.compute())
+
+
+def test_binary_instance_precision():
+    preds, target = create_test_images()
+    metric = BinaryInstancePrecision()
+    metric.update(preds, target)
+    print(metric.compute())
+
+
+def test_binary_instance_f1_score():
+    preds, target = create_test_images()
+    metric = BinaryInstanceF1Score()
     metric.update(preds, target)
     print(metric.compute())
 
@@ -112,3 +132,6 @@ def test_stat_score_update():
 
 
 test_stat_score_update()
+test_binary_instance_recall()
+test_binary_instance_precision()
+test_binary_instance_f1_score()

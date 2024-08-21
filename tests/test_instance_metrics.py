@@ -1,5 +1,6 @@
 import torch
 from thaw_slump_segmentation.metrics import (
+    BinaryInstanceAccuracy,
     BinaryInstanceF1Score,
     BinaryInstancePrecision,
     BinaryInstanceRecall,
@@ -75,6 +76,13 @@ def test_binary_instance_f1_score():
     print(metric.compute())
 
 
+def test_binary_instance_accuracy():
+    preds, target = create_test_images()
+    metric = BinaryInstanceAccuracy()
+    metric.update(preds, target)
+    print(metric.compute())
+
+
 def format_and_validate(preds, target, validate_args, multidim_average, ignore_index, threshold):
     if validate_args:
         _binary_stat_scores_tensor_validation(preds, target, multidim_average, ignore_index)
@@ -131,7 +139,9 @@ def test_stat_score_update():
     print(res)
 
 
-test_stat_score_update()
-test_binary_instance_recall()
-test_binary_instance_precision()
-test_binary_instance_f1_score()
+if __name__ == '__main__':
+    test_stat_score_update()
+    test_binary_instance_recall()
+    test_binary_instance_precision()
+    test_binary_instance_f1_score()
+    test_binary_instance_accuracy()

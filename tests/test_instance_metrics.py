@@ -4,9 +4,8 @@ from thaw_slump_segmentation.metrics import (
     BinaryInstanceF1Score,
     BinaryInstancePrecision,
     BinaryInstanceRecall,
-    mask_to_instances,
-    match_instances,
 )
+from thaw_slump_segmentation.metrics.instance_helpers import mask_to_instances, match_instances
 from torchmetrics.functional.classification.stat_scores import (
     _binary_stat_scores_tensor_validation,
 )

@@ -13,11 +13,13 @@ from torchmetrics.functional.classification.stat_scores import (
 
 
 def create_test_images():
+
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     # Simulate a batch of 4 images with 2 instances each, an instance is a random sizes blob on the image
     n, h, w = 8, 256, 256
 
-    target = torch.zeros(n, h, w)
-    preds = torch.zeros(n, h, w, dtype=torch.float32)
+    target = torch.zeros(n, h, w, device=device)
+    preds = torch.zeros(n, h, w, dtype=torch.float32, device=device)
     # Image 1: A single square in a corner with offset in prediction
     target[0, 10:120, 10:120] = 1
     preds[0, 20:110, 5:125] = 0.8

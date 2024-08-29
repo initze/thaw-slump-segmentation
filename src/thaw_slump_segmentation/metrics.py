@@ -19,7 +19,6 @@ from torchmetrics.utilities.plot import _AX_TYPE, _PLOT_OUT_TYPE
 try:
     import cupy as cp
     from cucim.skimage.measure import label as label_cucim
-
     CUCIM_AVAILABLE = True
 except ImportError:
     CUCIM_AVAILABLE = False
@@ -44,7 +43,8 @@ def mask_to_instances(x: torch.Tensor) -> list[torch.Tensor]:
     assert x.min() >= 0 and x.max() <= 1, f'Expected binary mask, got {x.min()} and {x.max()}'
 
     if CUCIM_AVAILABLE:
-        assert x.device == torch.device('cuda'), f'Expected CUDA device, got {x.device}'
+        # Check if device is cuda
+        assert x.device.type == 'cuda', f'Expected device to be cuda, got {x.device.type}'
         x = cp.asarray(x).astype(cp.uint8)
 
         instances = []
@@ -512,8 +512,8 @@ class BinaryBoundaryIoU(Metric):
             raise ValueError('Argument `ignore_index` is not supported for this metric yet.')
 
         if multidim_average == 'samplewise':
-            self.add_state('intersection', default=list(), dist_reduce_fx='cat')
-            self.add_state('union', default=list(), dist_reduce_fx='cat')
+            self.add_state('intersection', default=[], dist_reduce_fx='cat')
+            self.add_state('union', default=[], dist_reduce_fx='cat')
         else:
             self.add_state('intersection', default=torch.tensor(0), dist_reduce_fx='sum')
             self.add_state('union', default=torch.tensor(0), dist_reduce_fx='sum')

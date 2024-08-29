@@ -61,6 +61,12 @@ setup_raw_data = "thaw_slump_segmentation.scripts.setup_raw_data:setup_raw_data"
 train = "thaw_slump_segmentation.scripts.train:main"
 thaw-slump-segmentation = "thaw_slump_segmentation.main:cli"
 
+[project.optional-dependencies]
+cuda = [
+    "cupy-cuda12x>=13.3.0",
+    "cucim-cu12==24.8.*",
+]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
@@ -76,6 +82,11 @@ dev-dependencies = [
     "mkdocs-gen-files>=0.5.0",
     "pytest>=8.2.2",
 ]
+
+[[tool.rye.sources]]
+name = "nvidia"
+url = "https://pypi.nvidia.com"
+
 
 [tool.hatch.metadata]
 allow-direct-references = true

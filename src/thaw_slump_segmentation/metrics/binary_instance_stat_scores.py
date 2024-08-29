@@ -13,6 +13,7 @@ from torchmetrics.functional.classification.stat_scores import (
 )
 from torchmetrics.utilities.plot import _AX_TYPE, _PLOT_OUT_TYPE
 
+from thaw_slump_segmentation.metrics.boundary_helpers import _boundary_arg_validation
 from thaw_slump_segmentation.metrics.instance_helpers import mask_to_instances, match_instances
 
 MatchingMetric = Literal['iou', 'boundary']
@@ -46,18 +47,7 @@ class BinaryInstanceStatScores(_AbstractStatScores):
         super(_AbstractStatScores, self).__init__(**kwargs)
         if validate_args:
             _binary_stat_scores_arg_validation(threshold, multidim_average, ignore_index, zero_division)
-            if not (isinstance(matching_threshold, float) and (0 <= matching_threshold <= 1)):
-                raise ValueError(
-                    f'Expected arg `matching_threshold` to be a float in the [0,1] range, but got {matching_threshold}.'
-                )
-            if matching_metric not in ['iou', 'boundary']:
-                raise ValueError(
-                    f'Expected argument `matching_metric` to be either "iou" or "boundary", but got {matching_metric}.'
-                )
-            if not isinstance(boundary_dilation, (float, int)) and matching_metric == 'boundary':
-                raise ValueError(
-                    f'Expected argument `boundary_dilation` to be a float or int, but got {boundary_dilation}.'
-                )
+            _boundary_arg_validation(matching_threshold, matching_metric, boundary_dilation)
 
         self.threshold = threshold
         self.matching_threshold = matching_threshold
@@ -78,12 +68,8 @@ class BinaryInstanceStatScores(_AbstractStatScores):
         """Update state with predictions and targets."""
         if self.validate_args:
             _binary_stat_scores_tensor_validation(preds, target, self.multidim_average, self.ignore_index)
-            if not preds.shape == target.shape:
-                raise ValueError(
-                    f'Expected `preds` and `target` to have the same shape, but got {preds.shape} and {target.shape}.'
-                )
             if not preds.dim() == 3:
-                raise ValueError(f'Expected `preds` and `target` to have 3 dimensions, but got {preds.dim()}.')
+                raise ValueError(f'Expected `preds` and `target` to have 3 dimensions (BHW), but got {preds.dim()}.')
 
         # Format
         if preds.is_floating_point():

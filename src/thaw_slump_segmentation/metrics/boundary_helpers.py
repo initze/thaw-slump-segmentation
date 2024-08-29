@@ -7,6 +7,21 @@ import torchvision
 MatchingMetric = Literal['iou', 'boundary']
 
 
+def _boundary_arg_validation(
+    matching_threshold: float = 0.5, matching_metric: MatchingMetric = 'iou', boundary_dilation: float | int = 0.02
+):
+    if not (isinstance(matching_threshold, float) and (0 <= matching_threshold <= 1)):
+        raise ValueError(
+            f'Expected arg `matching_threshold` to be a float in the [0,1] range, but got {matching_threshold}.'
+        )
+    if matching_metric not in ['iou', 'boundary']:
+        raise ValueError(
+            f'Expected argument `matching_metric` to be either "iou" or "boundary", but got {matching_metric}.'
+        )
+    if not isinstance(boundary_dilation, (float, int)) and matching_metric == 'boundary':
+        raise ValueError(f'Expected argument `boundary_dilation` to be a float or int, but got {boundary_dilation}.')
+
+
 @torch.no_grad()
 def erode_pytorch(mask: torch.Tensor, iterations: int = 1, validate_args: bool = False) -> torch.Tensor:
     """Erodes a binary mask using a square kernel in PyTorch.

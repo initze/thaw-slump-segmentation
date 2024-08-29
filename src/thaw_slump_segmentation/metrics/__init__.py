@@ -6,6 +6,7 @@ from thaw_slump_segmentation.metrics.binary_instance_prc import (
 )
 from thaw_slump_segmentation.metrics.binary_instance_stat_scores import (
     BinaryInstanceAccuracy,
+    BinaryInstanceConfusionMatrix,
     BinaryInstanceF1Score,
     BinaryInstanceFBetaScore,
     BinaryInstancePrecision,

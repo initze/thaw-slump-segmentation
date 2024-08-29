@@ -1,4 +1,4 @@
-from typing import Any, Literal, Optional, Sequence
+from typing import Any, List, Literal, Optional, Sequence
 
 import torch
 from torch import Tensor
@@ -11,7 +11,7 @@ from torchmetrics.functional.classification.stat_scores import (
     _binary_stat_scores_compute,
     _binary_stat_scores_tensor_validation,
 )
-from torchmetrics.utilities.plot import _AX_TYPE, _PLOT_OUT_TYPE
+from torchmetrics.utilities.plot import _AX_TYPE, _CMAP_TYPE, _PLOT_OUT_TYPE, plot_confusion_matrix
 
 from thaw_slump_segmentation.metrics.boundary_helpers import _boundary_arg_validation
 from thaw_slump_segmentation.metrics.instance_helpers import mask_to_instances, match_instances
@@ -267,3 +267,42 @@ class BinaryInstanceF1Score(BinaryInstanceFBetaScore):
         ax: Optional[_AX_TYPE] = None,  # type: ignore
     ) -> _PLOT_OUT_TYPE:  # type: ignore
         return self._plot(val, ax)
+
+class BinaryInstanceConfusionMatrix(BinaryInstanceStatScores):
+    is_differentiable: bool = False
+    higher_is_better: Optional[bool] = None
+    full_state_update: bool = False
+
+    def __init__(
+        self,
+        normalize: Optional[bool] = None,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(**kwargs)
+        if normalize is not None and not isinstance(normalize, bool):
+            raise ValueError(f"Argument `normalize` needs to be of bool type but got {type(normalize)}")
+        self.normalize = normalize
+
+    def compute(self) -> Tensor:
+        """Compute the final statistics."""
+        tp, fp, tn, fn = self._final_state()
+        # tn is always 0
+        if self.normalize:
+            all = tp + fp + fn
+            return torch.Tensor([[0, fp / all], [fn / all, tp / all]], device=tp.device)
+        else:
+            return torch.Tensor([[tn, fp], [fn, tp]], device=tp.device)
+
+    def plot(
+        self,
+        val: Optional[Tensor] = None,
+        ax: Optional[_AX_TYPE] = None,  # type: ignore
+        add_text: bool = True,
+        labels: Optional[List[str]] = None,  # type: ignore
+        cmap: Optional[_CMAP_TYPE] = None,  # type: ignore
+    ) -> _PLOT_OUT_TYPE: # type: ignore
+        val = val or self.compute()
+        if not isinstance(val, Tensor):
+            raise TypeError(f"Expected val to be a single tensor but got {val}")
+        fig, ax = plot_confusion_matrix(val, ax=ax, add_text=add_text, labels=labels, cmap=cmap)
+        return fig, ax

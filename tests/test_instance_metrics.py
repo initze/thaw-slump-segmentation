@@ -2,6 +2,7 @@ import torch
 from thaw_slump_segmentation.metrics import (
     BinaryInstanceAccuracy,
     BinaryInstanceAveragePrecision,
+    BinaryInstanceConfusionMatrix,
     BinaryInstanceF1Score,
     BinaryInstancePrecision,
     BinaryInstancePrecisionRecallCurve,
@@ -85,6 +86,12 @@ def test_binary_instance_accuracy():
     metric.update(preds, target)
     print(metric.compute())
 
+def test_binary_instance_confusion_matrix():
+    preds, target = create_test_images()
+    metric = BinaryInstanceConfusionMatrix(normalize=True)
+    metric.update(preds, target)
+    print(metric.compute())
+
 def test_binary_instance_prc():
     preds, target = create_test_images()
     metric = BinaryInstancePrecisionRecallCurve(thresholds=100)
@@ -161,3 +168,4 @@ if __name__ == '__main__':
     test_binary_instance_accuracy()
     test_binary_instance_prc()
     test_binary_instance_average_precision()
+    test_binary_instance_confusion_matrix()

@@ -289,9 +289,9 @@ class BinaryInstanceConfusionMatrix(BinaryInstanceStatScores):
         # tn is always 0
         if self.normalize:
             all = tp + fp + fn
-            return torch.Tensor([[0, fp / all], [fn / all, tp / all]], device=tp.device)
+            return torch.tensor([[0, fp / all], [fn / all, tp / all]], device=tp.device)
         else:
-            return torch.Tensor([[tn, fp], [fn, tp]], device=tp.device)
+            return torch.tensor([[tn, fp], [fn, tp]], device=tp.device)
 
     def plot(
         self,

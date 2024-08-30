@@ -21,7 +21,7 @@ except:
     CUCIM_AVAILABLE = False
     print('Using standard skimage CPU implementation')
 
-ee.Initialize()
+# ee.Initialize()
 
 
 def run_inference(

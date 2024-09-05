@@ -2,42 +2,60 @@
 
 ## Installation
 
-### Environment setup
+### Environment Setup
 
-#### Python / conda
+Prereq:
 
-We recommend using a new conda environment from scratch
+- [Rye](https://rye.astral.sh/): `curl -sSf https://rye.astral.sh/get | bash`
+- [GDAL](https://gdal.org/en/latest/index.html): `sudo apt update && sudo apt install libpq-dev gdal-bin libgdal-dev` or for HPC: `conda install conda-forge::gdal`
+- Clang: `sudo apt update && sudo apt install clang` or for HPC: `conda install conda-forge::clang_linux-64`
 
-```bash
-conda create -n thaw_slump_segmentation python=3.11 mamba -c conda-forge
-conda activate thaw_slump_segmentation
+> If you install GDAL via apt for linux you can view the supported versions here: <https://pkgs.org/search/?q=libgdal-dev>. For a finer controll over the versions please use conda.
+
+Now first check your gdal-version:
+
+```sh
+$ gdal-config --version
+3.9.2
 ```
 
-#### gdal
+And your CUDA version (if you want to use CUDA):
 
-gdal incl. gdal-utilities (preferably version >=3.6) need to be installed in your environment, e.g. with conda/mamba
-
-```bash
-mamba install gdal>=3.6 -c conda-forge
+```sh
+$ nvidia-smi
+# Now look on the top right of the table
 ```
 
-### Package Installation
+> The GDAL version is relevant, since the version of the python bindings needs to match the installed GDAL version  
+> The CUDA feature is used for `cucim` to accelerate certain image transformations.
 
-* Latest development version: `pip install git+https://github.com/initze/thaw-slump-segmentation`
+If your version is one of: `3.9.2`, `3.8.5`, `3.7.3` or `3.6.4` you can sync with the respecting command of these:
 
-This will pull the CUDA 12 version of pytorch. If you are running CUDA 11, you need to manually switch to the corresponding Pytorch package afterwards by running `pip3 install torch==2.2.0+cu118 torchvision==0.17.0+cu118 --index-url https://download.pytorch.org/whl/cu118`
+```sh
+rye sync -f --features gdal39,cuda12 # For CUDA 12 and GDAL 3.9.2
+rye sync -f --features gdal38,cuda12 # For CUDA 12 and GDAL 3.8.5
+rye sync -f --features gdal37,cuda12 # For CUDA 12 and GDAL 3.7.3
+rye sync -f --features gdal36,cuda12 # For CUDA 12 and GDAL 3.6.4
 
-### Additional packages
+rye sync -f --features gdal39,cuda11 # For CUDA 11 and GDAL 3.9.2
+rye sync -f --features gdal38,cuda11 # For CUDA 11 and GDAL 3.8.5
+rye sync -f --features gdal37,cuda11 # For CUDA 11 and GDAL 3.7.3
+rye sync -f --features gdal36,cuda11 # For CUDA 11 and GDAL 3.6.4
 
-#### cucim
+rye sync -f --features gdal39 # For CPU only and GDAL 3.9.2
+rye sync -f --features gdal38 # For CPU only and GDAL 3.8.5
+rye sync -f --features gdal37 # For CPU only and GDAL 3.7.3
+rye sync -f --features gdal36 # For CPU only and GDAL 3.6.4
+```
 
-You can install cucim to speed up the postprocessing process. cucim will use the gpu to perform binary erosion of edge artifacts, which runs a lot faster than the standard CPU implementation of scikit-learn.
+If your GDAL version is not supported (yet) please sync without GDAL and then install GDAL to an new optional group. For example, if your GDAL version is 3.8.4:
 
-`pip install --extra-index-url=https://pypi.nvidia.com cucim-cu11==24.4.*`
+```sh
+rye sync -f
+rye add --optional=gdal384 "gdal==3.8.4"
+```
 
-Installation for other cuda versions see here:
-
-<https://docs.rapids.ai/install>
+> IMPORTANT! If you installed any of clang or gdal with conda, please ensure that while installing dependencies and working on the project to have the conda environment activated in which you installed clang and or gdal.
 
 ## System and Data Setup
 

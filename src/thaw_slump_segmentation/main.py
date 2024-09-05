@@ -5,7 +5,7 @@ from thaw_slump_segmentation.scripts.prepare_data import prepare_data
 from thaw_slump_segmentation.scripts.process_02_inference import process_02_inference
 from thaw_slump_segmentation.scripts.process_03_ensemble import process_03_ensemble
 from thaw_slump_segmentation.scripts.setup_raw_data import setup_raw_data
-from thaw_slump_segmentation.scripts.train import train
+from thaw_slump_segmentation.scripts.train import sweep, train, tune
 
 # TODO: Move this comment to docs
 # GEE is used for:
@@ -26,7 +26,8 @@ def hello(name: str):
     typer.echo(f'Hello, {name}!')
     return f'Hello, {name}!'
 
-
+cli.command()(sweep)
+cli.command()(tune)
 cli.command()(train)
 cli.command()(inference)
 

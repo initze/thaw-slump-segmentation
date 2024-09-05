@@ -9,12 +9,12 @@
 Usecase 2 Training Script
 """
 
-import argparse
 import gc
 import re
 import subprocess
 import sys
 from collections import defaultdict
+from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
 
@@ -23,7 +23,7 @@ import torch
 import torch.nn as nn
 import typer
 import yaml
-from rich import pretty, traceback
+from rich import pretty, print, traceback
 from torchmetrics import (
     AUROC,
     ROC,
@@ -66,16 +66,14 @@ pretty.install()
 class Engine:
     def __init__(
         self,
-        config: Path,
+        config: dict,
         data_dir: Path,
         name: str,
         log_dir: Path,
         resume: str,
         summary: bool,
-        wandb_project: str,
-        wandb_name: str,
     ):
-        self.config = yaml.load(config.open(), Loader=yaml_custom.SaneYAMLLoader)
+        self.config = config
         self.DATA_ROOT = data_dir
         # Logging setup
         timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
@@ -159,14 +157,11 @@ class Engine:
         self.checkpoints = self.log_dir / 'checkpoints'
         self.checkpoints.mkdir()
 
-        # Weights and Biases initialization
-        print('wandb project:', wandb_project)
-        print('wandb name:', wandb_name)
-        print('config:', self.config)
-        print('entity:', 'ml4earth')
-        wandb.init(project=wandb_project, name=wandb_name, config=self.config, entity='ingmarnitze_team')
-
     def run(self):
+
+        print("\n\n=== Using Config ===\n")
+        print(self.config)
+
         for phase in self.config['schedule']:
             self.logger.info(f'Starting phase "{phase["phase"]}"')
 
@@ -179,39 +174,43 @@ class Engine:
                 self.loss_function = create_loss(scoped_get('loss_function', phase, self.config)).to(self.dev)
 
                 for step in phase['steps']:
-                    command, key = parse_step(step)
-                    self.current_key = key
-
-                    if command == 'train_on':
-                        # Training step
-                        data_loader = self.get_dataloader(key)
-                        self.train_epoch(data_loader)
-                    elif command == 'validate_on':
-                        # Validation step
-                        data_loader = self.get_dataloader(key)
-                        self.val_epoch(data_loader)
-                    elif command == 'log_images':
-                        self.logger.warn(
-                            "Step 'log_images' is deprecated. Please use 'log_images' in the phase instead."
-                        )
-                        continue
-                    else:
-                        raise ValueError(f"Unknown command '{command}'")
-
-                    # Reset the metrics after each step
-                    if self.current_key:
-                        self.metrics[self.current_key].reset()
-                        gc.collect()
-                        torch.cuda.empty_cache()
+                    self.run_step(step)
 
                 # Log images after each epoch
                 if self.phase_should_log_images:
                     self.log_images()
 
                 if self.scheduler:
-                    print('before step:', self.scheduler.get_last_lr())
+                    print("\nUpdating LR-Scheduler: ")
+                    print(f' - Before step: {self.scheduler.get_last_lr()}')
                     self.scheduler.step()
-                    print('after step:', self.scheduler.get_last_lr())
+                    print(f' - After step: {self.scheduler.get_last_lr()}')
+
+    def run_step(self, step: str):
+        command, key = parse_step(step)
+        self.current_key = key
+
+        if command == 'train_on':
+            # Training step
+            data_loader = self.get_dataloader(key)
+            self.train_epoch(data_loader)
+        elif command == 'validate_on':
+            # Validation step
+            data_loader = self.get_dataloader(key)
+            self.val_epoch(data_loader)
+        elif command == 'log_images':
+            self.logger.warn(
+                "Step 'log_images' is deprecated. Please use 'log_images' in the phase instead."
+            )
+            return
+        else:
+            raise ValueError(f"Unknown command '{command}'")
+
+        # Reset the metrics after each step
+        if self.current_key:
+            self.metrics[self.current_key].reset()
+            gc.collect()
+            torch.cuda.empty_cache()
 
     def setup_metrics(self, phase: dict):
         # Setup Metrics for this phase
@@ -583,44 +582,96 @@ def train(
     ] = None,
 ):
     """Training script"""
-    engine = Engine(config, data_dir, name, log_dir, resume, summary, wandb_project, wandb_name)
+    config = yaml.load(config.open(), Loader=yaml_custom.SaneYAMLLoader)
+    engine = Engine(config, data_dir, name, log_dir, resume, summary)
+
+    if wandb_project is not None:
+        wandb_entity = "ingmarnitze_team"
+        print("\n\n=== Using Weights & Biases ===\n")
+        print(f"Entitiy: {wandb_entity}")
+        print(f"Project: {wandb_project}")
+        print(f"Name: {wandb_name}")
+
+        wandb.init(project=wandb_project, name=wandb_name, config=config, entity=wandb_entity)
+
     engine.run()
 
 
-# ! Moving legacy argparse cli to main to maintain compatibility with the original script
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(
-        description='Training script', formatter_class=argparse.ArgumentDefaultsHelpFormatter
-    )
-    parser.add_argument('-s', '--summary', action='store_true', help='Only print model summary and return.')
-    parser.add_argument('--data_dir', default='data', type=Path, help='Path to data processing dir')
-    parser.add_argument('--log_dir', default='logs', type=Path, help='Path to log dir')
-    parser.add_argument(
-        '-n', '--name', default='', help='Give this run a name, so that it will be logged into logs/<NAME>_<timestamp>.'
-    )
-    parser.add_argument('-c', '--config', default='config.yml', type=Path, help='Specify run config to use.')
-    parser.add_argument(
-        '-r',
-        '--resume',
-        default='',
-        help='Resume from the specified checkpoint.'
-        'Can be either a run-id (e.g. "2020-06-29_18-12-03") to select the last'
-        'Can be either a run-id (e.g. "2020-06-29_18-12-03") to select the last'
-        'Overrides the resume option in the config file if given.',
-    )
-    parser.add_argument(
-        '-wp', '--wandb_project', default='thaw-slump-segmentation', help='Set a project name for weights and biases'
-    )
-    parser.add_argument('-wn', '--wandb_name', default=None, help='Set a run name for weights and biases')
+def sweep(
+    config: Annotated[Path, typer.Option('--config', '-c', help='Specify run config to use.')] = Path('config.yml'),
+    wandb_project: Annotated[
+        str, typer.Option('--wandb_project', '-wp', help='Set a project name for weights and biases')
+    ] = 'thaw-slump-segmentation',
+    wandb_name: Annotated[
+        str, typer.Option('--wandb_name', '-wn', help='Set a run name for weights and biases')
+    ] = None,
+):
+    # Create Sweep configuration
+    cfg = yaml.load(config.open(), Loader=yaml_custom.SaneYAMLLoader)
+    sweep_configuration = cfg["sweep"]
+    sweep_configuration["name"] = wandb_name
 
-    args = parser.parse_args()
-    Engine(
-        args.config,
-        args.data_dir,
-        args.name,
-        args.log_dir,
-        args.resume,
-        args.summary,
-        args.wandb_project,
-        args.wandb_name,
-    ).run()
+    # Start the sweep
+    wandb_entity = "ingmarnitze_team"
+    sweep_id = wandb.sweep(sweep=sweep_configuration, project=wandb_project, entity=wandb_entity)
+
+    print(f"Started Sweep at project {wandb_project} with ID: {sweep_id}")
+    print("Please run the following command to run an agent:\n")
+    print(f"    $ rye run thaw-slump-segmentation tune --wandb_project {wandb_project} --config {config} {sweep_id}")
+
+
+def tune(
+    sweep_id: Annotated[str, typer.Argument(help="The sweep id from weights and biases. If you don't know one, create a sweep with 'rye run thaw-slump-segmentation sweep' first.")],
+    sweep_count: Annotated[int, typer.Option(help="Set how often this worker should train")] = 10,
+    data_dir: Annotated[Path, typer.Option('--data_dir', help='Path to data processing dir')] = Path('data'),
+    log_dir: Annotated[Path, typer.Option('--log_dir', help='Path to log dir')] = Path('logs'),
+    config: Annotated[Path, typer.Option('--config', '-c', help='Specify run config to use.')] = Path('config.yml'),
+    wandb_project: Annotated[
+        str, typer.Option('--wandb_project', '-wp', help='Set a project name for weights and biases')
+    ] = 'thaw-slump-segmentation',
+):
+    # Some features are disabled by default for tuning
+    summary = False
+    resume = None
+
+    config = yaml.load(config.open(), Loader=yaml_custom.SaneYAMLLoader)
+
+    def tune_run():
+        wandb_entity = "ingmarnitze_team"
+        wandb.init(project=wandb_project, config=config, entity=wandb_entity)
+        name = wandb.run.name
+        print("\n\n=== Using Weights & Biases ===\n")
+        print(f"Entitiy: {wandb_entity}")
+        print(f"Project: {wandb_project}")
+        print(f"Name: {name}")
+
+        # Overwrite config with WandB config
+        engine_config = deepcopy(config)
+        engine_config["learning_rate"] = wandb.config["learning_rate"]
+        engine_config["model"]["architecture"] = wandb.config["architecture"]
+        engine_config["model"]["encoder"] = wandb.config["encoder"]
+
+        engine = Engine(engine_config, data_dir, name, log_dir, resume, summary)
+        engine.run()
+
+    wandb_entity = "ingmarnitze_team"
+    wandb.agent(sweep_id, function=tune_run, count=sweep_count, project=wandb_project, entity=wandb_entity)
+
+
+def overwrite_config(self, key: str | list[str], wandb_key: str = None):
+    if isinstance(key, str):
+        # If key is matching, just use the key for both, only applicable if not nested
+        wandb_key = wandb_key or key
+        if self.config[key] == "TUNE":
+            self.config[key] = wandb.config[wandb_key]
+    else:
+        assert isinstance(key, list), f"Expect type of key either be str or list, got {type(key)}"
+        if wandb_key is None:
+            raise ValueError(f"Type of key is {type(key)}, expected wandb_key to be present but got None!")
+        cfg = self.config
+        # Recurse down to nested key
+        for k in key[:-2]:
+            cfg = cfg[k]
+        k = key[-1]
+        if cfg[k] == "TUNE":
+            cfg[k] = wandb.config[wandb_key]

@@ -9,8 +9,6 @@ authors = [
     { name = "Tobias Hölzer", email = "tobias.hoelzer@awi.de" },
 ]
 dependencies = [
-    "torch==2.2.0",
-    "torchvision",
     "numpy>=1.26.3, <2",
     "efficientnet-pytorch==0.7.1",
     "wandb>=0.16.6",
@@ -63,11 +61,16 @@ thaw-slump-segmentation = "thaw_slump_segmentation.main:cli"
 build_dem_vrt = "thaw_slump_segmentation.data_pre_processing.dem:buildDemVrtMain"
 
 [project.optional-dependencies]
+cpu = ["torch==2.2.0", "torchvision==0.17.0"]
 cuda11 = [
+    "torch==2.2.0+cu118",
+    "torchvision==0.17.0+cu118",
     "cupy-cuda11x>=13.3.0",
     "cucim-cu11>=24.8.0",
 ]
 cuda12 = [
+    "torch==2.2.0+cu121",
+    "torchvision==0.17.0+cu121",
     "cupy-cuda12x>=13.3.0",
     "cucim-cu12==24.8.*",
 ]
@@ -97,16 +100,24 @@ dev-dependencies = [
 name = "nvidia"
 url = "https://pypi.nvidia.com"
 
+[[tool.rye.sources]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+
+[[tool.rye.sources]]
+name = "pytorch-cu11"
+url = "https://download.pytorch.org/whl/cu118"
+
+[[tool.rye.sources]]
+name = "pytorch-cu12"
+url = "https://download.pytorch.org/whl/cu121"
+
 
 [tool.hatch.metadata]
 allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/thaw_slump_segmentation"]
-
-# [[tool.rye.sources]]
-# name = "pytorch"
-# url = "https://download.pytorch.org/whl/cu118"
 
 [tool.ruff]
 line-length = 120

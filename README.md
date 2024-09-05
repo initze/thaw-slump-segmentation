@@ -42,10 +42,10 @@ rye sync -f --features gdal38,cuda11 # For CUDA 11 and GDAL 3.8.5
 rye sync -f --features gdal37,cuda11 # For CUDA 11 and GDAL 3.7.3
 rye sync -f --features gdal36,cuda11 # For CUDA 11 and GDAL 3.6.4
 
-rye sync -f --features gdal39 # For CPU only and GDAL 3.9.2
-rye sync -f --features gdal38 # For CPU only and GDAL 3.8.5
-rye sync -f --features gdal37 # For CPU only and GDAL 3.7.3
-rye sync -f --features gdal36 # For CPU only and GDAL 3.6.4
+rye sync -f --features gdal39,cpu # For CPU only and GDAL 3.9.2
+rye sync -f --features gdal38,cpu # For CPU only and GDAL 3.8.5
+rye sync -f --features gdal37,cpu # For CPU only and GDAL 3.7.3
+rye sync -f --features gdal36,cpu # For CPU only and GDAL 3.6.4
 ```
 
 If your GDAL version is not supported (yet) please sync without GDAL and then install GDAL to an new optional group. For example, if your GDAL version is 3.8.4:
@@ -56,6 +56,30 @@ rye add --optional=gdal384 "gdal==3.8.4"
 ```
 
 > IMPORTANT! If you installed any of clang or gdal with conda, please ensure that while installing dependencies and working on the project to have the conda environment activated in which you installed clang and or gdal.
+
+#### Troubleshoot: Rye can't find the right versions
+
+Because the `pyproject.toml` specifies additional sources, e.g. `https://download.pytorch.org/whl/cpu`, it can happen that the a package with an older version is found in these package-indexes.
+If such a version is found, `uv` (the installer behind `Rye`) currently stops searching other sources for the right version and stops with an `Version not found` error.
+This can look something like this:
+
+```sh
+No solution found when resolving dependencies:
+  ╰─▶ Because only torchmetrics==1.0.3 is available and you require torchmetrics>=1.4.1, we can conclude that your requirements are unsatisfiable.
+```
+
+To fix this you can set an environment variable to tell `uv` to search all package-indicies:
+
+```sh
+UV_INDEX_STRATEGY="unsafe-best-match" rye sync ...
+```
+
+Please see these issues:
+
+- [Rye: Can't specify per-dependency package index / can't specify uv behavior in config file](https://github.com/astral-sh/rye/issues/1210#issuecomment-2263761535)
+- [UV: Add support for pinning a package to a specific index](https://github.com/astral-sh/uv/issues/171)
+
+> If you run into issues (e.g. on the DGX), you may want to set the following environment variable
 
 ## System and Data Setup
 

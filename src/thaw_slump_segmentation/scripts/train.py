@@ -45,8 +45,17 @@ from tqdm import tqdm
 from typing_extensions import Annotated
 
 import wandb
-
 from thaw_slump_segmentation.data_loading import DataSources, get_loader, get_slump_loader, get_vis_loader
+from thaw_slump_segmentation.metrics import (
+    BinaryBoundaryIoU,
+    BinaryInstanceAccuracy,
+    BinaryInstanceAveragePrecision,
+    BinaryInstanceConfusionMatrix,
+    BinaryInstanceF1Score,
+    BinaryInstancePrecision,
+    BinaryInstancePrecisionRecallCurve,
+    BinaryInstanceRecall,
+)
 from thaw_slump_segmentation.models import create_loss, create_model
 from thaw_slump_segmentation.utils import get_logger, init_logging, showexample, yaml_custom
 
@@ -210,23 +219,28 @@ class Engine:
         nthresholds = (
             100  # Make sure that the thresholds for the PRC-based metrics are equal to benefit from grouped computing
         )
+        # Make sure that the matching args are the same for all instance metrics
+        matching_threshold = 0.5
+        matching_metric = 'iou'
+        boundary_dilation = 0.02
+
         metrics = MetricCollection(
             {
-                'Accuracy': Accuracy(task='binary'),
-                'Precision': Precision(task='binary'),
-                'Specificity': Specificity(task='binary'),
-                'Recall': Recall(task='binary'),
-                'F1Score': F1Score(task='binary'),
-                'JaccardIndex': JaccardIndex(task='binary'),
-                'AUROC': AUROC(task='binary', thresholds=nthresholds),
-                'AveragePrecision': AveragePrecision(task='binary', thresholds=nthresholds),
+                'Accuracy': Accuracy(task='binary', validate_args=False),
+                'Precision': Precision(task='binary', validate_args=False),
+                'Specificity': Specificity(task='binary', validate_args=False),
+                'Recall': Recall(task='binary', validate_args=False),
+                'F1Score': F1Score(task='binary', validate_args=False),
+                'JaccardIndex': JaccardIndex(task='binary', validate_args=False),
+                'AUROC': AUROC(task='binary', thresholds=nthresholds, validate_args=False),
+                'AveragePrecision': AveragePrecision(task='binary', thresholds=nthresholds, validate_args=False),
                 # Calibration errors: https://arxiv.org/abs/1909.10155, they take a lot of memory!
                 #'ExpectedCalibrationError': CalibrationError(task='binary', norm='l1'),
                 #'RootMeanSquaredCalibrationError': CalibrationError(task='binary', norm='l2'),
                 #'MaximumCalibrationError': CalibrationError(task='binary', norm='max'),
-                'CohenKappa': CohenKappa(task='binary'),
-                'HammingDistance': HammingDistance(task='binary'),
-                'HingeLoss': HingeLoss(task='binary'),
+                'CohenKappa': CohenKappa(task='binary', validate_args=False),
+                'HammingDistance': HammingDistance(task='binary', validate_args=False),
+                'HingeLoss': HingeLoss(task='binary', validate_args=False),
                 # MCC raised a weired error one time, skipping to be save
                 # 'MatthewsCorrCoef': MatthewsCorrCoef(task='binary'),
             }
@@ -235,6 +249,9 @@ class Engine:
         self.rocs = {}
         self.prcs = {}
         self.confmats = {}
+        self.instance_prcs = {}
+        self.instance_confmats = {}
+
         if self.phase_should_log_images:
             self.metric_tracker = defaultdict(list)
 
@@ -247,11 +264,52 @@ class Engine:
             if command == 'validate_on':
                 # We don't want to log the confusion matrix, PRC and ROC curve for every step in the training loop
                 # We assign them seperately to have easy access to them in the log_images phase but still benefit from the MetricCollection in terms of compute_groups and update, compute & reset calls
-                self.rocs[key] = ROC(task='binary', thresholds=nthresholds).to(self.dev)
-                self.prcs[key] = PrecisionRecallCurve(task='binary', thresholds=nthresholds).to(self.dev)
-                self.confmats[key] = ConfusionMatrix(task='binary', normalize='true').to(self.dev)
+                self.rocs[key] = ROC(task='binary', thresholds=nthresholds, validate_args=False).to(self.dev)
+                self.prcs[key] = PrecisionRecallCurve(task='binary', thresholds=nthresholds, validate_args=False).to(
+                    self.dev
+                )
+                self.confmats[key] = ConfusionMatrix(task='binary', normalize='true', validate_args=False).to(self.dev)
+                self.instance_prcs[key] = BinaryInstancePrecisionRecallCurve(
+                    thresholds=nthresholds,
+                    matching_threshold=matching_threshold,
+                    matching_metric=matching_metric,
+                    validate_args=False,
+                ).to(self.dev)
+                self.instance_confmats[key] = BinaryInstanceConfusionMatrix(
+                    matching_threshold=matching_threshold, matching_metric=matching_metric, validate_args=False
+                ).to(self.dev)
                 self.metrics[key].add_metrics(
-                    {'ROC': self.rocs[key], 'PRC': self.prcs[key], 'ConfusionMatrix': self.confmats[key]}
+                    {
+                        'ROC': self.rocs[key],
+                        'PRC': self.prcs[key],
+                        'ConfusionMatrix': self.confmats[key],
+                        'Instance-PRC': self.instance_prcs[key],
+                        'Instance-ConfusionMatrix': self.instance_confmats[key],
+                    }
+                )
+                # We don't want to log the instance metrics for every step in the training loop, because they are memory intensive (and not very useful for training)
+                self.metrics[key].add_metrics(
+                    {
+                        'Instance-Accuracy': BinaryInstanceAccuracy(
+                            matching_threshold=matching_threshold, matching_metric=matching_metric, validate_args=False
+                        ).to(self.dev),
+                        'Instance-Precision': BinaryInstancePrecision(
+                            matching_threshold=matching_threshold, matching_metric=matching_metric, validate_args=False
+                        ).to(self.dev),
+                        'Instance-Recall': BinaryInstanceRecall(
+                            matching_threshold=matching_threshold, matching_metric=matching_metric, validate_args=False
+                        ).to(self.dev),
+                        'Instance-F1Score': BinaryInstanceF1Score(
+                            matching_threshold=matching_threshold, matching_metric=matching_metric, validate_args=False
+                        ).to(self.dev),
+                        'Instance-AveragePrecision': BinaryInstanceAveragePrecision(
+                            thresholds=nthresholds,
+                            matching_threshold=matching_threshold,
+                            matching_metric=matching_metric,
+                            validate_args=False,
+                        ).to(self.dev),
+                        'BoundaryIoU': BinaryBoundaryIoU(dilation=boundary_dilation, validate_args=False).to(self.dev),
+                    }
                 )
 
         # Create the plot directory
@@ -359,19 +417,29 @@ class Engine:
         fig_roc, _ = self.rocs[self.current_key].plot(score=True)
         fig_prc, _ = self.prcs[self.current_key].plot(score=True)
         fig_confmat, _ = self.confmats[self.current_key].plot(cmap='Blues')
+        fig_instance_prc, _ = self.instance_prcs[self.current_key].plot(score=True)
+        fig_instance_confmat, _ = self.instance_confmats[self.current_key].plot(cmap='Blues')
 
         # We need to wrap the figures into a wandb.Image to save storage -> Maybe we can find a better solution in the future, e.g. using plotly
         wandb.log({f'{self.current_key}/ROC': wandb.Image(fig_roc)}, step=self.board_idx)
         wandb.log({f'{self.current_key}/PRC': wandb.Image(fig_prc)}, step=self.board_idx)
         wandb.log({f'{self.current_key}/Confusion Matrix': wandb.Image(fig_confmat)}, step=self.board_idx)
+        wandb.log({f'{self.current_key}/Instance-PRC': wandb.Image(fig_instance_prc)}, step=self.board_idx)
+        wandb.log(
+            {f'{self.current_key}/Instance-Confusion Matrix': wandb.Image(fig_instance_confmat)}, step=self.board_idx
+        )
 
         if self.phase_should_log_images:
             fig_roc.savefig(self.metric_plot_dir / f'{self.current_key}_roc_curve.png')
             fig_prc.savefig(self.metric_plot_dir / f'{self.current_key}_precision_recall_curve.png')
             fig_confmat.savefig(self.metric_plot_dir / f'{self.current_key}_confusion_matrix.png')
+            fig_instance_prc.savefig(self.metric_plot_dir / f'{self.current_key}_instance_precision_recall_curve.png')
+            fig_instance_confmat.savefig(self.metric_plot_dir / f'{self.current_key}_instance_confusion_matrix.png')
         fig_roc.clear()
         fig_prc.clear()
         fig_confmat.clear()
+        fig_instance_prc.clear()
+        fig_instance_confmat.clear()
         plt.close('all')
 
     def log_metrics(self) -> dict:

@@ -223,6 +223,7 @@ class Engine:
         nthresholds = (
             100  # Make sure that the thresholds for the PRC-based metrics are equal to benefit from grouped computing
         )
+        nthresholds_instance = 10  # Less for instance metrics because they are more memory intensive
         # Make sure that the matching args are the same for all instance metrics
         matching_threshold = 0.5
         matching_metric = 'iou'
@@ -284,7 +285,7 @@ class Engine:
                 )
                 self.confmats[key] = ConfusionMatrix(task='binary', normalize='true', validate_args=False).to(self.dev)
                 self.instance_prcs[key] = BinaryInstancePrecisionRecallCurve(
-                    thresholds=nthresholds,
+                    thresholds=nthresholds_instance,
                     matching_threshold=matching_threshold,
                     matching_metric=matching_metric,
                     validate_args=False,
@@ -328,7 +329,7 @@ class Engine:
                 self.metrics_heavy[key].add_metrics(
                     {
                         'Instance-AveragePrecision': BinaryInstanceAveragePrecision(
-                            thresholds=nthresholds,
+                            thresholds=nthresholds_instance,
                             matching_threshold=matching_threshold,
                             matching_metric=matching_metric,
                             validate_args=False,

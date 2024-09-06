@@ -54,6 +54,7 @@ def mask_to_instances(x: torch.Tensor, validate_args: bool = False) -> list[torc
             instances.append(instances_i)
         return instances
 
+
 @torch.no_grad()
 def match_instances(
     instances_target: torch.Tensor,
@@ -81,18 +82,30 @@ def match_instances(
             instances_target.shape == instances_preds.shape
         ), f'Shapes do not match: {instances_target.shape} and {instances_preds.shape}'
 
+    height, width = instances_target.shape
+    ntargets = instances_target.max()
+    npreds = instances_preds.max()
+    # If there are no instances, return 0 for all metrics
+    if ntargets == 0:
+        return 0, npreds, 0
+    if npreds == 0:
+        return 0, 0, ntargets
+
+    # If there are too many predictions, return all as false positives (this happens when the model is very noisy)
+    # print(f'*** Got {instances_preds.max()} instances in prediction and {instances_target.max()} instances in target')
+    if npreds > ntargets * 5:
+        return 0, npreds, ntargets
+    # If there is only one prediction, return all as false negatives (this happens when the model is very noisy)
+    if npreds == 1 and ntargets > 1:
+        return 0, 1, ntargets
+
     # Create one-hot encoding of instances, so that each instance is a channel
-    target_labels = list(range(1, instances_target.max() + 1))
-    pred_labels = list(range(1, instances_preds.max() + 1))
-
-    if len(target_labels) == 0:
-        return 0, len(pred_labels), 0
-
-    if len(pred_labels) == 0:
-        return 0, 0, len(target_labels)
-
-    instances_target_onehot = torch.stack([instances_target == i for i in target_labels], dim=0).to(torch.uint8)
-    instances_preds_onehot = torch.stack([instances_preds == i for i in pred_labels], dim=0).to(torch.uint8)
+    instances_target_onehot = torch.zeros((ntargets, height, width), dtype=torch.uint8, device=instances_target.device)
+    instances_preds_onehot = torch.zeros((npreds, height, width), dtype=torch.uint8, device=instances_target.device)
+    for i in range(ntargets):
+        instances_target_onehot[i, :, :] = instances_target == (i + 1)
+    for i in range(npreds):
+        instances_preds_onehot[i, :, :] = instances_preds == (i + 1)
 
     # Now the instances are channels, hence tensors of shape (num_instances, height, width)
 
@@ -114,7 +127,7 @@ def match_instances(
 
     # Match instances based on IoU
     tp = (iou >= match_threshold).sum().item()
-    fp = len(pred_labels) - tp
-    fn = len(target_labels) - tp
+    fp = npreds - tp
+    fn = ntargets - tp
 
     return tp, fp, fn

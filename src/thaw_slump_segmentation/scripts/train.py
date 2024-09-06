@@ -33,7 +33,6 @@ from torchmetrics import (
     ConfusionMatrix,
     F1Score,
     HammingDistance,
-    HingeLoss,
     JaccardIndex,
     MetricCollection,
     Precision,
@@ -121,7 +120,7 @@ class Engine:
         self.logger.info(f'Training on {self.dev} device')
 
         self.model = self.model.to(self.dev)
-        self.model = torch.compile(self.model, mode='max-autotune', fullgraph=True)
+        # self.model = torch.compile(self.model, mode='max-autotune', fullgraph=True)
 
         self.learning_rate = self.config['learning_rate']
         self.opt = torch.optim.AdamW(self.model.parameters(), lr=self.learning_rate)
@@ -158,20 +157,27 @@ class Engine:
         self.checkpoints.mkdir()
 
     def run(self):
-
-        print("\n\n=== Using Config ===\n")
+        print('\n\n=== Using Config ===\n')
         print(self.config)
 
         for phase in self.config['schedule']:
             self.logger.info(f'Starting phase "{phase["phase"]}"')
 
             self.phase_should_log_images = phase.get('log_images', False)
+            self.phase_should_save_plots = phase.get('save_plots_to_file', True)
             self.setup_metrics(phase)
             self.current_key = None
             for epoch in range(phase['epochs']):
                 # Epoch setup
                 self.epoch = epoch
                 self.loss_function = create_loss(scoped_get('loss_function', phase, self.config)).to(self.dev)
+
+                # Check if this epoch should log images and heavy metrics
+                self.is_heavy_epoch = epoch % phase.get('heavy_metrics_nsteps', 1) == 0
+                if self.is_heavy_epoch:
+                    self.logger.info(f'Epoch {epoch} - Heavy Metrics Enabled')
+                else:
+                    self.logger.info(f'Epoch {epoch} - Heavy Metrics Disabled')
 
                 for step in phase['steps']:
                     self.run_step(step)
@@ -181,34 +187,33 @@ class Engine:
                     self.log_images()
 
                 if self.scheduler:
-                    print("\nUpdating LR-Scheduler: ")
+                    print('\nUpdating LR-Scheduler: ')
                     print(f' - Before step: {self.scheduler.get_last_lr()}')
                     self.scheduler.step()
                     print(f' - After step: {self.scheduler.get_last_lr()}')
 
     def run_step(self, step: str):
         command, key = parse_step(step)
+
+        # Fail early if the command is unknown or deprecated
+        assert command in ['train_on', 'validate_on', 'log_images'], f"Unknown command '{command}'"
+        if command == 'log_images':
+            self.logger.warn("Step 'log_images' is deprecated. Please use 'log_images' in the phase instead.")
+            return
+
         self.current_key = key
+        self.current_command = command
+        data_loader = self.get_dataloader(key)
 
         if command == 'train_on':
-            # Training step
-            data_loader = self.get_dataloader(key)
             self.train_epoch(data_loader)
         elif command == 'validate_on':
-            # Validation step
-            data_loader = self.get_dataloader(key)
             self.val_epoch(data_loader)
-        elif command == 'log_images':
-            self.logger.warn(
-                "Step 'log_images' is deprecated. Please use 'log_images' in the phase instead."
-            )
-            return
-        else:
-            raise ValueError(f"Unknown command '{command}'")
 
         # Reset the metrics after each step
         if self.current_key:
             self.metrics[self.current_key].reset()
+            self.metrics_heavy[self.current_key].reset()
             gc.collect()
             torch.cuda.empty_cache()
 
@@ -231,20 +236,28 @@ class Engine:
                 'Recall': Recall(task='binary', validate_args=False),
                 'F1Score': F1Score(task='binary', validate_args=False),
                 'JaccardIndex': JaccardIndex(task='binary', validate_args=False),
-                'AUROC': AUROC(task='binary', thresholds=nthresholds, validate_args=False),
-                'AveragePrecision': AveragePrecision(task='binary', thresholds=nthresholds, validate_args=False),
                 # Calibration errors: https://arxiv.org/abs/1909.10155, they take a lot of memory!
                 #'ExpectedCalibrationError': CalibrationError(task='binary', norm='l1'),
                 #'RootMeanSquaredCalibrationError': CalibrationError(task='binary', norm='l2'),
                 #'MaximumCalibrationError': CalibrationError(task='binary', norm='max'),
                 'CohenKappa': CohenKappa(task='binary', validate_args=False),
                 'HammingDistance': HammingDistance(task='binary', validate_args=False),
-                'HingeLoss': HingeLoss(task='binary', validate_args=False),
+                # 'HingeLoss': HingeLoss(task='binary', validate_args=False),
                 # MCC raised a weired error one time, skipping to be save
                 # 'MatthewsCorrCoef': MatthewsCorrCoef(task='binary'),
             }
         )
+
+        # Introducing a second collection, which should store hard-to-compute metrics
+        heavy_metrics = MetricCollection(
+            {
+                'AUROC': AUROC(task='binary', thresholds=nthresholds, validate_args=False),
+                'AveragePrecision': AveragePrecision(task='binary', thresholds=nthresholds, validate_args=False),
+            }
+        )
+
         self.metrics = {}
+        self.metrics_heavy = {}
         self.rocs = {}
         self.prcs = {}
         self.confmats = {}
@@ -253,6 +266,7 @@ class Engine:
 
         if self.phase_should_log_images:
             self.metric_tracker = defaultdict(list)
+            self.metric_heavy_tracker = defaultdict(list)
 
         for step in phase['steps']:
             command, key = parse_step(step)
@@ -260,6 +274,7 @@ class Engine:
                 continue
 
             self.metrics[key] = metrics.clone(f'{key}/').to(self.dev)
+            self.metrics_heavy[key] = heavy_metrics.clone(f'{key}/').to(self.dev)
             if command == 'validate_on':
                 # We don't want to log the confusion matrix, PRC and ROC curve for every step in the training loop
                 # We assign them seperately to have easy access to them in the log_images phase but still benefit from the MetricCollection in terms of compute_groups and update, compute & reset calls
@@ -277,15 +292,21 @@ class Engine:
                 self.instance_confmats[key] = BinaryInstanceConfusionMatrix(
                     matching_threshold=matching_threshold, matching_metric=matching_metric, validate_args=False
                 ).to(self.dev)
+
                 self.metrics[key].add_metrics(
                     {
-                        'ROC': self.rocs[key],
-                        'PRC': self.prcs[key],
                         'ConfusionMatrix': self.confmats[key],
-                        'Instance-PRC': self.instance_prcs[key],
                         'Instance-ConfusionMatrix': self.instance_confmats[key],
                     }
                 )
+                self.metrics_heavy[key].add_metrics(
+                    {
+                        'ROC': self.rocs[key],
+                        'PRC': self.prcs[key],
+                        'Instance-PRC': self.instance_prcs[key],
+                    }
+                )
+
                 # We don't want to log the instance metrics for every step in the training loop, because they are memory intensive (and not very useful for training)
                 self.metrics[key].add_metrics(
                     {
@@ -301,13 +322,17 @@ class Engine:
                         'Instance-F1Score': BinaryInstanceF1Score(
                             matching_threshold=matching_threshold, matching_metric=matching_metric, validate_args=False
                         ).to(self.dev),
+                        'BoundaryIoU': BinaryBoundaryIoU(dilation=boundary_dilation, validate_args=False).to(self.dev),
+                    }
+                )
+                self.metrics_heavy[key].add_metrics(
+                    {
                         'Instance-AveragePrecision': BinaryInstanceAveragePrecision(
                             thresholds=nthresholds,
                             matching_threshold=matching_threshold,
                             matching_metric=matching_metric,
                             validate_args=False,
                         ).to(self.dev),
-                        'BoundaryIoU': BinaryBoundaryIoU(dilation=boundary_dilation, validate_args=False).to(self.dev),
                     }
                 )
 
@@ -377,6 +402,8 @@ class Engine:
 
             with torch.no_grad():
                 self.metrics[self.current_key].update(y_hat.squeeze(1), target)
+                if self.is_heavy_epoch:
+                    self.metrics_heavy[self.current_key].update(y_hat.squeeze(1), target)
 
         # Compute epochs loss and metrics
         epoch_loss = {k: torch.stack(v).mean().item() for k, v in epoch_loss.items() if v}
@@ -400,10 +427,11 @@ class Engine:
                 img = img.to(self.dev, torch.float)
                 target = target.to(self.dev, torch.long, non_blocking=True)
                 y_hat = self.model(img).squeeze(1)
-
                 loss = self.loss_function(y_hat, target)
                 epoch_loss.append(loss.detach())
                 self.metrics[self.current_key].update(y_hat, target)
+                if self.is_heavy_epoch:
+                    self.metrics_heavy[self.current_key].update(y_hat, target)
 
             # Compute epochs loss and metrics
             epoch_loss = torch.stack(epoch_loss).mean().item()
@@ -413,56 +441,82 @@ class Engine:
         self.log_csv(epoch_metrics, epoch_loss)
 
         # Plot roc, prc and confusion matrix to disk and wandb
-        fig_roc, _ = self.rocs[self.current_key].plot(score=True)
-        fig_prc, _ = self.prcs[self.current_key].plot(score=True)
         fig_confmat, _ = self.confmats[self.current_key].plot(cmap='Blues')
-        fig_instance_prc, _ = self.instance_prcs[self.current_key].plot(score=True)
         fig_instance_confmat, _ = self.instance_confmats[self.current_key].plot(cmap='Blues')
-
         # We need to wrap the figures into a wandb.Image to save storage -> Maybe we can find a better solution in the future, e.g. using plotly
-        wandb.log({f'{self.current_key}/ROC': wandb.Image(fig_roc)}, step=self.board_idx)
-        wandb.log({f'{self.current_key}/PRC': wandb.Image(fig_prc)}, step=self.board_idx)
         wandb.log({f'{self.current_key}/Confusion Matrix': wandb.Image(fig_confmat)}, step=self.board_idx)
-        wandb.log({f'{self.current_key}/Instance-PRC': wandb.Image(fig_instance_prc)}, step=self.board_idx)
         wandb.log(
             {f'{self.current_key}/Instance-Confusion Matrix': wandb.Image(fig_instance_confmat)}, step=self.board_idx
         )
-
-        if self.phase_should_log_images:
-            fig_roc.savefig(self.metric_plot_dir / f'{self.current_key}_roc_curve.png')
-            fig_prc.savefig(self.metric_plot_dir / f'{self.current_key}_precision_recall_curve.png')
+        if self.phase_should_log_images and self.phase_should_save_plots:
             fig_confmat.savefig(self.metric_plot_dir / f'{self.current_key}_confusion_matrix.png')
-            fig_instance_prc.savefig(self.metric_plot_dir / f'{self.current_key}_instance_precision_recall_curve.png')
             fig_instance_confmat.savefig(self.metric_plot_dir / f'{self.current_key}_instance_confusion_matrix.png')
-        fig_roc.clear()
-        fig_prc.clear()
+
         fig_confmat.clear()
-        fig_instance_prc.clear()
         fig_instance_confmat.clear()
+
+        if self.is_heavy_epoch:
+            fig_roc, _ = self.rocs[self.current_key].plot(score=True)
+            fig_prc, _ = self.prcs[self.current_key].plot(score=True)
+            fig_instance_prc, _ = self.instance_prcs[self.current_key].plot(score=True)
+
+            wandb.log({f'{self.current_key}/ROC': wandb.Image(fig_roc)}, step=self.board_idx)
+            wandb.log({f'{self.current_key}/PRC': wandb.Image(fig_prc)}, step=self.board_idx)
+            wandb.log({f'{self.current_key}/Instance-PRC': wandb.Image(fig_instance_prc)}, step=self.board_idx)
+
+            if self.phase_should_log_images and self.phase_should_save_plots:
+                fig_roc.savefig(self.metric_plot_dir / f'{self.current_key}_roc_curve.png')
+                fig_prc.savefig(self.metric_plot_dir / f'{self.current_key}_precision_recall_curve.png')
+                fig_instance_prc.savefig(
+                    self.metric_plot_dir / f'{self.current_key}_instance_precision_recall_curve.png'
+                )
+
+            fig_roc.clear()
+            fig_prc.clear()
+            # fig_instance_prc.clear()
         plt.close('all')
 
     def log_metrics(self) -> dict:
         epoch_metrics = self.metrics[self.current_key].compute()
-        # We need to filter our ROC, PRC and Confusion Matrix from the metrics because they are not scalar metrics
+        epoch_metrics_heavy = {}
+        if self.is_heavy_epoch and self.current_command == 'validate_on':
+            self.logger.info(f'*** Calculating Heavy Metrics ({self.current_key}) in epoch {self.epoch}')
+            epoch_metrics_heavy = self.metrics_heavy[self.current_key].compute()
 
+        # Plot the metrics to disk
+        if self.phase_should_log_images and self.phase_should_save_plots:
+            scalar_epoch_metrics_tensor = {
+                k: v for k, v in epoch_metrics.items() if isinstance(v, torch.Tensor) and v.numel() == 1
+            }
+            self.metric_tracker[self.current_key].append(scalar_epoch_metrics_tensor)
+            fig, ax = plt.subplots(figsize=(30, 10))
+            self.metrics[self.current_key].plot(self.metric_tracker[self.current_key], together=True, ax=ax)
+            fig.savefig(self.metric_plot_dir / f'{self.current_key}_metrics.png')
+            fig.clear()
+
+            if self.is_heavy_epoch and self.current_command == 'validate_on':
+                scalar_epoch_heavy_metrics_tensor = {
+                    k: v for k, v in epoch_metrics_heavy.items() if isinstance(v, torch.Tensor) and v.numel() == 1
+                }
+                self.metric_heavy_tracker[self.current_key].append(scalar_epoch_heavy_metrics_tensor)
+                fig, ax = plt.subplots(figsize=(30, 10))
+                self.metrics_heavy[self.current_key].plot(
+                    self.metric_heavy_tracker[self.current_key], together=True, ax=ax
+                )
+                fig.savefig(self.metric_plot_dir / f'{self.current_key}_heavy_metrics.png')
+                fig.clear()
+            plt.close('all')
+
+        if self.is_heavy_epoch:
+            epoch_metrics = epoch_metrics | epoch_metrics_heavy
+
+        # We need to filter our ROC, PRC and Confusion Matrix from the metrics because they are not scalar metrics
         scalar_epoch_metrics = {
             k: v.item() for k, v in epoch_metrics.items() if isinstance(v, torch.Tensor) and v.numel() == 1
         }
 
         # Log to WandB
         wandb.log(scalar_epoch_metrics, step=self.board_idx)
-
-        # Plot the metrics to disk
-        if self.phase_should_log_images:
-            scalar_epoch_metrics_tensor = {
-                k: v for k, v in epoch_metrics.items() if isinstance(v, torch.Tensor) and v.numel() == 1
-            }
-            self.metric_tracker[self.current_key].append(scalar_epoch_metrics_tensor)
-            fig, ax = plt.subplots(figsize=(20, 10))
-            self.metrics[self.current_key].plot(self.metric_tracker[self.current_key], together=True, ax=ax)
-            fig.savefig(self.metric_plot_dir / f'{self.current_key}_metrics.png')
-            fig.clear()
-            plt.close('all')
 
         return scalar_epoch_metrics
 
@@ -506,7 +560,12 @@ class Engine:
         for i, tile in enumerate(self.vis_names):
             filename = self.log_dir / 'tile_predictions' / f'{tile}.jpg'
             showexample(
-                self.vis_loader.dataset[i], self.vis_predictions[i], filename, self.data_sources, step=self.board_idx
+                self.vis_loader.dataset[i],
+                self.vis_predictions[i],
+                filename,
+                self.data_sources,
+                step=self.board_idx,
+                complex=self.phase_should_save_plots,
             )
         plt.close('all')
 
@@ -586,11 +645,11 @@ def train(
     engine = Engine(config, data_dir, name, log_dir, resume, summary)
 
     if wandb_project is not None:
-        wandb_entity = "ingmarnitze_team"
-        print("\n\n=== Using Weights & Biases ===\n")
-        print(f"Entitiy: {wandb_entity}")
-        print(f"Project: {wandb_project}")
-        print(f"Name: {wandb_name}")
+        wandb_entity = 'ingmarnitze_team'
+        print('\n\n=== Using Weights & Biases ===\n')
+        print(f'Entitiy: {wandb_entity}')
+        print(f'Project: {wandb_project}')
+        print(f'Name: {wandb_name}')
 
         wandb.init(project=wandb_project, name=wandb_name, config=config, entity=wandb_entity)
 
@@ -608,21 +667,26 @@ def sweep(
 ):
     # Create Sweep configuration
     cfg = yaml.load(config.open(), Loader=yaml_custom.SaneYAMLLoader)
-    sweep_configuration = cfg["sweep"]
-    sweep_configuration["name"] = wandb_name
+    sweep_configuration = cfg['sweep']
+    sweep_configuration['name'] = wandb_name
 
     # Start the sweep
-    wandb_entity = "ingmarnitze_team"
+    wandb_entity = 'ingmarnitze_team'
     sweep_id = wandb.sweep(sweep=sweep_configuration, project=wandb_project, entity=wandb_entity)
 
-    print(f"Started Sweep at project {wandb_project} with ID: {sweep_id}")
-    print("Please run the following command to run an agent:\n")
-    print(f"    $ rye run thaw-slump-segmentation tune --wandb_project {wandb_project} --config {config} {sweep_id}")
+    print(f'Started Sweep at project {wandb_project} with ID: {sweep_id}')
+    print('Please run the following command to run an agent:\n')
+    print(f'    $ rye run thaw-slump-segmentation tune --wandb_project {wandb_project} --config {config} {sweep_id}')
 
 
 def tune(
-    sweep_id: Annotated[str, typer.Argument(help="The sweep id from weights and biases. If you don't know one, create a sweep with 'rye run thaw-slump-segmentation sweep' first.")],
-    sweep_count: Annotated[int, typer.Option(help="Set how often this worker should train")] = 10,
+    sweep_id: Annotated[
+        str,
+        typer.Argument(
+            help="The sweep id from weights and biases. If you don't know one, create a sweep with 'rye run thaw-slump-segmentation sweep' first."
+        ),
+    ],
+    sweep_count: Annotated[int, typer.Option(help='Set how often this worker should train')] = 10,
     data_dir: Annotated[Path, typer.Option('--data_dir', help='Path to data processing dir')] = Path('data'),
     log_dir: Annotated[Path, typer.Option('--log_dir', help='Path to log dir')] = Path('logs'),
     config: Annotated[Path, typer.Option('--config', '-c', help='Specify run config to use.')] = Path('config.yml'),
@@ -637,24 +701,24 @@ def tune(
     config = yaml.load(config.open(), Loader=yaml_custom.SaneYAMLLoader)
 
     def tune_run():
-        wandb_entity = "ingmarnitze_team"
+        wandb_entity = 'ingmarnitze_team'
         wandb.init(project=wandb_project, config=config, entity=wandb_entity)
         name = wandb.run.name
-        print("\n\n=== Using Weights & Biases ===\n")
-        print(f"Entitiy: {wandb_entity}")
-        print(f"Project: {wandb_project}")
-        print(f"Name: {name}")
+        print('\n\n=== Using Weights & Biases ===\n')
+        print(f'Entitiy: {wandb_entity}')
+        print(f'Project: {wandb_project}')
+        print(f'Name: {name}')
 
         # Overwrite config with WandB config
         engine_config = deepcopy(config)
-        engine_config["learning_rate"] = wandb.config["learning_rate"]
-        engine_config["model"]["architecture"] = wandb.config["architecture"]
-        engine_config["model"]["encoder"] = wandb.config["encoder"]
+        engine_config['learning_rate'] = wandb.config['learning_rate']
+        engine_config['model']['architecture'] = wandb.config['architecture']
+        engine_config['model']['encoder'] = wandb.config['encoder']
 
         engine = Engine(engine_config, data_dir, name, log_dir, resume, summary)
         engine.run()
 
-    wandb_entity = "ingmarnitze_team"
+    wandb_entity = 'ingmarnitze_team'
     wandb.agent(sweep_id, function=tune_run, count=sweep_count, project=wandb_project, entity=wandb_entity)
 
 
@@ -662,16 +726,16 @@ def overwrite_config(self, key: str | list[str], wandb_key: str = None):
     if isinstance(key, str):
         # If key is matching, just use the key for both, only applicable if not nested
         wandb_key = wandb_key or key
-        if self.config[key] == "TUNE":
+        if self.config[key] == 'TUNE':
             self.config[key] = wandb.config[wandb_key]
     else:
-        assert isinstance(key, list), f"Expect type of key either be str or list, got {type(key)}"
+        assert isinstance(key, list), f'Expect type of key either be str or list, got {type(key)}'
         if wandb_key is None:
-            raise ValueError(f"Type of key is {type(key)}, expected wandb_key to be present but got None!")
+            raise ValueError(f'Type of key is {type(key)}, expected wandb_key to be present but got None!')
         cfg = self.config
         # Recurse down to nested key
         for k in key[:-2]:
             cfg = cfg[k]
         k = key[-1]
-        if cfg[k] == "TUNE":
+        if cfg[k] == 'TUNE':
             cfg[k] = wandb.config[wandb_key]

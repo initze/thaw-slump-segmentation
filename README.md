@@ -79,8 +79,6 @@ Please see these issues:
 - [Rye: Can't specify per-dependency package index / can't specify uv behavior in config file](https://github.com/astral-sh/rye/issues/1210#issuecomment-2263761535)
 - [UV: Add support for pinning a package to a specific index](https://github.com/astral-sh/uv/issues/171)
 
-> If you run into issues (e.g. on the DGX), you may want to set the following environment variable
-
 ## System and Data Setup
 
 ### Option 1 - Singularity container

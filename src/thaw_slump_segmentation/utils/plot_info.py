@@ -63,26 +63,49 @@ def get_channel_offset(data_sources, target_source):
     return offset
 
 
-def showexample(data, preds, filename, data_sources, step):
-    # First plot
-    ROWS = 6
-    m = 0.02
-    gridspec_kw = dict(left=m, right=1 - m, top=1 - m, bottom=m, hspace=0.12, wspace=m)
-    N = 1 + int(np.ceil(len(preds) / ROWS))
-    fig, ax = plt.subplots(ROWS, N, figsize=(3 * N, 3 * ROWS), gridspec_kw=gridspec_kw)
-    ax = ax.T.reshape(-1)
+def showexample(data, preds, filename, data_sources, step, complex=True):
 
-    heatmap_args = dict(cmap=plt.cm.Greys_r, vmin=0, vmax=1)
+    ds_names = {src.name for src in data_sources}
 
     img, target = data
     img = img.to(torch.float)
+
+    m = 0.02
+    heatmap_args = {'cmap': plt.cm.Greys_r, 'vmin': 0, 'vmax': 1}
+    gridspec_kw = {'left': m, 'right': 1 - m, 'top': 1 - m, 'bottom': m, 'hspace': 0.12, 'wspace': m}
+
+    # Second plot for wandb
+    fig, ax = plt.subplots(1, 3, figsize=(9, 4), gridspec_kw=gridspec_kw)
+    if 'planet' in ds_names:
+        offset = get_channel_offset(data_sources, 'planet')
+        b, g, r, nir = np.arange(4) + offset
+        bgnir = imageize(img[[nir, b, g]])
+        ax[0].imshow(bgnir)
+        ax[0].set_title('NIR-R-G')
+    ax[1].imshow(target.cpu(), **heatmap_args)
+    ax[1].set_title('Ground Truth')
+
+    pred = torch.sigmoid(preds[-1])
+    ax[2].imshow(pred, **heatmap_args)
+    ax[2].set_title('Prediction')
+    for axis in ax:
+        axis.axis('off')
+    wandb.log({filename.stem: wandb.Image(fig)}, step=step)
+
+    # First plot
+    if not complex:
+        return
+
+    ROWS = 6
+    N = 1 + int(np.ceil(len(preds) / ROWS))
+    fig, ax = plt.subplots(ROWS, N, figsize=(3 * N, 3 * ROWS), gridspec_kw=gridspec_kw)
+    ax = ax.T.reshape(-1)
 
     # Clear all axes
     for axis in ax:
         axis.imshow(np.ones([1, 1, 3]))
         axis.axis('off')
 
-    ds_names = set(src.name for src in data_sources)
     if 'planet' in ds_names:
         offset = get_channel_offset(data_sources, 'planet')
         b, g, r, nir = np.arange(4) + offset
@@ -123,23 +146,6 @@ def showexample(data, preds, filename, data_sources, step):
     filename.parent.mkdir(exist_ok=True)
     plt.savefig(filename, bbox_inches='tight')
     plt.close()
-    fig, ax = plt.subplots(1, 3, figsize=(9, 4), gridspec_kw=gridspec_kw)
-    if 'planet' in ds_names:
-        offset = get_channel_offset(data_sources, 'planet')
-        b, g, r, nir = np.arange(4) + offset
-        bgnir = imageize(img[[nir, b, g]])
-        ax[0].imshow(bgnir)
-        ax[0].set_title('NIR-R-G')
-    ax[1].imshow(target.cpu(), **heatmap_args)
-    ax[1].set_title('Ground Truth')
-
-    pred = torch.sigmoid(preds[-1])
-    ax[2].imshow(pred, **heatmap_args)
-    ax[2].set_title('Prediction')
-    for axis in ax:
-        axis.axis('off')
-    wandb.log({filename.stem: wandb.Image(fig)}, step=step)
-
 
 def read_metrics_file(file_path):
     with open(file_path) as src:
@@ -160,7 +166,8 @@ def read_metrics_file(file_path):
 
 
 def plot_metrics(train_metrics, val_metrics, outdir='.'):
-    metrics = (set(train_metrics) | set(val_metrics)) - set(['step', 'epoch'])
+    """ Usused function """
+    metrics = (set(train_metrics) | set(val_metrics)) - {'step', 'epoch'}
     for metric in metrics:
         outfile = os.path.join(outdir, f'{metric}.png')
         ax = plt.subplot()
@@ -180,6 +187,7 @@ def plot_metrics(train_metrics, val_metrics, outdir='.'):
 
 
 def plot_precision_recall(train_metrics, val_metrics, outdir='.'):
+    """ Usused function """
     fig = plt.figure(figsize=(10, 3))
     ax1, ax2 = fig.subplots(1, 2)
 

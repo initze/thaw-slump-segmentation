@@ -17,3 +17,4 @@ requirements.lock
 requirements-dev.lock
 wandb
 /models
+.venv

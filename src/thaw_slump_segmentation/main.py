@@ -1,6 +1,7 @@
 import typer
 
 from thaw_slump_segmentation.scripts.inference import inference
+from thaw_slump_segmentation.scripts.lewkowicz_metrics import match_lewkowicz
 from thaw_slump_segmentation.scripts.prepare_data import prepare_data
 from thaw_slump_segmentation.scripts.process_02_inference import process_02_inference
 from thaw_slump_segmentation.scripts.process_03_ensemble import process_03_ensemble
@@ -30,6 +31,7 @@ cli.command()(sweep)
 cli.command()(tune)
 cli.command()(train)
 cli.command()(inference)
+cli.command()(match_lewkowicz)
 
 
 data_cli = typer.Typer()

@@ -1,10 +1,23 @@
 # Changelog
 
-## [0.10.7] - 2024-10-15
+## [0.11.0] - 2024-10-15
 
 ### Added
 
 - added citation file
+- Instance Metrics + BoundaryIoU by @relativityhd in [#166](https://github.com/initze/thaw-slump-segmentation/pull/166)
+- Sentinel2 native by @iona5 in [#148](https://github.com/initze/thaw-slump-segmentation/pull/148)
+- Saved package import by @initze in [#161](https://github.com/initze/thaw-slump-segmentation/pull/161)
+- Add testing infrastructure by @iona5 in [#147](https://github.com/initze/thaw-slump-segmentation/pull/147)
+
+### Changed
+
+- MINOR: CLI/inference: fix help of `<tile_to_predict>` by @iona5 in [#157](https://github.com/initze/thaw-slump-segmentation/pull/157)
+- Changed to module imports by @initze in [#160](https://github.com/initze/thaw-slump-segmentation/pull/160)
+- Remove sub-dir models from gitignore by @relativityhd in [#164](https://github.com/initze/thaw-slump-segmentation/pull/164)
+- Preprocessing/Inference improvements by @iona5 in [#165](https://github.com/initze/thaw-slump-segmentation/pull/165)
+- Install GDAL with Rye by @relativityhd in [#168](https://github.com/initze/thaw-slump-segmentation/pull/168)
+- Fix a bug, where pytorch is installed without cuda by @relativityhd in [#169](https://github.com/initze/thaw-slump-segmentation/pull/169)
 
 ## [0.10.6] - 2024-07-15
 

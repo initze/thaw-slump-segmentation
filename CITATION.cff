@@ -1,0 +1,37 @@
+cff-version: 1.2.0
+authors:
+- family-names: "Nitze"
+  given-names: "Ingmar"
+  orcid: "https://orcid.org/0000-0002-1165-6852"
+  email: ingmar.nitze@awi.de
+  affiliation: Alfred Wegener Institute for Polar and Marine Research
+
+- family-names: "Heidler"
+  given-names: "Konrad"
+  orcid: "0000-0001-8226-0727"
+  affiliation: Technical University Munich
+
+- family-names: "Küpper"
+  given-names: "Jonas"
+  orcid: "0000-0001-6728-7411"
+  affiliation: Alfred Wegener Institute for Polar and Marine Research
+
+- family-names: "Hölzer"
+  given-names: "Tobias"
+  orcid: "0000-0002-4670-7031"
+  affiliation: Alfred Wegener Institute for Polar and Marine Research, University of Potsdam
+
+title: "DARTS RTS AI segmentation code"
+type: code
+version: 0.10.7
+date-released: 2024-10-15
+url: "https://github.com/initze/thaw-slump-segmentation"
+abstract: "Code base for training and inference of the DARTS Retrogressive Thaw Slumps detection pipeline"
+keywords:
+  - "deep learning"
+  - "segmentation"
+  - "permafrost"
+  - "retrogressive thaw slumps"
+  - "geospatial"
+license: "MIT"  # Specify your license type
+repository-code: "https://github.com/initze/thaw-slump-segmentation" 

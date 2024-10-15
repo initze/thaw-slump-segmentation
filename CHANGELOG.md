@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.10.7] - 2024-10-15
+
+### Added
+
+- added citation file
+
 ## [0.10.6] - 2024-07-15
 
 ### Changed

@@ -1,0 +1,4203 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../inference/">
+      
+      
+        <link rel="next" href="../process_02_inference/">
+      
+      
+      <link rel="icon" href="../../../../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.41">
+    
+    
+      
+        <title>Prepare data - Thaw Slump Segmentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../../../assets/stylesheets/main.0253249f.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../../../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../../../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#src.thaw_slump_segmentation.scripts.prepare_data" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../../../.." title="Thaw Slump Segmentation" class="md-header__button md-logo" aria-label="Thaw Slump Segmentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Thaw Slump Segmentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Prepare data
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/initze/thaw-slump-segmentation" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.6.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
+  </div>
+  <div class="md-source__repository">
+    thaw-slump-segmentation
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../../../.." class="md-tabs__link">
+        
+  
+    
+  
+  Thaw Slump Segmentation
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+    
+  
+  
+    
+    
+      
+  
+  
+    
+  
+  
+    
+    
+      
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../../__main__/" class="md-tabs__link">
+          
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+    
+  
+
+    
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../../../../scripts/" class="md-tabs__link">
+        
+  
+    
+  
+  Scripts
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+  
+
+<nav class="md-nav md-nav--primary md-nav--lifted md-nav--integrated" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../../../.." title="Thaw Slump Segmentation" class="md-nav__button md-logo" aria-label="Thaw Slump Segmentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Thaw Slump Segmentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/initze/thaw-slump-segmentation" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.6.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
+  </div>
+  <div class="md-source__repository">
+    thaw-slump-segmentation
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../.." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Thaw Slump Segmentation
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+      
+        
+        
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  <span class="md-ellipsis">
+    Reference
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            Reference
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_1" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2_1" id="__nav_2_1_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Src
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_1_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2_1">
+            <span class="md-nav__icon md-icon"></span>
+            Src
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_1_1" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2_1_1" id="__nav_2_1_1_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Thaw slump segmentation
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_2_1_1_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2_1_1">
+            <span class="md-nav__icon md-icon"></span>
+            Thaw slump segmentation
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../__main__/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+      main  
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../data_loading/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Data loading
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../loss_functions/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Loss functions
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../main/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Main
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../postprocessing/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Postprocessing
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_1_1_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_1_1_6" id="__nav_2_1_1_6_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Data pre processing
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="4" aria-labelledby="__nav_2_1_1_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_1_1_6">
+            <span class="md-nav__icon md-icon"></span>
+            Data pre processing
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../data_pre_processing/dem/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Dem
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../data_pre_processing/earthengine/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Earthengine
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../data_pre_processing/gdal/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Gdal
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../data_pre_processing/udm/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Udm
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../data_pre_processing/utils/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Utils
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_1_1_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_1_1_7" id="__nav_2_1_1_7_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Metrics
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="4" aria-labelledby="__nav_2_1_1_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_1_1_7">
+            <span class="md-nav__icon md-icon"></span>
+            Metrics
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../metrics/binary_instance_prc/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Binary instance prc
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../metrics/binary_instance_stat_scores/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Binary instance stat scores
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../metrics/boundary_helpers/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Boundary helpers
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../metrics/boundary_iou/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Boundary iou
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../metrics/instance_helpers/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Instance helpers
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_1_1_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_1_1_8" id="__nav_2_1_1_8_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Models
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="4" aria-labelledby="__nav_2_1_1_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_1_1_8">
+            <span class="md-nav__icon md-icon"></span>
+            Models
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../models/__version__/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+      version  
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_1_1_8_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_1_1_8_2" id="__nav_2_1_1_8_2_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Base
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="5" aria-labelledby="__nav_2_1_1_8_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_1_1_8_2">
+            <span class="md-nav__icon md-icon"></span>
+            Base
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../models/base/heads/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Heads
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../models/base/initialization/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Initialization
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../models/base/model/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Model
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../models/base/modules/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Modules
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_1_1_8_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_1_1_8_3" id="__nav_2_1_1_8_3_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Deeplabv3
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="5" aria-labelledby="__nav_2_1_1_8_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_1_1_8_3">
+            <span class="md-nav__icon md-icon"></span>
+            Deeplabv3
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../models/deeplabv3/decoder/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Decoder
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../models/deeplabv3/model/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Model
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_1_1_8_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_1_1_8_4" id="__nav_2_1_1_8_4_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Encoders
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="5" aria-labelledby="__nav_2_1_1_8_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_1_1_8_4">
+            <span class="md-nav__icon md-icon"></span>
+            Encoders
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../models/encoders/_base/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+     base
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../models/encoders/_preprocessing/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+     preprocessing
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../models/encoders/_utils/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+     utils
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../models/encoders/densenet/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Densenet
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../models/encoders/dpn/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Dpn
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../models/encoders/efficientnet/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Efficientnet
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../models/encoders/inceptionresnetv2/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Inceptionresnetv2
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../models/encoders/inceptionv4/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Inceptionv4
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../models/encoders/mobilenet/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Mobilenet
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../models/encoders/resnet/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Resnet
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../models/encoders/senet/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Senet
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../models/encoders/timm_efficientnet/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Timm efficientnet
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../models/encoders/timm_regnet/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Timm regnet
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../models/encoders/timm_res2net/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Timm res2net
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../models/encoders/timm_resnest/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Timm resnest
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../models/encoders/timm_sknet/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Timm sknet
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../models/encoders/vgg/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Vgg
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../models/encoders/xception/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Xception
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_1_1_8_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_1_1_8_5" id="__nav_2_1_1_8_5_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Fpn
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="5" aria-labelledby="__nav_2_1_1_8_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_1_1_8_5">
+            <span class="md-nav__icon md-icon"></span>
+            Fpn
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../models/fpn/decoder/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Decoder
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../models/fpn/model/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Model
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_1_1_8_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_1_1_8_6" id="__nav_2_1_1_8_6_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Linknet
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="5" aria-labelledby="__nav_2_1_1_8_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_1_1_8_6">
+            <span class="md-nav__icon md-icon"></span>
+            Linknet
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../models/linknet/decoder/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Decoder
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../models/linknet/model/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Model
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_1_1_8_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_1_1_8_7" id="__nav_2_1_1_8_7_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Losses
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="5" aria-labelledby="__nav_2_1_1_8_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_1_1_8_7">
+            <span class="md-nav__icon md-icon"></span>
+            Losses
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../models/losses/_functional/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+     functional
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../models/losses/constants/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Constants
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../models/losses/dice/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Dice
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../models/losses/focal/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Focal
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../models/losses/jaccard/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Jaccard
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../models/losses/lovasz/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Lovasz
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../models/losses/soft_bce/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Soft bce
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../models/losses/soft_ce/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Soft ce
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_1_1_8_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_1_1_8_8" id="__nav_2_1_1_8_8_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Manet
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="5" aria-labelledby="__nav_2_1_1_8_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_1_1_8_8">
+            <span class="md-nav__icon md-icon"></span>
+            Manet
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../models/manet/decoder/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Decoder
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../models/manet/model/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Model
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_1_1_8_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_1_1_8_9" id="__nav_2_1_1_8_9_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Pan
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="5" aria-labelledby="__nav_2_1_1_8_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_1_1_8_9">
+            <span class="md-nav__icon md-icon"></span>
+            Pan
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../models/pan/decoder/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Decoder
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../models/pan/model/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Model
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_1_1_8_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_1_1_8_10" id="__nav_2_1_1_8_10_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Pspnet
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="5" aria-labelledby="__nav_2_1_1_8_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_1_1_8_10">
+            <span class="md-nav__icon md-icon"></span>
+            Pspnet
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../models/pspnet/decoder/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Decoder
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../models/pspnet/model/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Model
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_1_1_8_11" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_1_1_8_11" id="__nav_2_1_1_8_11_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Unet
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="5" aria-labelledby="__nav_2_1_1_8_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_1_1_8_11">
+            <span class="md-nav__icon md-icon"></span>
+            Unet
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../models/unet/decoder/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Decoder
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../models/unet/model/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Model
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_1_1_8_12" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_1_1_8_12" id="__nav_2_1_1_8_12_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Unetplusplus
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="5" aria-labelledby="__nav_2_1_1_8_12_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_1_1_8_12">
+            <span class="md-nav__icon md-icon"></span>
+            Unetplusplus
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../models/unetplusplus/decoder/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Decoder
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../models/unetplusplus/model/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Model
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_1_1_8_13" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_1_1_8_13" id="__nav_2_1_1_8_13_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Utils
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="5" aria-labelledby="__nav_2_1_1_8_13_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_1_1_8_13">
+            <span class="md-nav__icon md-icon"></span>
+            Utils
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../models/utils/base/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Base
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../models/utils/functional/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Functional
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../models/utils/losses/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Losses
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../models/utils/meter/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Meter
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../models/utils/metrics/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Metrics
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../models/utils/train/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Train
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_1_1_9" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2_1_1_9" id="__nav_2_1_1_9_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Scripts
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="4" aria-labelledby="__nav_2_1_1_9_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2_1_1_9">
+            <span class="md-nav__icon md-icon"></span>
+            Scripts
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../inference/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Inference
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Prepare data
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    Prepare data
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#src.thaw_slump_segmentation.scripts.prepare_data" class="md-nav__link">
+    <span class="md-ellipsis">
+      prepare_data
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#src.thaw_slump_segmentation.scripts.prepare_data.RASTERFILTER" class="md-nav__link">
+    <span class="md-ellipsis">
+      RASTERFILTER
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#src.thaw_slump_segmentation.scripts.prepare_data.VECTORFILTER" class="md-nav__link">
+    <span class="md-ellipsis">
+      VECTORFILTER
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#src.thaw_slump_segmentation.scripts.prepare_data.args" class="md-nav__link">
+    <span class="md-ellipsis">
+      args
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#src.thaw_slump_segmentation.scripts.prepare_data.parser" class="md-nav__link">
+    <span class="md-ellipsis">
+      parser
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#src.thaw_slump_segmentation.scripts.prepare_data.do_gdal_calls" class="md-nav__link">
+    <span class="md-ellipsis">
+      do_gdal_calls
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#src.thaw_slump_segmentation.scripts.prepare_data.get_planet_product_type" class="md-nav__link">
+    <span class="md-ellipsis">
+      get_planet_product_type
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#src.thaw_slump_segmentation.scripts.prepare_data.glob_file" class="md-nav__link">
+    <span class="md-ellipsis">
+      glob_file
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#src.thaw_slump_segmentation.scripts.prepare_data.main_function" class="md-nav__link">
+    <span class="md-ellipsis">
+      main_function
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#src.thaw_slump_segmentation.scripts.prepare_data.make_info_picture" class="md-nav__link">
+    <span class="md-ellipsis">
+      make_info_picture
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#src.thaw_slump_segmentation.scripts.prepare_data.mask_from_img" class="md-nav__link">
+    <span class="md-ellipsis">
+      mask_from_img
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#src.thaw_slump_segmentation.scripts.prepare_data.other_from_img" class="md-nav__link">
+    <span class="md-ellipsis">
+      other_from_img
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#src.thaw_slump_segmentation.scripts.prepare_data.prepare_data" class="md-nav__link">
+    <span class="md-ellipsis">
+      prepare_data
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#src.thaw_slump_segmentation.scripts.prepare_data.read_and_assert_imagedata" class="md-nav__link">
+    <span class="md-ellipsis">
+      read_and_assert_imagedata
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#src.thaw_slump_segmentation.scripts.prepare_data.tile_size_callback" class="md-nav__link">
+    <span class="md-ellipsis">
+      tile_size_callback
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../process_02_inference/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Process 02 inference
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../process_03_ensemble/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Process 03 ensemble
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../setup_raw_data/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Setup raw data
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../train/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Train
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_1_1_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_1_1_10" id="__nav_2_1_1_10_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Utils
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="4" aria-labelledby="__nav_2_1_1_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_1_1_10">
+            <span class="md-nav__icon md-icon"></span>
+            Utils
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../utils/data/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Data
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../utils/geometry/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Geometry
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../utils/images/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Images
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../utils/io/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Io
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../utils/logging/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Logging
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../utils/plot_info/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Plot info
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../utils/plot_statistics/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Plot statistics
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../utils/stats/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Stats
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../utils/yaml_custom/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Yaml custom
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../../scripts/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Scripts
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  <h1>Prepare data</h1>
+
+<div class="doc doc-object doc-module">
+
+
+
+<a id="src.thaw_slump_segmentation.scripts.prepare_data"></a>
+    <div class="doc doc-contents first">
+
+        <p>Usecase 2 Data Preprocessing Script</p>
+
+
+
+
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h2 id="src.thaw_slump_segmentation.scripts.prepare_data.RASTERFILTER" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">RASTERFILTER</span> <span class="o">=</span> <span class="s1">&#39;*_SR*.tif&#39;</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h2 id="src.thaw_slump_segmentation.scripts.prepare_data.VECTORFILTER" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">VECTORFILTER</span> <span class="o">=</span> <span class="s1">&#39;*.shp&#39;</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h2 id="src.thaw_slump_segmentation.scripts.prepare_data.args" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h2 id="src.thaw_slump_segmentation.scripts.prepare_data.parser" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s1">&#39;Make data ready for training&#39;</span><span class="p">,</span> <span class="n">formatter_class</span><span class="o">=</span><span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentDefaultsHelpFormatter</span><span class="p">)</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+    </div>
+
+</div>
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="src.thaw_slump_segmentation.scripts.prepare_data.do_gdal_calls" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">do_gdal_calls</span><span class="p">(</span><span class="n">DATASET</span><span class="p">,</span> <span class="n">xsize</span><span class="p">,</span> <span class="n">ysize</span><span class="p">,</span> <span class="n">overlap</span><span class="p">,</span> <span class="n">aux_data</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;ndvi&#39;</span><span class="p">,</span> <span class="s1">&#39;tcvis&#39;</span><span class="p">,</span> <span class="s1">&#39;slope&#39;</span><span class="p">,</span> <span class="s1">&#39;relative_elevation&#39;</span><span class="p">],</span> <span class="n">logger</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+
+            <details class="quote">
+              <summary>Source code in <code>src/thaw_slump_segmentation/scripts/prepare_data.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">113</span>
+<span class="normal">114</span>
+<span class="normal">115</span>
+<span class="normal">116</span>
+<span class="normal">117</span>
+<span class="normal">118</span>
+<span class="normal">119</span>
+<span class="normal">120</span>
+<span class="normal">121</span>
+<span class="normal">122</span>
+<span class="normal">123</span>
+<span class="normal">124</span>
+<span class="normal">125</span>
+<span class="normal">126</span>
+<span class="normal">127</span>
+<span class="normal">128</span>
+<span class="normal">129</span>
+<span class="normal">130</span>
+<span class="normal">131</span>
+<span class="normal">132</span>
+<span class="normal">133</span>
+<span class="normal">134</span>
+<span class="normal">135</span>
+<span class="normal">136</span>
+<span class="normal">137</span>
+<span class="normal">138</span>
+<span class="normal">139</span>
+<span class="normal">140</span>
+<span class="normal">141</span>
+<span class="normal">142</span>
+<span class="normal">143</span>
+<span class="normal">144</span>
+<span class="normal">145</span>
+<span class="normal">146</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">do_gdal_calls</span><span class="p">(</span>
+    <span class="n">DATASET</span><span class="p">,</span>
+    <span class="n">xsize</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">ysize</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">overlap</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">aux_data</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;ndvi&#39;</span><span class="p">,</span> <span class="s1">&#39;tcvis&#39;</span><span class="p">,</span> <span class="s1">&#39;slope&#39;</span><span class="p">,</span> <span class="s1">&#39;relative_elevation&#39;</span><span class="p">],</span>
+    <span class="n">logger</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="n">rasterfile</span> <span class="o">=</span> <span class="n">glob_file</span><span class="p">(</span><span class="n">DATASET</span><span class="p">,</span> <span class="n">RASTERFILTER</span><span class="p">,</span> <span class="n">logger</span><span class="p">)</span>
+    <span class="n">image_name</span> <span class="o">=</span> <span class="n">rasterfile</span><span class="o">.</span><span class="n">name</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="o">-</span><span class="mi">7</span><span class="p">]</span>
+
+    <span class="n">maskfile</span> <span class="o">=</span> <span class="n">DATASET</span> <span class="o">/</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">image_name</span><span class="si">}</span><span class="s1">_mask.tif&#39;</span>
+
+    <span class="n">tile_dir_data</span> <span class="o">=</span> <span class="n">DATASET</span> <span class="o">/</span> <span class="s1">&#39;tiles&#39;</span> <span class="o">/</span> <span class="s1">&#39;data&#39;</span>
+    <span class="n">tile_dir_mask</span> <span class="o">=</span> <span class="n">DATASET</span> <span class="o">/</span> <span class="s1">&#39;tiles&#39;</span> <span class="o">/</span> <span class="s1">&#39;mask&#39;</span>
+
+    <span class="c1"># Create parents on the first data folder</span>
+    <span class="n">tile_dir_data</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">tile_dir_mask</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+
+    <span class="c1"># Retile data, mask</span>
+    <span class="c1"># log_run(f&#39;python {gdal.retile} -ps {XSIZE} {YSIZE} -overlap {OVERLAP} -targetDir {tile_dir_data} {rasterfile}&#39;, logger)</span>
+    <span class="c1"># log_run(f&#39;python {gdal.retile} -ps {XSIZE} {YSIZE} -overlap {OVERLAP} -targetDir {tile_dir_mask} {maskfile}&#39;, logger)</span>
+    <span class="n">log_run</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">gdal</span><span class="o">.</span><span class="n">retile</span><span class="si">}</span><span class="s1"> -ps </span><span class="si">{</span><span class="n">xsize</span><span class="si">}</span><span class="s1"> </span><span class="si">{</span><span class="n">ysize</span><span class="si">}</span><span class="s1"> -overlap </span><span class="si">{</span><span class="n">overlap</span><span class="si">}</span><span class="s1"> -targetDir </span><span class="si">{</span><span class="n">tile_dir_data</span><span class="si">}</span><span class="s1"> </span><span class="si">{</span><span class="n">rasterfile</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">logger</span><span class="p">)</span>
+    <span class="n">log_run</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">gdal</span><span class="o">.</span><span class="n">retile</span><span class="si">}</span><span class="s1"> -ps </span><span class="si">{</span><span class="n">xsize</span><span class="si">}</span><span class="s1"> </span><span class="si">{</span><span class="n">ysize</span><span class="si">}</span><span class="s1"> -overlap </span><span class="si">{</span><span class="n">overlap</span><span class="si">}</span><span class="s1"> -targetDir </span><span class="si">{</span><span class="n">tile_dir_mask</span><span class="si">}</span><span class="s1"> </span><span class="si">{</span><span class="n">maskfile</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">logger</span><span class="p">)</span>
+
+    <span class="c1"># Retile additional data</span>
+    <span class="k">for</span> <span class="n">aux</span> <span class="ow">in</span> <span class="n">aux_data</span><span class="p">:</span>
+        <span class="n">auxfile</span> <span class="o">=</span> <span class="n">DATASET</span> <span class="o">/</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">aux</span><span class="si">}</span><span class="s1">.tif&#39;</span>
+        <span class="n">tile_dir_aux</span> <span class="o">=</span> <span class="n">DATASET</span> <span class="o">/</span> <span class="s1">&#39;tiles&#39;</span> <span class="o">/</span> <span class="n">aux</span>
+        <span class="n">tile_dir_aux</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="c1"># log_run(f&#39;python {gdal.retile} -ps {XSIZE} {YSIZE} -overlap {OVERLAP} -targetDir {tile_dir_aux} {auxfile}&#39;, logger)</span>
+        <span class="n">log_run</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">gdal</span><span class="o">.</span><span class="n">retile</span><span class="si">}</span><span class="s1"> -ps </span><span class="si">{</span><span class="n">xsize</span><span class="si">}</span><span class="s1"> </span><span class="si">{</span><span class="n">ysize</span><span class="si">}</span><span class="s1"> -overlap </span><span class="si">{</span><span class="n">overlap</span><span class="si">}</span><span class="s1"> -targetDir </span><span class="si">{</span><span class="n">tile_dir_aux</span><span class="si">}</span><span class="s1"> </span><span class="si">{</span><span class="n">auxfile</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">logger</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="src.thaw_slump_segmentation.scripts.prepare_data.get_planet_product_type" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">get_planet_product_type</span><span class="p">(</span><span class="n">img_path</span><span class="p">)</span></code>
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>return if file is scene or OrthoTile</p>
+
+            <details class="quote">
+              <summary>Source code in <code>src/thaw_slump_segmentation/scripts/prepare_data.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">45</span>
+<span class="normal">46</span>
+<span class="normal">47</span>
+<span class="normal">48</span>
+<span class="normal">49</span>
+<span class="normal">50</span>
+<span class="normal">51</span>
+<span class="normal">52</span>
+<span class="normal">53</span>
+<span class="normal">54</span>
+<span class="normal">55</span>
+<span class="normal">56</span>
+<span class="normal">57</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">get_planet_product_type</span><span class="p">(</span><span class="n">img_path</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    return if file is scene or OrthoTile&quot;&quot;&quot;</span>
+    <span class="n">split</span> <span class="o">=</span> <span class="n">img_path</span><span class="o">.</span><span class="n">stem</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">)</span>
+    <span class="c1"># check if 4th last imagename segment is BGRN</span>
+    <span class="k">if</span> <span class="n">split</span><span class="p">[</span><span class="o">-</span><span class="mi">4</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;BGRN&#39;</span><span class="p">:</span>
+        <span class="n">pl_type</span> <span class="o">=</span> <span class="s1">&#39;OrthoTile&#39;</span>
+    <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">split</span><span class="p">)</span> <span class="o">==</span> <span class="mi">6</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">split</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span> <span class="o">==</span> <span class="mi">6</span><span class="p">:</span>
+        <span class="n">pl_type</span> <span class="o">=</span> <span class="s2">&quot;Sentinel2&quot;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">pl_type</span> <span class="o">=</span> <span class="s1">&#39;Scene&#39;</span>
+
+    <span class="k">return</span> <span class="n">pl_type</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="src.thaw_slump_segmentation.scripts.prepare_data.glob_file" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">glob_file</span><span class="p">(</span><span class="n">DATASET</span><span class="p">,</span> <span class="n">filter_string</span><span class="p">,</span> <span class="n">logger</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+
+            <details class="quote">
+              <summary>Source code in <code>src/thaw_slump_segmentation/scripts/prepare_data.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">104</span>
+<span class="normal">105</span>
+<span class="normal">106</span>
+<span class="normal">107</span>
+<span class="normal">108</span>
+<span class="normal">109</span>
+<span class="normal">110</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">glob_file</span><span class="p">(</span><span class="n">DATASET</span><span class="p">,</span> <span class="n">filter_string</span><span class="p">,</span> <span class="n">logger</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="n">candidates</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">DATASET</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">filter_string</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">))</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">candidates</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Found file: </span><span class="si">{</span><span class="n">candidates</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">candidates</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Found </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">candidates</span><span class="p">)</span><span class="si">}</span><span class="s1"> candidates.&#39;</span> <span class="s1">&#39;Please make selection more specific!&#39;</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="src.thaw_slump_segmentation.scripts.prepare_data.main_function" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">main_function</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">log_path</span><span class="p">,</span> <span class="n">h5dir</span><span class="p">,</span> <span class="n">xsize</span><span class="p">,</span> <span class="n">ysize</span><span class="p">,</span> <span class="n">overlap</span><span class="p">,</span> <span class="n">threshold</span><span class="p">,</span> <span class="n">skip_gdal</span><span class="p">,</span> <span class="n">gdal_bin</span><span class="p">,</span> <span class="n">gdal_path</span><span class="p">)</span></code>
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+
+            <details class="quote">
+              <summary>Source code in <code>src/thaw_slump_segmentation/scripts/prepare_data.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">167</span>
+<span class="normal">168</span>
+<span class="normal">169</span>
+<span class="normal">170</span>
+<span class="normal">171</span>
+<span class="normal">172</span>
+<span class="normal">173</span>
+<span class="normal">174</span>
+<span class="normal">175</span>
+<span class="normal">176</span>
+<span class="normal">177</span>
+<span class="normal">178</span>
+<span class="normal">179</span>
+<span class="normal">180</span>
+<span class="normal">181</span>
+<span class="normal">182</span>
+<span class="normal">183</span>
+<span class="normal">184</span>
+<span class="normal">185</span>
+<span class="normal">186</span>
+<span class="normal">187</span>
+<span class="normal">188</span>
+<span class="normal">189</span>
+<span class="normal">190</span>
+<span class="normal">191</span>
+<span class="normal">192</span>
+<span class="normal">193</span>
+<span class="normal">194</span>
+<span class="normal">195</span>
+<span class="normal">196</span>
+<span class="normal">197</span>
+<span class="normal">198</span>
+<span class="normal">199</span>
+<span class="normal">200</span>
+<span class="normal">201</span>
+<span class="normal">202</span>
+<span class="normal">203</span>
+<span class="normal">204</span>
+<span class="normal">205</span>
+<span class="normal">206</span>
+<span class="normal">207</span>
+<span class="normal">208</span>
+<span class="normal">209</span>
+<span class="normal">210</span>
+<span class="normal">211</span>
+<span class="normal">212</span>
+<span class="normal">213</span>
+<span class="normal">214</span>
+<span class="normal">215</span>
+<span class="normal">216</span>
+<span class="normal">217</span>
+<span class="normal">218</span>
+<span class="normal">219</span>
+<span class="normal">220</span>
+<span class="normal">221</span>
+<span class="normal">222</span>
+<span class="normal">223</span>
+<span class="normal">224</span>
+<span class="normal">225</span>
+<span class="normal">226</span>
+<span class="normal">227</span>
+<span class="normal">228</span>
+<span class="normal">229</span>
+<span class="normal">230</span>
+<span class="normal">231</span>
+<span class="normal">232</span>
+<span class="normal">233</span>
+<span class="normal">234</span>
+<span class="normal">235</span>
+<span class="normal">236</span>
+<span class="normal">237</span>
+<span class="normal">238</span>
+<span class="normal">239</span>
+<span class="normal">240</span>
+<span class="normal">241</span>
+<span class="normal">242</span>
+<span class="normal">243</span>
+<span class="normal">244</span>
+<span class="normal">245</span>
+<span class="normal">246</span>
+<span class="normal">247</span>
+<span class="normal">248</span>
+<span class="normal">249</span>
+<span class="normal">250</span>
+<span class="normal">251</span>
+<span class="normal">252</span>
+<span class="normal">253</span>
+<span class="normal">254</span>
+<span class="normal">255</span>
+<span class="normal">256</span>
+<span class="normal">257</span>
+<span class="normal">258</span>
+<span class="normal">259</span>
+<span class="normal">260</span>
+<span class="normal">261</span>
+<span class="normal">262</span>
+<span class="normal">263</span>
+<span class="normal">264</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">main_function</span><span class="p">(</span>
+    <span class="n">dataset</span><span class="p">,</span> <span class="n">log_path</span><span class="p">,</span> <span class="n">h5dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">xsize</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">ysize</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">overlap</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">threshold</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">skip_gdal</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">gdal_bin</span><span class="p">:</span><span class="nb">str</span><span class="p">,</span> <span class="n">gdal_path</span><span class="p">:</span><span class="nb">str</span>
+<span class="p">):</span>
+    <span class="n">init_logging</span><span class="p">(</span><span class="n">log_path</span><span class="p">)</span>
+    <span class="n">thread_logger</span> <span class="o">=</span> <span class="n">get_logger</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;prepare_data.</span><span class="si">{</span><span class="n">dataset</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="n">thread_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Starting preparation on dataset </span><span class="si">{</span><span class="n">dataset</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">skip_gdal</span><span class="p">:</span>
+        <span class="n">gdal</span><span class="o">.</span><span class="n">initialize</span><span class="p">(</span><span class="nb">bin</span><span class="o">=</span><span class="n">gdal_bin</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="n">gdal_bin</span><span class="p">)</span>
+        <span class="n">thread_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Doing GDAL Calls&#39;</span><span class="p">)</span>
+        <span class="n">do_gdal_calls</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">xsize</span><span class="p">,</span> <span class="n">ysize</span><span class="p">,</span> <span class="n">overlap</span><span class="p">,</span> <span class="n">logger</span><span class="o">=</span><span class="n">thread_logger</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">thread_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Skipping GDAL Calls&#39;</span><span class="p">)</span>
+
+    <span class="n">tifs</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s1">&#39;tiles/data/*.tif&#39;</span><span class="p">)))</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">tifs</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">thread_logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;No tiles found for </span><span class="si">{</span><span class="n">dataset</span><span class="si">}</span><span class="s1">, skipping this directory.&#39;</span><span class="p">)</span>
+        <span class="k">return</span>
+
+    <span class="n">h5_path</span> <span class="o">=</span> <span class="n">h5dir</span> <span class="o">/</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">dataset</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s1">.h5&#39;</span>
+    <span class="n">info_dir</span> <span class="o">=</span> <span class="n">h5dir</span> <span class="o">/</span> <span class="n">dataset</span><span class="o">.</span><span class="n">name</span>
+    <span class="n">info_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="n">thread_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Creating H5File at </span><span class="si">{</span><span class="n">h5_path</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="n">h5</span> <span class="o">=</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span>
+        <span class="n">h5_path</span><span class="p">,</span>
+        <span class="s1">&#39;w&#39;</span><span class="p">,</span>
+        <span class="n">rdcc_nbytes</span><span class="o">=</span><span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">&lt;&lt;</span> <span class="mi">30</span><span class="p">),</span>  <span class="c1"># 2 GiB</span>
+        <span class="n">rdcc_nslots</span><span class="o">=</span><span class="mi">200003</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">channel_numbers</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">planet</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">ndvi</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">tcvis</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">relative_elevation</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">slope</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="n">datasets</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">dataset_name</span><span class="p">,</span> <span class="n">nchannels</span> <span class="ow">in</span> <span class="n">channel_numbers</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">ds</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span>
+            <span class="n">dataset_name</span><span class="p">,</span>
+            <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span>
+            <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">tifs</span><span class="p">),</span> <span class="n">nchannels</span><span class="p">,</span> <span class="n">xsize</span><span class="p">,</span> <span class="n">ysize</span><span class="p">),</span>
+            <span class="n">maxshape</span><span class="o">=</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">tifs</span><span class="p">),</span> <span class="n">nchannels</span><span class="p">,</span> <span class="n">xsize</span><span class="p">,</span> <span class="n">ysize</span><span class="p">),</span>
+            <span class="n">chunks</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">nchannels</span><span class="p">,</span> <span class="n">xsize</span><span class="p">,</span> <span class="n">ysize</span><span class="p">),</span>
+            <span class="n">compression</span><span class="o">=</span><span class="s1">&#39;lzf&#39;</span><span class="p">,</span>
+            <span class="n">scaleoffset</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">datasets</span><span class="p">[</span><span class="n">dataset_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">ds</span>
+
+    <span class="n">datasets</span><span class="p">[</span><span class="s1">&#39;mask&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">h5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span>
+        <span class="s1">&#39;mask&#39;</span><span class="p">,</span>
+        <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">,</span>
+        <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">tifs</span><span class="p">),</span> <span class="mi">1</span><span class="p">,</span> <span class="n">xsize</span><span class="p">,</span> <span class="n">ysize</span><span class="p">),</span>
+        <span class="n">maxshape</span><span class="o">=</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">tifs</span><span class="p">),</span> <span class="mi">1</span><span class="p">,</span> <span class="n">xsize</span><span class="p">,</span> <span class="n">ysize</span><span class="p">),</span>
+        <span class="n">chunks</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">xsize</span><span class="p">,</span> <span class="n">ysize</span><span class="p">),</span>
+        <span class="n">compression</span><span class="o">=</span><span class="s1">&#39;lzf&#39;</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Convert data to HDF5 storage for efficient data loading</span>
+    <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">bad_tiles</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">img</span> <span class="ow">in</span> <span class="n">tifs</span><span class="p">:</span>
+        <span class="n">tile</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">with</span> <span class="n">rio</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">img</span><span class="p">)</span> <span class="k">as</span> <span class="n">raster</span><span class="p">:</span>
+            <span class="n">tile</span><span class="p">[</span><span class="s1">&#39;planet&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">raster</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="n">tile</span><span class="p">[</span><span class="s1">&#39;planet&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span> <span class="o">&gt;</span> <span class="n">threshold</span><span class="p">:</span>
+            <span class="n">bad_tiles</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">continue</span>
+
+        <span class="k">with</span> <span class="n">rio</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">mask_from_img</span><span class="p">(</span><span class="n">img</span><span class="p">))</span> <span class="k">as</span> <span class="n">raster</span><span class="p">:</span>
+            <span class="n">tile</span><span class="p">[</span><span class="s1">&#39;mask&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">raster</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+        <span class="k">assert</span> <span class="n">tile</span><span class="p">[</span><span class="s1">&#39;mask&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;Mask can&#39;t contain values &gt; 1&quot;</span>
+
+        <span class="k">for</span> <span class="n">other</span> <span class="ow">in</span> <span class="n">channel_numbers</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">other</span> <span class="o">==</span> <span class="s1">&#39;planet&#39;</span><span class="p">:</span>
+                <span class="k">continue</span>  <span class="c1"># We already did this!</span>
+            <span class="k">with</span> <span class="n">rio</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">other_from_img</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">other</span><span class="p">))</span> <span class="k">as</span> <span class="n">raster</span><span class="p">:</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">raster</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">channel_numbers</span><span class="p">[</span><span class="n">other</span><span class="p">]:</span>
+                <span class="c1"># This is for tcvis mostly</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="p">[:</span> <span class="n">channel_numbers</span><span class="p">[</span><span class="n">other</span><span class="p">]]</span>
+            <span class="n">tile</span><span class="p">[</span><span class="n">other</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span>
+
+        <span class="c1"># gdal_retile leaves narrow stripes at the right and bottom border,</span>
+        <span class="c1"># which are filtered out here:</span>
+        <span class="n">is_narrow</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">for</span> <span class="n">tensor</span> <span class="ow">in</span> <span class="n">tile</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">tensor</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">:]</span> <span class="o">!=</span> <span class="p">(</span><span class="n">xsize</span><span class="p">,</span> <span class="n">ysize</span><span class="p">):</span>
+                <span class="n">is_narrow</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="k">break</span>
+        <span class="k">if</span> <span class="n">is_narrow</span><span class="p">:</span>
+            <span class="n">bad_tiles</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">continue</span>
+
+        <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">tile</span><span class="p">:</span>
+            <span class="n">datasets</span><span class="p">[</span><span class="n">t</span><span class="p">][</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">tile</span><span class="p">[</span><span class="n">t</span><span class="p">]</span>
+
+        <span class="n">make_info_picture</span><span class="p">(</span><span class="n">tile</span><span class="p">,</span> <span class="n">info_dir</span> <span class="o">/</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">.jpg&#39;</span><span class="p">)</span>
+        <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+
+    <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">datasets</span><span class="p">:</span>
+        <span class="n">datasets</span><span class="p">[</span><span class="n">t</span><span class="p">]</span><span class="o">.</span><span class="n">resize</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="src.thaw_slump_segmentation.scripts.prepare_data.make_info_picture" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">make_info_picture</span><span class="p">(</span><span class="n">tile</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span></code>
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Make overview picture</p>
+
+            <details class="quote">
+              <summary>Source code in <code>src/thaw_slump_segmentation/scripts/prepare_data.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">149</span>
+<span class="normal">150</span>
+<span class="normal">151</span>
+<span class="normal">152</span>
+<span class="normal">153</span>
+<span class="normal">154</span>
+<span class="normal">155</span>
+<span class="normal">156</span>
+<span class="normal">157</span>
+<span class="normal">158</span>
+<span class="normal">159</span>
+<span class="normal">160</span>
+<span class="normal">161</span>
+<span class="normal">162</span>
+<span class="normal">163</span>
+<span class="normal">164</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">make_info_picture</span><span class="p">(</span><span class="n">tile</span><span class="p">,</span> <span class="n">filename</span><span class="p">):</span>
+    <span class="s2">&quot;Make overview picture&quot;</span>
+    <span class="n">rgbn</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">tile</span><span class="p">[</span><span class="s1">&#39;planet&#39;</span><span class="p">][:</span><span class="mi">4</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">/</span> <span class="mi">3000</span> <span class="o">*</span> <span class="mi">255</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">255</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+    <span class="n">tcvis</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">tile</span><span class="p">[</span><span class="s1">&#39;tcvis&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">255</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+
+    <span class="n">rgb</span> <span class="o">=</span> <span class="n">rgbn</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:</span><span class="mi">3</span><span class="p">]</span>
+    <span class="n">nir</span> <span class="o">=</span> <span class="n">rgbn</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">]]</span>
+    <span class="n">mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">tile</span><span class="p">[</span><span class="s1">&#39;mask&#39;</span><span class="p">][[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]]</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">*</span> <span class="mi">255</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+
+    <span class="n">img</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span>
+        <span class="p">[</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">rgb</span><span class="p">,</span> <span class="n">nir</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">tcvis</span><span class="p">,</span> <span class="n">mask</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
+        <span class="p">]</span>
+    <span class="p">)</span>
+    <span class="n">imsave</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">img</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="src.thaw_slump_segmentation.scripts.prepare_data.mask_from_img" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">mask_from_img</span><span class="p">(</span><span class="n">img_path</span><span class="p">)</span></code>
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Given an image path, return path for the mask</p>
+
+            <details class="quote">
+              <summary>Source code in <code>src/thaw_slump_segmentation/scripts/prepare_data.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">60</span>
+<span class="normal">61</span>
+<span class="normal">62</span>
+<span class="normal">63</span>
+<span class="normal">64</span>
+<span class="normal">65</span>
+<span class="normal">66</span>
+<span class="normal">67</span>
+<span class="normal">68</span>
+<span class="normal">69</span>
+<span class="normal">70</span>
+<span class="normal">71</span>
+<span class="normal">72</span>
+<span class="normal">73</span>
+<span class="normal">74</span>
+<span class="normal">75</span>
+<span class="normal">76</span>
+<span class="normal">77</span>
+<span class="normal">78</span>
+<span class="normal">79</span>
+<span class="normal">80</span>
+<span class="normal">81</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">mask_from_img</span><span class="p">(</span><span class="n">img_path</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Given an image path, return path for the mask</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># change for</span>
+    <span class="n">product_type</span> <span class="o">=</span> <span class="n">get_planet_product_type</span><span class="p">(</span><span class="n">img_path</span><span class="p">)</span>
+    <span class="n">base</span> <span class="o">=</span> <span class="n">img_path</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span>
+
+    <span class="k">if</span> <span class="n">product_type</span> <span class="o">==</span> <span class="s1">&#39;Scene&#39;</span><span class="p">:</span>
+        <span class="n">date</span><span class="p">,</span> <span class="n">time</span><span class="p">,</span> <span class="o">*</span><span class="n">block</span><span class="p">,</span> <span class="n">platform</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">sr</span><span class="p">,</span> <span class="n">row</span><span class="p">,</span> <span class="n">col</span> <span class="o">=</span> <span class="n">img_path</span><span class="o">.</span><span class="n">stem</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">)</span>
+        <span class="n">block</span> <span class="o">=</span> <span class="s1">&#39;_&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">block</span><span class="p">)</span>
+        <span class="n">mask_path</span> <span class="o">=</span> <span class="n">base</span> <span class="o">/</span> <span class="s1">&#39;mask&#39;</span> <span class="o">/</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">date</span><span class="si">}</span><span class="s1">_</span><span class="si">{</span><span class="n">time</span><span class="si">}</span><span class="s1">_</span><span class="si">{</span><span class="n">block</span><span class="si">}</span><span class="s1">_mask_</span><span class="si">{</span><span class="n">row</span><span class="si">}</span><span class="s1">_</span><span class="si">{</span><span class="n">col</span><span class="si">}</span><span class="s1">.tif&#39;</span>
+    <span class="k">elif</span> <span class="n">product_type</span> <span class="o">==</span> <span class="s2">&quot;Sentinel2&quot;</span><span class="p">:</span>
+        <span class="n">date</span><span class="p">,</span> <span class="n">processing_date</span><span class="p">,</span> <span class="n">tile_id</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">row</span><span class="p">,</span> <span class="n">col</span> <span class="o">=</span> <span class="n">img_path</span><span class="o">.</span><span class="n">stem</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">)</span>
+        <span class="n">mask_path</span> <span class="o">=</span> <span class="n">base</span> <span class="o">/</span> <span class="s1">&#39;mask&#39;</span> <span class="o">/</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">date</span><span class="si">}</span><span class="s1">_</span><span class="si">{</span><span class="n">processing_date</span><span class="si">}</span><span class="s1">_</span><span class="si">{</span><span class="n">tile_id</span><span class="si">}</span><span class="s1">_mask_</span><span class="si">{</span><span class="n">row</span><span class="si">}</span><span class="s1">_</span><span class="si">{</span><span class="n">col</span><span class="si">}</span><span class="s1">.tif&#39;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">block</span><span class="p">,</span> <span class="n">tile</span><span class="p">,</span> <span class="n">date</span><span class="p">,</span> <span class="n">sensor</span><span class="p">,</span> <span class="n">bgrn</span><span class="p">,</span> <span class="n">sr</span><span class="p">,</span> <span class="n">row</span><span class="p">,</span> <span class="n">col</span> <span class="o">=</span> <span class="n">img_path</span><span class="o">.</span><span class="n">stem</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">)</span>
+        <span class="n">mask_path</span> <span class="o">=</span> <span class="n">base</span> <span class="o">/</span> <span class="s1">&#39;mask&#39;</span> <span class="o">/</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">block</span><span class="si">}</span><span class="s1">_</span><span class="si">{</span><span class="n">tile</span><span class="si">}</span><span class="s1">_</span><span class="si">{</span><span class="n">date</span><span class="si">}</span><span class="s1">_</span><span class="si">{</span><span class="n">sensor</span><span class="si">}</span><span class="s1">_mask_</span><span class="si">{</span><span class="n">row</span><span class="si">}</span><span class="s1">_</span><span class="si">{</span><span class="n">col</span><span class="si">}</span><span class="s1">.tif&#39;</span>
+
+    <span class="k">assert</span> <span class="n">mask_path</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">mask_path</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="src.thaw_slump_segmentation.scripts.prepare_data.other_from_img" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">other_from_img</span><span class="p">(</span><span class="n">img_path</span><span class="p">,</span> <span class="n">other</span><span class="p">)</span></code>
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Given an image path, return paths for mask and tcvis</p>
+
+            <details class="quote">
+              <summary>Source code in <code>src/thaw_slump_segmentation/scripts/prepare_data.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 84</span>
+<span class="normal"> 85</span>
+<span class="normal"> 86</span>
+<span class="normal"> 87</span>
+<span class="normal"> 88</span>
+<span class="normal"> 89</span>
+<span class="normal"> 90</span>
+<span class="normal"> 91</span>
+<span class="normal"> 92</span>
+<span class="normal"> 93</span>
+<span class="normal"> 94</span>
+<span class="normal"> 95</span>
+<span class="normal"> 96</span>
+<span class="normal"> 97</span>
+<span class="normal"> 98</span>
+<span class="normal"> 99</span>
+<span class="normal">100</span>
+<span class="normal">101</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">other_from_img</span><span class="p">(</span><span class="n">img_path</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Given an image path, return paths for mask and tcvis</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">product_type</span> <span class="o">=</span> <span class="n">get_planet_product_type</span><span class="p">(</span><span class="n">img_path</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">product_type</span> <span class="o">==</span> <span class="s1">&#39;Scene&#39;</span><span class="p">:</span>
+        <span class="n">date</span><span class="p">,</span> <span class="n">time</span><span class="p">,</span> <span class="o">*</span><span class="n">block</span><span class="p">,</span> <span class="n">platform</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">sr</span><span class="p">,</span> <span class="n">row</span><span class="p">,</span> <span class="n">col</span> <span class="o">=</span> <span class="n">img_path</span><span class="o">.</span><span class="n">stem</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">product_type</span> <span class="o">==</span> <span class="s2">&quot;Sentinel2&quot;</span><span class="p">:</span>
+        <span class="n">date</span><span class="p">,</span> <span class="n">processing_date</span><span class="p">,</span> <span class="n">tile_id</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">row</span><span class="p">,</span> <span class="n">col</span> <span class="o">=</span> <span class="n">img_path</span><span class="o">.</span><span class="n">stem</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">block</span><span class="p">,</span> <span class="n">tile</span><span class="p">,</span> <span class="n">date</span><span class="p">,</span> <span class="n">sensor</span><span class="p">,</span> <span class="n">bgrn</span><span class="p">,</span> <span class="n">sr</span><span class="p">,</span> <span class="n">row</span><span class="p">,</span> <span class="n">col</span> <span class="o">=</span> <span class="n">img_path</span><span class="o">.</span><span class="n">stem</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">)</span>
+
+    <span class="n">base</span> <span class="o">=</span> <span class="n">img_path</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span>
+
+    <span class="n">path</span> <span class="o">=</span> <span class="n">base</span> <span class="o">/</span> <span class="n">other</span> <span class="o">/</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">other</span><span class="si">}</span><span class="s1">_</span><span class="si">{</span><span class="n">row</span><span class="si">}</span><span class="s1">_</span><span class="si">{</span><span class="n">col</span><span class="si">}</span><span class="s1">.tif&#39;</span>
+    <span class="k">assert</span> <span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">path</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="src.thaw_slump_segmentation.scripts.prepare_data.prepare_data" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">prepare_data</span><span class="p">(</span><span class="n">data_dir</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">),</span> <span class="n">log_dir</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="s1">&#39;logs&#39;</span><span class="p">),</span> <span class="n">skip_gdal</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">gdal_bin</span><span class="o">=</span><span class="s1">&#39;/usr/bin&#39;</span><span class="p">,</span> <span class="n">gdal_path</span><span class="o">=</span><span class="s1">&#39;/usr/bin&#39;</span><span class="p">,</span> <span class="n">n_jobs</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">nodata_threshold</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">tile_size</span><span class="o">=</span><span class="s1">&#39;256x256&#39;</span><span class="p">,</span> <span class="n">tile_overlap</span><span class="o">=</span><span class="mi">25</span><span class="p">)</span></code>
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Make data ready for training</p>
+
+            <details class="quote">
+              <summary>Source code in <code>src/thaw_slump_segmentation/scripts/prepare_data.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">275</span>
+<span class="normal">276</span>
+<span class="normal">277</span>
+<span class="normal">278</span>
+<span class="normal">279</span>
+<span class="normal">280</span>
+<span class="normal">281</span>
+<span class="normal">282</span>
+<span class="normal">283</span>
+<span class="normal">284</span>
+<span class="normal">285</span>
+<span class="normal">286</span>
+<span class="normal">287</span>
+<span class="normal">288</span>
+<span class="normal">289</span>
+<span class="normal">290</span>
+<span class="normal">291</span>
+<span class="normal">292</span>
+<span class="normal">293</span>
+<span class="normal">294</span>
+<span class="normal">295</span>
+<span class="normal">296</span>
+<span class="normal">297</span>
+<span class="normal">298</span>
+<span class="normal">299</span>
+<span class="normal">300</span>
+<span class="normal">301</span>
+<span class="normal">302</span>
+<span class="normal">303</span>
+<span class="normal">304</span>
+<span class="normal">305</span>
+<span class="normal">306</span>
+<span class="normal">307</span>
+<span class="normal">308</span>
+<span class="normal">309</span>
+<span class="normal">310</span>
+<span class="normal">311</span>
+<span class="normal">312</span>
+<span class="normal">313</span>
+<span class="normal">314</span>
+<span class="normal">315</span>
+<span class="normal">316</span>
+<span class="normal">317</span>
+<span class="normal">318</span>
+<span class="normal">319</span>
+<span class="normal">320</span>
+<span class="normal">321</span>
+<span class="normal">322</span>
+<span class="normal">323</span>
+<span class="normal">324</span>
+<span class="normal">325</span>
+<span class="normal">326</span>
+<span class="normal">327</span>
+<span class="normal">328</span>
+<span class="normal">329</span>
+<span class="normal">330</span>
+<span class="normal">331</span>
+<span class="normal">332</span>
+<span class="normal">333</span>
+<span class="normal">334</span>
+<span class="normal">335</span>
+<span class="normal">336</span>
+<span class="normal">337</span>
+<span class="normal">338</span>
+<span class="normal">339</span>
+<span class="normal">340</span>
+<span class="normal">341</span>
+<span class="normal">342</span>
+<span class="normal">343</span>
+<span class="normal">344</span>
+<span class="normal">345</span>
+<span class="normal">346</span>
+<span class="normal">347</span>
+<span class="normal">348</span>
+<span class="normal">349</span>
+<span class="normal">350</span>
+<span class="normal">351</span>
+<span class="normal">352</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">prepare_data</span><span class="p">(</span>
+    <span class="n">data_dir</span><span class="p">:</span> <span class="n">Annotated</span><span class="p">[</span><span class="n">Path</span><span class="p">,</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span><span class="s1">&#39;--data_dir&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Path to data processing dir&#39;</span><span class="p">)]</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">),</span>
+    <span class="n">log_dir</span><span class="p">:</span> <span class="n">Annotated</span><span class="p">[</span><span class="n">Path</span><span class="p">,</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span><span class="s1">&#39;--log_dir&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Path to log dir&#39;</span><span class="p">)]</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s1">&#39;logs&#39;</span><span class="p">),</span>
+    <span class="n">skip_gdal</span><span class="p">:</span> <span class="n">Annotated</span><span class="p">[</span>
+        <span class="nb">bool</span><span class="p">,</span>
+        <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span><span class="s1">&#39;--skip_gdal/--use_gdal&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Skip the Gdal conversion stage (if it has already been done)&#39;</span><span class="p">),</span>
+    <span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">gdal_bin</span><span class="p">:</span> <span class="n">Annotated</span><span class="p">[</span>
+        <span class="nb">str</span><span class="p">,</span>
+        <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span><span class="s1">&#39;--gdal_bin&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Path to gdal binaries (ignored if --skip_gdal is passed)&#39;</span><span class="p">,</span> <span class="n">envvar</span><span class="o">=</span><span class="s1">&#39;GDAL_BIN&#39;</span><span class="p">),</span>
+    <span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;/usr/bin&#39;</span><span class="p">,</span>
+    <span class="n">gdal_path</span><span class="p">:</span> <span class="n">Annotated</span><span class="p">[</span>
+        <span class="nb">str</span><span class="p">,</span>
+        <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span><span class="s1">&#39;--gdal_path&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Path to gdal scripts (ignored if --skip_gdal is passed)&#39;</span><span class="p">,</span> <span class="n">envvar</span><span class="o">=</span><span class="s1">&#39;GDAL_PATH&#39;</span><span class="p">),</span>
+    <span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;/usr/bin&#39;</span><span class="p">,</span>
+    <span class="n">n_jobs</span><span class="p">:</span> <span class="n">Annotated</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span><span class="s1">&#39;--n_jobs&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;number of parallel joblib jobs&#39;</span><span class="p">)]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">nodata_threshold</span><span class="p">:</span> <span class="n">Annotated</span><span class="p">[</span>
+        <span class="nb">float</span><span class="p">,</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span><span class="s1">&#39;--nodata_threshold&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Throw away data with at least this </span><span class="si">% o</span><span class="s1">f nodata pixels&#39;</span><span class="p">)</span>
+    <span class="p">]</span> <span class="o">=</span> <span class="mi">50</span><span class="p">,</span>
+    <span class="n">tile_size</span><span class="p">:</span> <span class="n">Annotated</span><span class="p">[</span>
+        <span class="nb">str</span><span class="p">,</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span><span class="s1">&#39;--tile_size&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Tiling size in pixels e.g. &#39;256x256&#39;&quot;</span><span class="p">,</span> <span class="n">callback</span><span class="o">=</span><span class="n">tile_size_callback</span><span class="p">)</span>
+    <span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;256x256&#39;</span><span class="p">,</span>
+    <span class="n">tile_overlap</span><span class="p">:</span> <span class="n">Annotated</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span><span class="s1">&#39;--tile_overlap&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Overlap of the tiles in pixels&#39;</span><span class="p">)]</span> <span class="o">=</span> <span class="mi">25</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Make data ready for training&quot;&quot;&quot;</span>
+
+    <span class="c1"># Tiling Settings</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tile_size</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+        <span class="n">xsize</span><span class="p">,</span> <span class="n">ysize</span> <span class="o">=</span> <span class="n">tile_size</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">xsize</span><span class="p">,</span> <span class="n">ysize</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">tile_size</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">))</span>
+    <span class="n">overlap</span> <span class="o">=</span> <span class="n">tile_overlap</span>
+
+    <span class="n">timestamp</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s1">&#39;%Y-%m-</span><span class="si">%d</span><span class="s1">_%H-%M-%S&#39;</span><span class="p">)</span>
+    <span class="n">log_path</span> <span class="o">=</span> <span class="n">log_dir</span> <span class="o">/</span> <span class="sa">f</span><span class="s1">&#39;prepare_data-</span><span class="si">{</span><span class="n">timestamp</span><span class="si">}</span><span class="s1">.log&#39;</span>
+    <span class="n">log_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">init_logging</span><span class="p">(</span><span class="n">log_path</span><span class="p">)</span>
+    <span class="n">logger</span> <span class="o">=</span> <span class="n">get_logger</span><span class="p">(</span><span class="s1">&#39;prepare_data&#39;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;#############################&#39;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;# Starting Data Preparation #&#39;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;#############################&#39;</span><span class="p">)</span>
+
+    <span class="n">threshold</span> <span class="o">=</span> <span class="n">nodata_threshold</span> <span class="o">/</span> <span class="mi">100</span>
+
+    <span class="n">DATA_ROOT</span> <span class="o">=</span> <span class="n">data_dir</span>
+    <span class="n">DATA_DIR</span> <span class="o">=</span> <span class="n">DATA_ROOT</span> <span class="o">/</span> <span class="s1">&#39;tiles&#39;</span>
+    <span class="n">h5dir</span> <span class="o">=</span> <span class="n">DATA_ROOT</span> <span class="o">/</span> <span class="s1">&#39;h5&#39;</span>
+    <span class="n">h5dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="c1"># All folders that contain the big raster (...AnalyticsML_SR.tif) are assumed to be a dataset</span>
+    <span class="n">datasets</span> <span class="o">=</span> <span class="p">[</span><span class="n">raster</span><span class="o">.</span><span class="n">parent</span> <span class="k">for</span> <span class="n">raster</span> <span class="ow">in</span> <span class="n">DATA_DIR</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s1">&#39;*/&#39;</span> <span class="o">+</span> <span class="n">RASTERFILTER</span><span class="p">)]</span>
+
+    <span class="n">overwrite_conflicts</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">dataset</span> <span class="ow">in</span> <span class="n">datasets</span><span class="p">:</span>
+        <span class="n">check_dir</span> <span class="o">=</span> <span class="n">h5dir</span> <span class="o">/</span> <span class="n">dataset</span><span class="o">.</span><span class="n">name</span>
+        <span class="k">if</span> <span class="n">check_dir</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+            <span class="n">overwrite_conflicts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">check_dir</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">overwrite_conflicts</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Found old data directories: </span><span class="si">{</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">dir</span><span class="o">.</span><span class="n">name</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="nb">dir</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">overwrite_conflicts</span><span class="p">)</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+        <span class="n">decision</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="s1">&#39;Delete and recreate them [d], skip them [s] or abort [a]? &#39;</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">decision</span> <span class="o">==</span> <span class="s1">&#39;d&#39;</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;User chose to delete old directories.&#39;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">old_dir</span> <span class="ow">in</span> <span class="n">overwrite_conflicts</span><span class="p">:</span>
+                <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="n">old_dir</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">decision</span> <span class="o">==</span> <span class="s1">&#39;s&#39;</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;User chose to skip old directories.&#39;</span><span class="p">)</span>
+            <span class="n">already_done</span> <span class="o">=</span> <span class="p">[</span><span class="n">d</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">overwrite_conflicts</span><span class="p">]</span>
+            <span class="n">datasets</span> <span class="o">=</span> <span class="p">[</span><span class="n">d</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">datasets</span> <span class="k">if</span> <span class="n">d</span><span class="o">.</span><span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">already_done</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># When in doubt, don&#39;t overwrite/change anything to be safe</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s1">&#39;Aborting due to conflicts with existing data directories.&#39;</span><span class="p">)</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="n">Parallel</span><span class="p">(</span><span class="n">n_jobs</span><span class="o">=</span><span class="n">n_jobs</span><span class="p">)(</span>
+        <span class="n">delayed</span><span class="p">(</span><span class="n">main_function</span><span class="p">)(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">log_path</span><span class="p">,</span> <span class="n">h5dir</span><span class="p">,</span> <span class="n">xsize</span><span class="p">,</span> <span class="n">ysize</span><span class="p">,</span> <span class="n">overlap</span><span class="p">,</span> <span class="n">threshold</span><span class="p">,</span> <span class="n">skip_gdal</span><span class="p">,</span> <span class="n">gdal_bin</span><span class="p">,</span> <span class="n">gdal_path</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">dataset</span> <span class="ow">in</span> <span class="n">datasets</span>
+    <span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="src.thaw_slump_segmentation.scripts.prepare_data.read_and_assert_imagedata" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">read_and_assert_imagedata</span><span class="p">(</span><span class="n">image_path</span><span class="p">)</span></code>
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+
+            <details class="quote">
+              <summary>Source code in <code>src/thaw_slump_segmentation/scripts/prepare_data.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">34</span>
+<span class="normal">35</span>
+<span class="normal">36</span>
+<span class="normal">37</span>
+<span class="normal">38</span>
+<span class="normal">39</span>
+<span class="normal">40</span>
+<span class="normal">41</span>
+<span class="normal">42</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">read_and_assert_imagedata</span><span class="p">(</span><span class="n">image_path</span><span class="p">):</span>
+    <span class="k">with</span> <span class="n">rio</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">image_path</span><span class="p">)</span> <span class="k">as</span> <span class="n">raster</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">raster</span><span class="o">.</span><span class="n">count</span> <span class="o">&lt;=</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">raster</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">raster</span><span class="o">.</span><span class="n">read</span><span class="p">()[:</span><span class="mi">3</span><span class="p">]</span>
+        <span class="c1"># Assert data can safely be coerced to int16</span>
+        <span class="k">assert</span> <span class="n">data</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="o">**</span><span class="mi">15</span>
+        <span class="k">return</span> <span class="n">data</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="src.thaw_slump_segmentation.scripts.prepare_data.tile_size_callback" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">tile_size_callback</span><span class="p">(</span><span class="n">value</span><span class="p">)</span></code>
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+
+            <details class="quote">
+              <summary>Source code in <code>src/thaw_slump_segmentation/scripts/prepare_data.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">267</span>
+<span class="normal">268</span>
+<span class="normal">269</span>
+<span class="normal">270</span>
+<span class="normal">271</span>
+<span class="normal">272</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">tile_size_callback</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">value</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">))</span>
+    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">typer</span><span class="o">.</span><span class="n">BadParameter</span><span class="p">(</span><span class="s1">&#39;Tile size must be in the format &quot;256x256&quot;&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../inference/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Inference">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Inference
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../process_02_inference/" class="md-footer__link md-footer__link--next" aria-label="Next: Process 02 inference">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Process 02 inference
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "../../../../..", "features": ["navigation.instant", "navigation.tracking", "content.code.annotate", "content.code.copy", "content.tabs.link", "content.action.edit", "toc.integrate", "toc.follow", "navigation.path", "navigation.top", "navigation.tabs", "navigation.footer"], "search": "../../../../../assets/javascripts/workers/search.6ce7567c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    
+      <script src="../../../../../assets/javascripts/bundle.83f73b43.min.js"></script>
+      
+    
+  </body>
+</html>

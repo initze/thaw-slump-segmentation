@@ -66,7 +66,7 @@ def process_02_inference(
     # print basic information
     total_images = int(len(df_final))
     preprocessed_images = int(df_final.preprocessed.sum())
-    preprocessing_images = int(total_images - preprocessed_images)
+    preprocessing_images = len(df_final[~df_final['preprocessed'] & ~df_final['inference_finished']])
     finished_images = int(df_final.inference_finished.sum())
     print(f'Number of images: {total_images}')
     print(f'Number of preprocessed images: {preprocessed_images}')
@@ -93,7 +93,8 @@ def process_02_inference(
     # #### Copy data for Preprocessing
     # make better documentation
 
-    df_preprocess = df_final[df_final.preprocessed == False]
+    # df_preprocess = df_final[df_final.preprocessed == False]
+    df_preprocess = df_final[~df_final['preprocessed'] & ~df_final['inference_finished']]
     print(f'Number of images to preprocess: {len(df_preprocess)}')
 
     # TODO make better check

@@ -48,7 +48,7 @@ dependencies = [
     "torchmetrics>=1.4.1",
 ]
 readme = "README.md"
-requires-python = ">= 3.11.*"
+requires-python = ">= 3.11"
 
 [project.scripts]
 inference = "thaw_slump_segmentation.scripts.inference:main"

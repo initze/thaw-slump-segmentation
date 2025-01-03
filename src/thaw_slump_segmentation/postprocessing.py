@@ -21,7 +21,7 @@ except:
     CUCIM_AVAILABLE = False
     print('Using standard skimage CPU implementation')
 
-ee.Initialize()
+ee.Initialize(project='ee-ingmarnitze')
 
 
 def run_inference(
@@ -530,6 +530,8 @@ def load_and_parse_vector(file_path: Union[str, Path], filter_water: bool = Fals
     """
     try:
         gdf = gpd.read_file(file_path).to_crs('EPSG:4326')
+        if len(gdf) == 0:
+            return None
         if filter_water:
             gdf = filter_remove_water(gdf)
     except:

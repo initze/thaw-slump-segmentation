@@ -18,6 +18,8 @@ import typer
 from joblib import Parallel, delayed
 from typing_extensions import Annotated
 
+import geemap
+
 from .. import data_pre_processing
 from ..data_pre_processing import (
     aux_data_to_tiles,
@@ -57,11 +59,12 @@ def preprocess_directory(image_dir, data_dir, aux_dir, backup_dir, log_path, gda
     if not is_ee_initialized:
         try:
             thread_logger.debug('Initializing Earth Engine')
-            ee.Initialize()
+            # ee.Initialize(project='ee-ingmarnitze', opt_url='https://earthengine-highvolume.googleapis.com')
+            geemap.ee_initialize(project='ee-ingmarnitze', opt_url='https://earthengine-highvolume.googleapis.com')
         except Exception:
             thread_logger.warn('Initializing Earth Engine failed, trying to authenticate')
             ee.Authenticate()
-            ee.Initialize()
+            ee.Initialize(project='ee-ingmarnitze', opt_url='https://earthengine-highvolume.googleapis.com')
         is_ee_initialized = True
     success_state = dict(rename=0, label=0, ndvi=0, tcvis=0, rel_dem=0, slope=0, mask=0, move=0)
     thread_logger.info(f'Starting preprocessing {image_name}')
@@ -129,7 +132,7 @@ def setup_raw_data(
     logger.info('###########################')
 
     dir_list = check_input_data(INPUT_DATA_DIR)
-    print(dir_list)
+    # print(dir_list)
     if len(dir_list) > 0:
         Parallel(n_jobs=n_jobs)(
             delayed(preprocess_directory)(
